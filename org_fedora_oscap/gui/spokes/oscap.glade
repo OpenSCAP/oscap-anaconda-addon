@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.0 -->
+  <!-- interface-requires AnacondaWidgets 1.0 -->
+  <object class="AnacondaSpokeWindow" id="OSCAPspokeWindow">
+    <property name="startup_id">filler</property>
+    <property name="can_focus">False</property>
+    <property name="hexpand">True</property>
+    <property name="vexpand">True</property>
+    <property name="startup_id">filler</property>
+    <signal name="button-clicked" handler="on_back_clicked" swapped="no"/>
+    <child internal-child="main_box">
+      <object class="GtkBox" id="AnacondaSpokeWindow-main_box1">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">6</property>
+        <child internal-child="nav_box">
+          <object class="GtkEventBox" id="AnacondaSpokeWindow-nav_box1">
+            <property name="app_paintable">True</property>
+            <property name="can_focus">False</property>
+            <child internal-child="nav_area">
+              <object class="GtkGrid" id="AnacondaSpokeWindow-nav_area1">
+                <property name="can_focus">False</property>
+                <property name="margin_left">6</property>
+                <property name="margin_right">6</property>
+                <property name="margin_top">6</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child internal-child="alignment">
+          <object class="GtkAlignment" id="AnacondaSpokeWindow-alignment1">
+            <property name="can_focus">False</property>
+            <property name="yalign">0</property>
+            <property name="xscale">0.75</property>
+            <property name="yscale">0.75</property>
+            <child internal-child="action_area">
+              <object class="GtkBox" id="AnacondaSpokeWindow-action_area1">
+                <property name="can_focus">False</property>
+                <property name="orientation">vertical</property>
+                <property name="spacing">6</property>
+                <child>
+                  <object class="GtkBox" id="mainBox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">4</property>
+                    <child>
+                      <object class="GtkLabel" id="chooseProfileLabel">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">Choose profile below:</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkTreeView" id="profilesView">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="model">profilesStore</property>
+                        <property name="headers_visible">False</property>
+                        <child internal-child="selection">
+                          <object class="GtkTreeSelection" id="profilesSelection"/>
+                        </child>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="profileColumn">
+                            <property name="title" translatable="yes">Profile</property>
+                            <child>
+                              <object class="GtkCellRendererText" id="cellrenderertext1"/>
+                              <attributes>
+                                <attribute name="markup">0</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="changesLabel">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="margin_top">20</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">Changes needed to be done:</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkTreeView" id="changesView">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="model">changesStore</property>
+                        <property name="headers_visible">False</property>
+                        <child internal-child="selection">
+                          <object class="GtkTreeSelection" id="changesSelection">
+                            <property name="mode">none</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="messageTypeColumn">
+                            <child>
+                              <object class="GtkCellRendererPixbuf" id="messageTypeRenderer"/>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="messageColumn">
+                            <child>
+                              <object class="GtkCellRendererText" id="cellrenderertext2"/>
+                              <attributes>
+                                <attribute name="text">1</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">3</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkListStore" id="changesStore">
+    <columns>
+      <!-- column-name messageType -->
+      <column type="gint"/>
+      <!-- column-name message -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">0</col>
+        <col id="1" translatable="yes">/tmp is not on a separate partition</col>
+      </row>
+      <row>
+        <col id="0">0</col>
+        <col id="1" translatable="yes">/var/log is not on a separate partition</col>
+      </row>
+      <row>
+        <col id="0">1</col>
+        <col id="1" translatable="yes">root password may be not strong enough</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="profilesStore">
+    <columns>
+      <!-- column-name profileName -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0" translatable="yes">&lt;span weight='bold'&gt;Common Profile for General-Purpose Systems&lt;/span&gt;
+This profile contains items common to general-purpose desktop and server installations.</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">&lt;span weight='bold'&gt;Desktop Baseline&lt;/span&gt;
+This profile is for a desktop installation of RHEL 6.</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">&lt;span weight='bold'&gt;Server Baseline&lt;/span&gt;
+This profile is for RHEL 6 acting as a server.</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">&lt;span weight='bold'&gt;Pre-release Draft STIG for RHEL 6 Server&lt;/span&gt;
+This profile is being developed under the DoD consensus model to become a STIG in coordination with DISA FSO.</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">&lt;span weight='bold'&gt;Default&lt;/span&gt;
+The default profile.</col>
+      </row>
+    </data>
+  </object>
+</interface>
