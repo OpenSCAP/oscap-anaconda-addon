@@ -126,6 +126,21 @@ class OSCAPdata(AddonData):
             msg = "Unknown item '%s' for %s addon" % (line, self.name)
             raise KickstartParseError(msg)
 
+    def finalize(self):
+        tmpl = "%s missing for the %s addon"
+
+        if not self.content_type:
+            raise KickstartValueError(tmpl % ("content-type", self.name))
+
+        if not self.content_url:
+            raise KickstartValueError(tmpl % ("content-url", self.name))
+
+        if self.content_type == "datastream" and not self.datastream_id:
+            raise KickstartValueError(tmpl % ("datastream-id", self.name))
+
+        if not self.profile_id:
+            raise KickstartValueError(tmpl % ("profile", self.name))
+
     def setup(self, storage, ksdata, instclass):
         """
         The setup method that should make changes to the runtime environment
