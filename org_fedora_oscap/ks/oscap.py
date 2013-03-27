@@ -67,13 +67,19 @@ class OSCAPdata(AddonData):
 
         """
 
-        ret  = "content-type=%s\n" % self.content_type
-        ret += "content-url=%s\n" % self.content_url
-        ret += "datastream-id=%s\n" % self.datastream_id
-        ret += "profile=%s\n" % self.profile_id
+        def key_value_pair(key, value, ident=4):
+            return "%s%s = %s" % (ident * " ", key, value)
+
+        ret  = "%s\n" % key_value_pair("content-type", self.content_type)
+        ret += "%s\n" % key_value_pair("content-url", self.content_url)
+
+        if self.datastream_id:
+            ret += "%s\n" % key_value_pair("datastream-id", self.datastream_id)
+
+        ret += "%s" % key_value_pair("profile", self.profile_id)
 
         if self.certificate:
-            ret += "certificate=%s\n" % self.certificate
+            ret += "\n%s\n" % key_value_pair("certificate", self.certificate)
 
         return ret
 
@@ -173,3 +179,34 @@ class OSCAPdata(AddonData):
 
         #TODO: call oscap remediate in chroot
         pass
+
+if __name__ == "__main__":
+    addon_data = OSCAPdata("org_fedora_oscap")
+
+    for line in ["content-type = datastream\n",
+                 "content-url = https://example.com/hardening.xml\n",
+                 "datastream-id = id_datastream_1\n",
+                 "profile = Web Server\n",
+                 ]:
+        addon_data.handle_line(line)
+
+    addon_data.finalize()
+
+    addon_data_str = str(addon_data)
+
+    print "====__str__ test===="
+    print "%addon org_fedora_oscap"
+    print addon_data_str
+    print "%end"
+    print
+
+    addon_data2 = OSCAPdata("org_fedora_oscap")
+    for line in addon_data_str.split("\n"):
+        addon_data2.handle_line(line)
+    addon_data2.finalize()
+
+    print "====__str__ value parsed===="
+    print "%addon org_fedora_oscap"
+    print str(addon_data2)
+    print "%end"
+
