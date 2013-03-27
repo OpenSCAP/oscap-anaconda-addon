@@ -55,6 +55,7 @@ class OSCAPdata(AddonData):
         self.content_type = ""
         self.content_url = ""
         self.datastream_id = ""
+        self.xccdf_id = ""
         self.profile_id = ""
 
         # certificate to verify HTTPS connection or signed data
@@ -75,6 +76,8 @@ class OSCAPdata(AddonData):
 
         if self.datastream_id:
             ret += "%s\n" % key_value_pair("datastream-id", self.datastream_id)
+        if self.xccdf_id:
+            ret += "%s\n" % key_value_pair("xccdf-id", self.xccdf_id)
 
         ret += "%s" % key_value_pair("profile", self.profile_id)
 
@@ -103,6 +106,10 @@ class OSCAPdata(AddonData):
         # need to be checked?
         self.datastream_id = value
 
+    def _parse_xccdf_id(self, value):
+        # need to be checked?
+        self.xccdf_id = value
+
     def _parse_profile_id(self, value):
         # need to be checked?
         self.profile_id = value
@@ -121,6 +128,7 @@ class OSCAPdata(AddonData):
                     "content-url" : self._parse_content_url,
                     "datastream-id" : self._parse_datastream_id,
                     "profile" : self._parse_profile_id,
+                    "xccdf-id" : self._parse_xccdf_id,
                     }
 
         line = line.strip()
@@ -141,8 +149,11 @@ class OSCAPdata(AddonData):
         if not self.content_url:
             raise KickstartValueError(tmpl % ("content-url", self.name))
 
-        if self.content_type == "datastream" and not self.datastream_id:
-            raise KickstartValueError(tmpl % ("datastream-id", self.name))
+        if self.content_type == "datastream":
+            if not self.datastream_id:
+                raise KickstartValueError(tmpl % ("datastream-id", self.name))
+            if not self.xccdf_id:
+                raise KickstartValueError(tmpl % ("xccdf-id", self.name))
 
         if not self.profile_id:
             raise KickstartValueError(tmpl % ("profile", self.name))
@@ -186,6 +197,7 @@ if __name__ == "__main__":
     for line in ["content-type = datastream\n",
                  "content-url = https://example.com/hardening.xml\n",
                  "datastream-id = id_datastream_1\n",
+                 "xccdf-id = id_xccdf_new\n",
                  "profile = Web Server\n",
                  ]:
         addon_data.handle_line(line)
