@@ -174,8 +174,11 @@ class OSCAPdata(AddonData):
 
         """
 
-        # no actions needed in this addon
-        pass
+        # add packages needed on the target system to the list of packages
+        # that are requested to be installed
+        for pkg in ("oscap", "oscap-utils"):
+            if pkg not in ksdata.packages.packageList:
+                ksdata.packages.packageList.append(pkg)
 
     def execute(self, storage, ksdata, instclass, users):
         """
