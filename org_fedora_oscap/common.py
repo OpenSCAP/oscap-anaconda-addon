@@ -102,7 +102,7 @@ class RuleData(object):
         except KeyError:
             # should never happen
             # TODO: only log error instead?
-            raise UknownRuleError("Unknown rule: '%s'" % rule)
+            raise UknownRuleError("Unknown rule: '%s'" % first_word)
 
     def _new_part_rule(self, rule):
         args = rule.split()
