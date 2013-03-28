@@ -111,9 +111,10 @@ class RuleData(object):
         # args contain both "part" and mount point (e.g. "/tmp")
         mount_point = args[1]
 
-        part_data = self._part_rules[mount_point]
+        self._part_rules.ensure_mount_point(mount_point)
 
         if opts.mount_options:
+            part_data = self._part_rules[mount_point]
             part_data.add_mount_options(opts.mount_options)
 
     def _new_passwd_rule(self, rule):
@@ -138,11 +139,7 @@ class PartRules(object):
     def __getitem__(self, key):
         """Method to support dictionary-like syntax."""
 
-        if key in self._rules:
-            return self._rules[key]
-        else:
-            self._rules[key] = PartRule(key)
-            return self._rules[key]
+        return self._rules[key]
 
     def __setitem__(self, key, value):
         """Method to support dictionary-like syntax."""
@@ -158,6 +155,15 @@ class PartRules(object):
         """One of the methods needed to implement a container."""
 
         return self._rules.__len__()
+
+    def __contains__(self, key):
+        """Method needed for the 'in' operator to work."""
+
+        return key in self._rules
+
+    def ensure_mount_point(self, mount_point):
+        if mount_point not in self._rules:
+            self._rules[mount_point] = PartRule(mount_point)
 
 class PartRule(object):
     """Simple class holding rule data for a single partition/mount point."""
