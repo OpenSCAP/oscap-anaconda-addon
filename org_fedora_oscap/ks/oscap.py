@@ -71,19 +71,21 @@ class OSCAPdata(AddonData):
         def key_value_pair(key, value, ident=4):
             return "%s%s = %s" % (ident * " ", key, value)
 
-        ret  = "%s\n" % key_value_pair("content-type", self.content_type)
-        ret += "%s\n" % key_value_pair("content-url", self.content_url)
+        ret = "%%addon %s" % self.name
+        ret += "\n%s" % key_value_pair("content-type", self.content_type)
+        ret += "\n%s" % key_value_pair("content-url", self.content_url)
 
         if self.datastream_id:
-            ret += "%s\n" % key_value_pair("datastream-id", self.datastream_id)
+            ret += "\n%s" % key_value_pair("datastream-id", self.datastream_id)
         if self.xccdf_id:
-            ret += "%s\n" % key_value_pair("xccdf-id", self.xccdf_id)
+            ret += "\n%s" % key_value_pair("xccdf-id", self.xccdf_id)
 
-        ret += "%s" % key_value_pair("profile", self.profile_id)
+        ret += "\n%s" % key_value_pair("profile", self.profile_id)
 
         if self.certificate:
-            ret += "\n%s\n" % key_value_pair("certificate", self.certificate)
+            ret += "\n%s" % key_value_pair("certificate", self.certificate)
 
+        ret += "\n%end"
         return ret
 
     def _parse_content_type(self, value):
@@ -210,18 +212,15 @@ if __name__ == "__main__":
     addon_data_str = str(addon_data)
 
     print "====__str__ test===="
-    print "%addon org_fedora_oscap"
     print addon_data_str
-    print "%end"
     print
 
     addon_data2 = OSCAPdata("org_fedora_oscap")
-    for line in addon_data_str.split("\n"):
+    for line in addon_data_str.split("\n")[1:-1]:
         addon_data2.handle_line(line)
     addon_data2.finalize()
 
     print "====__str__ value parsed===="
-    print "%addon org_fedora_oscap"
     print str(addon_data2)
-    print "%end"
+
 
