@@ -36,6 +36,8 @@ SUPPORTED_URL_PREFIXES = ("http://", "https://",
                           # LABEL:?, hdaX:?,
                           )
 
+REQUIRED_PACKAGES = ("openscap", "openscap-utils", )
+
 class OSCAPdata(AddonData):
     """
     Class parsing and storing data for the OSCAP addon.
@@ -178,7 +180,7 @@ class OSCAPdata(AddonData):
 
         # add packages needed on the target system to the list of packages
         # that are requested to be installed
-        for pkg in ("oscap", "oscap-utils"):
+        for pkg in REQUIRED_PACKAGES:
             if pkg not in ksdata.packages.packageList:
                 ksdata.packages.packageList.append(pkg)
 
