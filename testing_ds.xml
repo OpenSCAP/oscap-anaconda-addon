@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ds:data-stream-collection xmlns:ds="http://scap.nist.gov/schema/scap/source/1.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cat="urn:oasis:names:tc:entity:xmlns:xml:catalog" id="scap_org.open-scap_collection_from_xccdf_first-xccdf.xml" schematron-version="1.0">
+  <ds:data-stream id="scap_org.open-scap_datastream_tst" scap-version="1.2" use-case="OTHER">
+    <ds:checklists>
+      <ds:component-ref id="scap_org.open-scap_cref_first-xccdf.xml"
+                        xlink:href="#scap_org.open-scap_comp_first-xccdf.xml">
+        <cat:catalog>
+          <cat:uri name="scap-mycheck-oval.xml"
+                   uri="#scap_com.example_cref_mycheck"/>
+        </cat:catalog>
+      </ds:component-ref>
+      <ds:component-ref id="scap_org.open-scap_cref_second-xccdf.xml"
+                        xlink:href="#scap_org.open-scap_comp_second-xccdf.xml"/>
+    </ds:checklists>
+    <ds:checks>
+      <ds:component-ref id="scap_com.example_cref_mycheck" xlink:href="#scap_com.example_comp_mycheck" />
+    </ds:checks>
+  </ds:data-stream>
+  <ds:component id="scap_org.open-scap_comp_first-xccdf.xml" timestamp="2012-10-10T13:34:54">
+    <Benchmark xmlns="http://checklists.nist.gov/xccdf/1.2" id="xccdf_moc.elpmaxe.www_benchmark_first">
+      <status>incomplete</status>
+      <version>1.0</version>
+      <Profile id="xccdf_com.example_profile_my_profile">
+        <title>My testing profile</title>
+        <description>A profile for testing purposes.</description>
+        <select selected="true" idref="xccdf_moc.elpmaxe.www_rule_first"/>
+      </Profile>
+      <Rule selected="false" id="xccdf_moc.elpmaxe.www_rule_first">
+        <fix reboot="false" disruption="low" system="urn:xccdf:fix:script:sh">
+          touch /root/must_exist.txt
+        </fix>
+        <check system="http://oval.mitre.org/XMLSchema/oval-definitions-5">
+          <check-content-ref href="scap-mycheck-oval.xml" name="oval:org.open-scap.f14:def:20000"/>
+        </check>
+      </Rule>
+    </Benchmark>
+  </ds:component>
+  <ds:component id="scap_org.open-scap_comp_second-xccdf.xml" timestamp="2012-10-10T13:34:54">
+    <Benchmark xmlns="http://checklists.nist.gov/xccdf/1.2" id="xccdf_moc.elpmaxe.www_benchmark_second">
+      <status>incomplete</status>
+      <version>1.0</version>
+      <Rule selected="true" id="xccdf_moc.elpmaxe.www_rule_second">
+        <fix reboot="false" disruption="low" system="urn:xccdf:fix:script:sh">
+          touch /root/must_exist.txt
+        </fix>
+      </Rule>
+    </Benchmark>
+  </ds:component>
+  <ds:component id="scap_com.example_comp_mycheck" timestamp="2012-07-20T12:22:58">
+    <oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval-def="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:lin-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:unix-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix">
+      <generator>
+        <oval:product_name>vim, emacs</oval:product_name>
+        <oval:schema_version>5.5</oval:schema_version>
+        <oval:timestamp>2010-08-30T12:00:00-04:00</oval:timestamp>
+      </generator>
+      <definitions>
+        <definition class="compliance" id="oval:org.open-scap.f14:def:20000" version="1">
+          <metadata>
+            <title>Ensure that /root/must_exist.txt file exists.</title>
+            <reference ref_id="TBD" source="CCE"/>
+            <description>
+              Testing check.
+            </description>
+          </metadata>
+          <criteria>
+            <criterion comment="Check /root/must_exist.txt file exists" test_ref="oval:org.open-scap.f14:tst:20000"/>
+          </criteria>
+        </definition>
+      </definitions>
+      <tests>
+        <unix-def:file_test check="all" check_existence="at_least_one_exists"
+                            comment="Check /root/must_exist.txt file exists" id="oval:org.open-scap.f14:tst:20000" version="1">
+          <unix-def:object object_ref="oval:org.open-scap.f14:obj:20000"/>
+        </unix-def:file_test>
+      </tests>
+      <objects>
+        <unix-def:file_object comment="Check existance of /root/must_exist.txt" id="oval:org.open-scap.f14:obj:20000" version="1">
+          <unix-def:path operation="pattern match">^/root$</unix-def:path>
+          <unix-def:filename>must_exist.txt</unix-def:filename>
+        </unix-def:file_object>
+      </objects>
+    </oval_definitions>
+  </ds:component>
+</ds:data-stream-collection>
