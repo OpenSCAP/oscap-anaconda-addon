@@ -28,7 +28,7 @@ from pykickstart.errors import KickstartParseError, KickstartValueError
 # @see: pyanaconda.kickstart.AnacondaKSHandler.__init__
 __all__ = ["OSCAPdata"]
 
-SUPPORTED_CONTENT_TYPES = ("datastream", "rpm",
+SUPPORTED_CONTENT_TYPES = ("datastream", "RPM",
                            # tarball?
                            )
 
@@ -169,14 +169,18 @@ class OSCAPdata(AddonData):
         if not self.content_url:
             raise KickstartValueError(tmpl % ("content-url", self.name))
 
-        if self.content_type == "datastream":
-            if not self.datastream_id:
-                raise KickstartValueError(tmpl % ("datastream-id", self.name))
-            if not self.xccdf_id:
-                raise KickstartValueError(tmpl % ("xccdf-id", self.name))
-
         if not self.profile_id:
             raise KickstartValueError(tmpl % ("profile", self.name))
+
+        if self.content_type == "RPM" and not self.xccdf_path:
+            msg = "Path to the XCCDF file has to be given if content in RPM "\
+                  "is used"
+            raise KickstartValueError(msg)
+
+        if self.content_type == "RPM" and not self.content_url.endswith(".rpm"):
+            msg = "Content type set to RPM, but the content URL doesn't end "\
+                  "with '.rpm'"
+            raise KickstartValueError(msg)
 
     def setup(self, storage, ksdata, instclass):
         """

@@ -1,6 +1,7 @@
 """Module with tests for the ks/oscap.py module."""
 
 import unittest
+from pykickstart.errors import KickstartValueError
 from org_fedora_oscap.ks.oscap import OSCAPdata
 
 class ParsingTest(unittest.TestCase):
@@ -47,3 +48,84 @@ class ParsingTest(unittest.TestCase):
 
         str_ret2 = str(self.oscap_data)
         self.assertEqual(str_ret, str_ret2)
+
+class IncompleteDataTest(unittest.TestCase):
+    def setUp(self):
+        self.oscap_data = OSCAPdata("org_fedora_oscap")
+
+    def nothing_given_test(self):
+        with self.assertRaises(KickstartValueError):
+            self.oscap_data.finalize()
+
+    def no_content_type_test(self):
+        for line in ["content-url = http://example.com/test_ds.xml",
+                     "profile = Web Server",
+                     ]:
+            self.oscap_data.handle_line(line)
+        with self.assertRaises(KickstartValueError):
+            self.oscap_data.finalize()
+
+    def no_content_url_test(self):
+        for line in ["content-type = datastream",
+                     "profile = Web Server",
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        with self.assertRaises(KickstartValueError):
+            self.oscap_data.finalize()
+
+    def no_profile_test(self):
+        for line in ["content-url = http://example.com/test_ds.xml",
+                     "content-type = datastream",
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        with self.assertRaises(KickstartValueError):
+            self.oscap_data.finalize()
+
+class InvalidDataTest(unittest.TestCase):
+    def setUp(self):
+        self.oscap_data = OSCAPdata("org_fedora_oscap")
+
+    def rpm_without_path_test(self):
+        for line in ["content-url = http://example.com/oscap_content.rpm",
+                     "content-type = RPM",
+                     "profile = Web Server",
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        with self.assertRaises(KickstartValueError):
+            self.oscap_data.finalize()
+
+    def rpm_with_wrong_suffix_test(self):
+        for line in ["content-url = http://example.com/oscap_content.xml",
+                     "content-type = RPM",
+                     "profile = Web Server",
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        with self.assertRaises(KickstartValueError):
+            self.oscap_data.finalize()
+
+class EverythinkOKtest(unittest.TestCase):
+    def setUp(self):
+        self.oscap_data = OSCAPdata("org_fedora_oscap")
+
+    def enough_for_ds_test(self):
+        for line in ["content-url = http://example.com/test_ds.xml",
+                     "content-type = datastream",
+                     "profile = Web Server",
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        self.oscap_data.finalize()
+
+    def enough_for_rpm_test(self):
+        for line in ["content-url = http://example.com/oscap_content.rpm",
+                     "content-type = RPM",
+                     "profile = Web Server",
+                     "xccdf-path = /usr/share/oscap/xccdf.xml"
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        self.oscap_data.finalize()
