@@ -59,6 +59,8 @@ class OSCAPdata(AddonData):
         self.datastream_id = ""
         self.xccdf_id = ""
         self.profile_id = ""
+        self.xccdf_path = ""
+        self.cpe_path = ""
 
         # certificate to verify HTTPS connection or signed data
         self.certificate = ""
@@ -81,6 +83,10 @@ class OSCAPdata(AddonData):
             ret += "\n%s" % key_value_pair("datastream-id", self.datastream_id)
         if self.xccdf_id:
             ret += "\n%s" % key_value_pair("xccdf-id", self.xccdf_id)
+        if self.xccdf_path:
+            ret += "\n%s" % key_value_pair("xccdf-path", self.xccdf_path)
+        if self.cpe_path:
+            ret += "\n%s" % key_value_pair("cpe-path", self.cpe_path)
 
         ret += "\n%s" % key_value_pair("profile", self.profile_id)
 
@@ -118,6 +124,14 @@ class OSCAPdata(AddonData):
         # need to be checked?
         self.profile_id = value
 
+    def _parse_xccdf_path(self, value):
+        # need to be checked?
+        self.xccdf_path = value
+
+    def _parse_cpe_path(self, value):
+        # need to be checked?
+        self.cpe_path = value
+
     def handle_line(self, line):
         """
         The handle_line method that is called with every line from this addon's
@@ -133,6 +147,8 @@ class OSCAPdata(AddonData):
                     "datastream-id" : self._parse_datastream_id,
                     "profile" : self._parse_profile_id,
                     "xccdf-id" : self._parse_xccdf_id,
+                    "xccdf-path": self._parse_xccdf_path,
+                    "cpe-path": self._parse_cpe_path,
                     }
 
         line = line.strip()

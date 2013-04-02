@@ -10,6 +10,8 @@ class ParsingTest(unittest.TestCase):
                      "content-url = https://example.com/hardening.xml\n",
                      "datastream-id = id_datastream_1\n",
                      "xccdf-id = id_xccdf_new\n",
+                     "xccdf-path = /usr/share/oscap/xccdf.xml",
+                     "cpe-path = /usr/share/oscap/cpe.xml",
                      "profile = Web Server\n",
                      ]:
             self.oscap_data.handle_line(line)
@@ -20,6 +22,8 @@ class ParsingTest(unittest.TestCase):
                          "https://example.com/hardening.xml")
         self.assertEqual(self.oscap_data.datastream_id, "id_datastream_1")
         self.assertEqual(self.oscap_data.xccdf_id, "id_xccdf_new")
+        self.assertEqual(self.oscap_data.xccdf_path, "/usr/share/oscap/xccdf.xml")
+        self.assertEqual(self.oscap_data.cpe_path, "/usr/share/oscap/cpe.xml")
         self.assertEqual(self.oscap_data.profile_id, "Web Server")
 
     def str_test(self):
@@ -30,6 +34,8 @@ class ParsingTest(unittest.TestCase):
                          "    content-url = https://example.com/hardening.xml\n"
                          "    datastream-id = id_datastream_1\n"
                          "    xccdf-id = id_xccdf_new\n"
+                         "    xccdf-path = /usr/share/oscap/xccdf.xml\n"
+                         "    cpe-path = /usr/share/oscap/cpe.xml\n"
                          "    profile = Web Server\n"
                          "%end"
                          )
