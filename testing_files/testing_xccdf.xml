@@ -1,0 +1,17 @@
+<Benchmark xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xhtml="http://www.w3.org/1999/xhtml"
+xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://checklists.nist.gov/xccdf/1.1" id="RHEL-6"
+xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.1 xccdf-1.1.4.xsd"
+resolved="false" xml:lang="en-US">
+  <status>draft</status>
+  <version>0.1</version>
+  <Rule id="testing_rule" severity="low" selected="true">
+    <title>Simple rule for testing purposes</title>
+    <fix id="testing_rule_fix"
+         system="urn:xccdf:fix:script:sh">
+      touch /root/must_exist.txt
+    </fix>
+    <check system="http://open-scap.org/page/SCE">
+      <check-content-ref href="check.sh"/>
+    </check>
+  </Rule>
+</Benchmark>
