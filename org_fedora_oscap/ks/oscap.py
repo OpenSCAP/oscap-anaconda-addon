@@ -217,32 +217,3 @@ class OSCAPdata(AddonData):
 
         #TODO: call oscap remediate in chroot
         pass
-
-if __name__ == "__main__":
-    addon_data = OSCAPdata("org_fedora_oscap")
-
-    for line in ["content-type = datastream\n",
-                 "content-url = https://example.com/hardening.xml\n",
-                 "datastream-id = id_datastream_1\n",
-                 "xccdf-id = id_xccdf_new\n",
-                 "profile = Web Server\n",
-                 ]:
-        addon_data.handle_line(line)
-
-    addon_data.finalize()
-
-    addon_data_str = str(addon_data)
-
-    print "====__str__ test===="
-    print addon_data_str
-    print
-
-    addon_data2 = OSCAPdata("org_fedora_oscap")
-    for line in addon_data_str.split("\n")[1:-1]:
-        addon_data2.handle_line(line)
-    addon_data2.finalize()
-
-    print "====__str__ value parsed===="
-    print str(addon_data2)
-
-

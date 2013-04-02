@@ -222,24 +222,3 @@ class PasswdRules(object):
 
         if minlen > self._minlen:
             self._minlen = minlen
-
-if __name__ == "__main__":
-    # TODO: should live in a separate unittest file
-
-    rule_data = RuleData()
-    print rule_data
-
-    rule_data.new_rule("part /tmp --mountoptions=nodev,noauto")
-    rule_data.new_rule("part /var/log")
-    rule_data.new_rule("passwd --minlen=14")
-    print rule_data
-    print
-
-    rule_data = RuleData()
-    rule_data.new_rule("passwd --minlen=10")
-    print rule_data
-    print
-
-    rule_data = RuleData()
-    rule_data.new_rule("part /tmp --mountoptions=users")
-    print rule_data
