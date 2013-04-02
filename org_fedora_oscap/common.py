@@ -25,12 +25,16 @@ specific to any installation mode (tui, gui, ks).
 """
 
 import optparse
+import os
+import os.path
+import subprocess
 
 # everything else should be private
-__all__ = ["RuleData"]
+__all__ = ["RuleData", "run_oscap_remediate"]
+
+RESULTS_PATH = "/root/openscap_data/eval_remediate_results.xml"
 
 # TODO: use set instead of list for mount options?
-
 def parse_csv(option, opt_str, value, parser):
     for item in value.split(","):
         if item:
@@ -45,10 +49,75 @@ PASSWD_RULE_PARSER = optparse.OptionParser()
 PASSWD_RULE_PARSER.add_option("--minlen", dest="minlen", action="store",
                               default=0, type="int")
 
+
 class OSCAPaddonError(Exception):
     """Exception class for OSCAP addon related errors."""
 
     pass
+def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
+    """
+    Run the evaluation and remediation with the oscap tool on a given file,
+    doing the remediation as defined in a given profile defined in a given
+    checklist that is a part of a given datastream. If requested, run in
+    chroot.
+
+    @param profile: id of the profile that will drive the remediation
+    @type profile: str
+    @param fpath: path to a file with SCAP content
+    @type fpath: str
+    @param ds_id: ID of the datastream that contains the checklist defining
+    the profile
+    @type ds_id: str
+    @param xccdf_id: ID of the checklist that defines the profile
+    @type xccdf_id: str
+    @param chroot: path to the root the oscap tool should be run in
+    @type chroot: str
+
+    """
+
+    def do_chroot():
+        """Helper function doing the chroot if requested."""
+        if chroot and chroot != "/":
+            os.chroot(chroot)
+
+    # make sure the directory for the results exists
+    results_dir = os.path.dirname(RESULTS_PATH)
+    if chroot:
+        results_dir = os.path.normpath(chroot + "/" + results_dir)
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
+
+    args  = ["oscap", "xccdf", "eval"]
+    args.append("--remediate")
+    args.append("--results=%s" % RESULTS_PATH)
+    args.append("--profile=%s" % profile)
+
+    if ds_id:
+        args.append("--datastream-id=%s" % ds_id)
+    if xccdf_id:
+        args.append("--xccdf-id=%s" % xccdf_id)
+
+    args.append(fpath)
+
+    try:
+        proc = subprocess.Popen(args,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                preexec_fn=do_chroot)
+    except OSError as oserr:
+        msg = "Failed to run the oscap tool: %s" % oserr
+        raise OSCAPaddonError(msg)
+
+    (stdout, stderr) = proc.communicate()
+
+    # save stdout?
+    # XXX: is checking return code enough?
+    # pylint thinks Popen has no attribute returncode
+    # pylint: disable-msg=E1101
+    if proc.returncode != 0 or stderr:
+        msg = "Content evaluation and remediation with the oscap tool "\
+            "failed: %s" % stderr
+        raise OSCAPaddonError(msg)
 
 class UknownRuleError(OSCAPaddonError):
     """Exception class for cases when an uknown rule is to be processed."""
