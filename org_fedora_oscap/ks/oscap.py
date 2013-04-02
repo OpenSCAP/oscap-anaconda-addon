@@ -161,6 +161,12 @@ class OSCAPdata(AddonData):
             raise KickstartParseError(msg)
 
     def finalize(self):
+        """
+        The finalize method that is called when the end of the %addon section
+        (the %end line) is reached. It means no more kickstart data will come.
+
+        """
+
         tmpl = "%s missing for the %s addon"
 
         if not self.content_type:
