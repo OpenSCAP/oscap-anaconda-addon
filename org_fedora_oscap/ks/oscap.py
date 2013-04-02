@@ -70,8 +70,8 @@ class OSCAPdata(AddonData):
 
         """
 
-        def key_value_pair(key, value, ident=4):
-            return "%s%s = %s" % (ident * " ", key, value)
+        def key_value_pair(key, value, indent=4):
+            return "%s%s = %s" % (indent * " ", key, value)
 
         ret = "%%addon %s" % self.name
         ret += "\n%s" % key_value_pair("content-type", self.content_type)
