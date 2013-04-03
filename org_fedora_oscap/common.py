@@ -30,9 +30,11 @@ import os.path
 import subprocess
 
 # everything else should be private
-__all__ = ["RuleData", "run_oscap_remediate"]
+__all__ = ["RuleData", "run_oscap_remediate", "get_fix_rules_pre"]
 
 RESULTS_PATH = "/root/openscap_data/eval_remediate_results.xml"
+
+PRE_INSTALL_FIX_SYSTEM_ATTR = "urn:redhat:anaconda:pre"
 
 # TODO: use set instead of list for mount options?
 def parse_csv(option, opt_str, value, parser):
@@ -54,6 +56,64 @@ class OSCAPaddonError(Exception):
     """Exception class for OSCAP addon related errors."""
 
     pass
+
+def get_fix_rules_pre(profile, fpath, ds_id="", xccdf_id=""):
+    """
+    Get fix rules for the pre-installation environment for a given profile in a
+    given datastream and checklist in a given file.
+
+    @see: run_oscap_remediate
+    @see: _run_oscap_gen_fix
+    @return: fix rules for a given profile
+    @rtype: str
+
+    """
+
+    return _run_oscap_gen_fix(profile, fpath, PRE_INSTALL_FIX_SYSTEM_ATTR,
+                              ds_id=ds_id, xccdf_id=xccdf_id)
+
+def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id=""):
+    """
+    Run oscap tool on a given file to get the contents of fix elements with the
+    'system' attribute equal to a given template for a given datastream,
+    checklist and profile.
+
+    @see: run_oscap_remediate
+    @param template: the value of the 'system' attribute of the fix elements
+    @type template: str
+    @return: oscap tool's stdout
+    @rtype: str
+
+    """
+
+    args = ["oscap", "xccdf", "generate", "fix"]
+    args.append("--profile=%s" % profile)
+    args.append("--template=%s" % template)
+
+    if ds_id:
+        args.append("--datastream-id=%s" % ds_id)
+    if xccdf_id:
+        args.append("--xccdf-id=%s" % xccdf_id)
+
+    args.append(fpath)
+
+    try:
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+    except OSError as oserr:
+        msg = "Failed to run the oscap tool: %s" % oserr
+        raise OSCAPaddonError(msg)
+
+    (stdout, stderr) = proc.communicate()
+
+    # pylint thinks Popen has no attribute returncode
+    # pylint: disable-msg=E1101
+    if proc.returncode != 0 or stderr:
+        msg = "Failed to generate fix rules with the oscap tool: %s" % stderr
+        raise OSCAPaddonError(msg)
+
+    return stdout
+
 def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
     """
     Run the evaluation and remediation with the oscap tool on a given file,
