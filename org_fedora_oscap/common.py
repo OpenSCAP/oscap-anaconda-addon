@@ -72,6 +72,8 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
     @type xccdf_id: str
     @param chroot: path to the root the oscap tool should be run in
     @type chroot: str
+    @return: oscap tool's stdout (summary of the rules, checks and fixes)
+    @rtype: str
 
     """
 
@@ -87,7 +89,7 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
 
-    args  = ["oscap", "xccdf", "eval"]
+    args = ["oscap", "xccdf", "eval"]
     args.append("--remediate")
     args.append("--results=%s" % RESULTS_PATH)
     args.append("--profile=%s" % profile)
@@ -118,6 +120,8 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
         msg = "Content evaluation and remediation with the oscap tool "\
             "failed: %s" % stderr
         raise OSCAPaddonError(msg)
+
+    return stdout
 
 class UknownRuleError(OSCAPaddonError):
     """Exception class for cases when an uknown rule is to be processed."""
