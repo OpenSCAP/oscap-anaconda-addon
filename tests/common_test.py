@@ -21,6 +21,7 @@
 """Module with unit tests for the common.py module"""
 
 import unittest
+import os
 import mock
 from org_fedora_oscap import common
 
@@ -106,8 +107,12 @@ class OSCAPtoolRunningTest(unittest.TestCase):
         self.mock_subprocess.PIPE = mock.Mock()
 
         self.mock_os = mock.Mock()
+        self.mock_os.path = mock.Mock()
+        self.mock_os.path.dirname = os.path.dirname
+        self.mock_os.path.normpath = os.path.normpath
         self.mock_os.path.isdir = mock.Mock()
         self.mock_os.makedirs = mock.Mock()
+        self.mock_os.chroot = mock.Mock()
 
         self.run_oscap_remediate = common.run_oscap_remediate
         self.run_oscap_remediate.func_globals["subprocess"] = self.mock_subprocess
@@ -198,6 +203,31 @@ class OSCAPtoolRunningTest(unittest.TestCase):
 
         # plus the preexec_fn kwarg should have been passed
         self.assertIn("preexec_fn", self.mock_subprocess.Popen.call_args[1])
+
+    def run_oscap_remediate_dont_create_dir_test(self):
+        self.mock_os.path.isdir.return_value = True
+        self.run_oscap_remediate("myprofile", "my_ds.xml")
+
+        self.assertTrue(self.mock_os.path.isdir.called)
+        self.assertFalse(self.mock_os.makedirs.called)
+
+    def run_oscap_remediate_create_dir_test(self):
+        self.mock_os.path.isdir.return_value = False
+        self.run_oscap_remediate("myprofile", "my_ds.xml")
+
+        self.assertTrue(self.mock_os.path.isdir.called)
+        self.assertTrue(self.mock_os.makedirs.called)
+        self.mock_os.makedirs.assert_called_with_args(os.path.dirname(
+                                                      common.RESULTS_PATH))
+
+    def run_oscap_remediate_create_chroot_dir_test(self):
+        self.mock_os.path.isdir.return_value = False
+        self.run_oscap_remediate("myprofile", "my_ds.xml", chroot="/mnt/test")
+
+        self.assertTrue(self.mock_os.path.isdir.called)
+        self.assertTrue(self.mock_os.makedirs.called)
+        chroot_dir = "/mnt/test" + common.RESULTS_PATH
+        self.mock_os.makedirs.assert_called_with_args(chroot_dir)
 
 if __name__ == "__main__":
     unittest.main()
