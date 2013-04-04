@@ -21,6 +21,7 @@
 """Module with unit tests for the common.py module"""
 
 import unittest
+import mock
 from org_fedora_oscap import common
 
 class PartRulesSyntaxSupportTest(unittest.TestCase):
@@ -88,6 +89,115 @@ class RuleDataParsingTest(unittest.TestCase):
         # should be stripped and merged
         self.assertEqual(str(self.rule_data._part_rules),
                          "part /tmp --mountoptions=nodev")
+
+class OSCAPtoolRunningTest(unittest.TestCase):
+    def setUp(self):
+        self.mock_subprocess = mock.Mock()
+        self.mock_subprocess.Popen = mock.Mock()
+        self.mock_popen = mock.Mock()
+        self.mock_communicate = mock.Mock()
+
+        self.mock_communicate.return_value = ("", "")
+
+        self.mock_popen.communicate = self.mock_communicate
+        self.mock_popen.returncode = 0
+
+        self.mock_subprocess.Popen.return_value = self.mock_popen
+        self.mock_subprocess.PIPE = mock.Mock()
+
+        self.mock_os = mock.Mock()
+        self.mock_os.path.isdir = mock.Mock()
+        self.mock_os.makedirs = mock.Mock()
+
+        self.run_oscap_remediate = common.run_oscap_remediate
+        self.run_oscap_remediate.func_globals["subprocess"] = self.mock_subprocess
+        self.run_oscap_remediate.func_globals["os"] = self.mock_os
+
+    def run_oscap_remediate_profile_only_test(self):
+        self.run_oscap_remediate("myprofile", "my_ds.xml")
+
+        # check calls where done right
+        args = ["oscap", "xccdf", "eval", "--remediate",
+                "--results=%s" % common.RESULTS_PATH, "--profile=myprofile",
+                "my_ds.xml"]
+
+        # it's impossible to check the preexec_func as it is an internal
+        # function of the run_oscap_remediate function
+        kwargs = { "stdout": self.mock_subprocess.PIPE,
+                   "stderr": self.mock_subprocess.PIPE,
+                   }
+
+        for arg in args:
+            self.assertIn(arg, self.mock_subprocess.Popen.call_args[0][0])
+            self.mock_subprocess.Popen.call_args[0][0].remove(arg)
+
+        # nothing else should have been passed
+        self.assertEqual(self.mock_subprocess.Popen.call_args[0][0], [])
+
+        for (key, val) in kwargs.iteritems():
+            self.assertEqual(kwargs[key],
+                             self.mock_subprocess.Popen.call_args[1].pop(key))
+
+        # plus the preexec_fn kwarg should have been passed
+        self.assertIn("preexec_fn", self.mock_subprocess.Popen.call_args[1])
+
+    def run_oscap_remediate_with_ds_test(self):
+        self.run_oscap_remediate("myprofile", "my_ds.xml", "my_ds_id")
+
+        # check calls where done right
+        args = ["oscap", "xccdf", "eval", "--remediate",
+                "--results=%s" % common.RESULTS_PATH, "--profile=myprofile",
+                "--datastream-id=my_ds_id", "my_ds.xml"]
+
+        # it's impossible to check the preexec_func as it is an internal
+        # function of the run_oscap_remediate function
+        kwargs = { "stdout": self.mock_subprocess.PIPE,
+                   "stderr": self.mock_subprocess.PIPE,
+                   }
+
+        for arg in args:
+            self.assertIn(arg, self.mock_subprocess.Popen.call_args[0][0])
+            self.mock_subprocess.Popen.call_args[0][0].remove(arg)
+
+        # nothing else should have been passed
+        self.assertEqual(self.mock_subprocess.Popen.call_args[0][0], [])
+
+        for (key, val) in kwargs.iteritems():
+            self.assertEqual(kwargs[key],
+                             self.mock_subprocess.Popen.call_args[1].pop(key))
+
+        # plus the preexec_fn kwarg should have been passed
+        self.assertIn("preexec_fn", self.mock_subprocess.Popen.call_args[1])
+
+    def run_oscap_remediate_with_ds_xccdf_test(self):
+        self.run_oscap_remediate("myprofile", "my_ds.xml", "my_ds_id",
+                                 "my_xccdf_id")
+
+        # check calls where done right
+        args = ["oscap", "xccdf", "eval", "--remediate",
+                "--results=%s" % common.RESULTS_PATH, "--profile=myprofile",
+                "--datastream-id=my_ds_id", "--xccdf-id=my_xccdf_id",
+                "my_ds.xml"]
+
+        # it's impossible to check the preexec_func as it is an internal
+        # function of the run_oscap_remediate function
+        kwargs = { "stdout": self.mock_subprocess.PIPE,
+                   "stderr": self.mock_subprocess.PIPE,
+                   }
+
+        for arg in args:
+            self.assertIn(arg, self.mock_subprocess.Popen.call_args[0][0])
+            self.mock_subprocess.Popen.call_args[0][0].remove(arg)
+
+        # nothing else should have been passed
+        self.assertEqual(self.mock_subprocess.Popen.call_args[0][0], [])
+
+        for (key, val) in kwargs.iteritems():
+            self.assertEqual(kwargs[key],
+                             self.mock_subprocess.Popen.call_args[1].pop(key))
+
+        # plus the preexec_fn kwarg should have been passed
+        self.assertIn("preexec_fn", self.mock_subprocess.Popen.call_args[1])
 
 if __name__ == "__main__":
     unittest.main()
