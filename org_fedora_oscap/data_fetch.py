@@ -8,6 +8,9 @@ import socket
 import ssl
 import re
 
+# everything else should be private
+__all__ = ["fetch_data"]
+
 # TODO: needs improvements
 URL_RE_STR = r"(https?)://([^/]+)(/.*)"
 URL_RE = re.compile(URL_RE_STR)
@@ -37,6 +40,32 @@ class FetchError(DataFetchError):
 
     pass
 
+def fetch_data(url, out_file, ca_certs=None):
+    """
+    Fetch data from a given URL. If the URL starts with https://, ca_certs can
+    be a path to PEM file with CA certificate chain to validate server
+    certificate.
+
+    :param url: URL of the data
+    :type url: str
+    :param out_file: path to the output file
+    :type out_file: str
+    :param ca_certs: path to a PEM file with CA certificate chain
+    :type ca_certs: str
+    :raise WrongRequestError: if a wrong combination of arguments is passed
+                              (ca_certs file path given and url starting with
+                              http://) or arguments don't have required format
+    :raise CertificateValidationError: if server certificate validation fails
+    :raise FetchError: if data fetching fails (usually due to I/O errors)
+
+    """
+
+    if url.startswith("http://") or url.startswith("https://"):
+        _fetch_http_data(url, out_file, ca_certs)
+    else:
+        msg = "Cannot fetch data from '%s': unknown URL format" % url
+        raise UnknownURLformatError(msg)
+
 def _throw_away_headers(data):
     """
     Function that throws away HTTP headers from given data.
@@ -63,7 +92,7 @@ def _throw_away_headers(data):
         # just headers
         return (True, "")
 
-def fetch_data(url, out_file, ca_certs=None):
+def _fetch_http_data(url, out_file, ca_certs=None):
     """
     Function that fetches data and writes it out to the given file path. If a
     path to the file with CA certificates is given and the url starts with
