@@ -42,14 +42,14 @@ class OSCAPdata(AddonData):
     """
     Class parsing and storing data for the OSCAP addon.
 
-    @see: pyanaconda.addons.AddonData
+    :see: pyanaconda.addons.AddonData
 
     """
 
     def __init__(self, name):
         """
-        @param name: name of the addon
-        @type name: str
+        :param name: name of the addon
+        :type name: str
 
         """
 
@@ -137,8 +137,8 @@ class OSCAPdata(AddonData):
         The handle_line method that is called with every line from this addon's
         %addon section of the kickstart file.
 
-        @param line: a single line from the %addon section
-        @type line: str
+        :param line: a single line from the %addon section
+        :type line: str
 
         """
 
@@ -193,14 +193,14 @@ class OSCAPdata(AddonData):
         The setup method that should make changes to the runtime environment
         according to the data stored in this object.
 
-        @param storage: object storing storage-related information
+        :param storage: object storing storage-related information
                         (disks, partitioning, bootloader, etc.)
-        @type storage: blivet.Blivet instance
-        @param ksdata: data parsed from the kickstart file and set in the
+        :type storage: blivet.Blivet instance
+        :param ksdata: data parsed from the kickstart file and set in the
                        installation process
-        @type ksdata: pykickstart.base.BaseHandler instance
-        @param instclass: distribution-specific information
-        @type instclass: pyanaconda.installclass.BaseInstallClass
+        :type ksdata: pykickstart.base.BaseHandler instance
+        :param instclass: distribution-specific information
+        :type instclass: pyanaconda.installclass.BaseInstallClass
 
         """
 
@@ -215,9 +215,9 @@ class OSCAPdata(AddonData):
         The execute method that should make changes to the installed system. It
         is called only once in the post-install setup phase.
 
-        @see: setup
-        @param users: information about created users
-        @type users: pyanaconda.users.Users instance
+        :see: setup
+        :param users: information about created users
+        :type users: pyanaconda.users.Users instance
 
         """
 

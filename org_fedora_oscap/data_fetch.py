@@ -41,12 +41,12 @@ def _throw_away_headers(data):
     """
     Function that throws away HTTP headers from given data.
 
-    @param data: data (usually HTTP response)
-    @param data: str
-    @return: a tuple containing two items -- a bool value indicating if the end
+    :param data: data (usually HTTP response)
+    :param data: str
+    :return: a tuple containing two items -- a bool value indicating if the end
              of the headers has been found and a string containing the rest of
              the data after removing headers
-    @rtype: tuple(bool, str)
+    :rtype: tuple(bool, str)
 
     """
 
@@ -69,18 +69,18 @@ def fetch_data(url, out_file, ca_certs=None):
     path to the file with CA certificates is given and the url starts with
     'https', the server certificate is validated.
 
-    @param url: url of the data that has to start with 'http://' or "https://"
-    @type url: str
-    @param out_file: path to the output file
-    @type out_file: str
-    @param ca_certs: path to the file with CA certificates for server
+    :param url: url of the data that has to start with 'http://' or "https://"
+    :type url: str
+    :param out_file: path to the output file
+    :type out_file: str
+    :param ca_certs: path to the file with CA certificates for server
                      certificate validation
-    @type ca_certs: str
-    @raise WrongRequestError: if a wrong combination of arguments is passed
+    :type ca_certs: str
+    :raise WrongRequestError: if a wrong combination of arguments is passed
                               (ca_certs file path given and url starting with
                               http://) or arguments don't have required format
-    @raise CertificateValidationError: if server certificate validation fails
-    @raise FetchError: if data fetching fails (usually due to I/O errors)
+    :raise CertificateValidationError: if server certificate validation fails
+    :raise FetchError: if data fetching fails (usually due to I/O errors)
 
     """
 

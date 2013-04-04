@@ -50,9 +50,9 @@ class OSCAPSpoke(NormalSpoke):
     category and thus on the Summary hub. It is a very simple example of
     a unit for the Anaconda's graphical user interface.
 
-    @see: pyanaconda.ui.common.UIObject
-    @see: pyanaconda.ui.common.Spoke
-    @see: pyanaconda.ui.gui.GUIObject
+    :see: pyanaconda.ui.common.UIObject
+    :see: pyanaconda.ui.common.Spoke
+    :see: pyanaconda.ui.gui.GUIObject
 
     """
 
@@ -81,17 +81,17 @@ class OSCAPSpoke(NormalSpoke):
     ### methods defined by API ###
     def __init__(self, data, storage, payload, instclass):
         """
-        @see: pyanaconda.ui.common.Spoke.__init__
-        @param data: data object passed to every spoke to load/store data
+        :see: pyanaconda.ui.common.Spoke.__init__
+        :param data: data object passed to every spoke to load/store data
                      from/to it
-        @type data: pykickstart.base.BaseHandler
-        @param storage: object storing storage-related information
+        :type data: pykickstart.base.BaseHandler
+        :param storage: object storing storage-related information
                         (disks, partitioning, bootloader, etc.)
-        @type storage: blivet.Blivet
-        @param payload: object storing packaging-related information
-        @type payload: pyanaconda.packaging.Payload
-        @param instclass: distribution-specific information
-        @type instclass: pyanaconda.installclass.BaseInstallClass
+        :type storage: blivet.Blivet
+        :param payload: object storing packaging-related information
+        :type payload: pyanaconda.packaging.Payload
+        :param instclass: distribution-specific information
+        :type instclass: pyanaconda.installclass.BaseInstallClass
 
         """
 
@@ -103,7 +103,7 @@ class OSCAPSpoke(NormalSpoke):
         The difference between __init__ and this method is that this may take
         a long time and thus could be called in a separated thread.
 
-        @see: pyanaconda.ui.common.UIObject.initialize
+        :see: pyanaconda.ui.common.UIObject.initialize
 
         """
 
@@ -118,7 +118,7 @@ class OSCAPSpoke(NormalSpoke):
         It should update the UI elements according to the contents of
         self.data.
 
-        @see: pyanaconda.ui.common.UIObject.refresh
+        :see: pyanaconda.ui.common.UIObject.refresh
 
         """
 
@@ -151,7 +151,7 @@ class OSCAPSpoke(NormalSpoke):
         spoke are set, or not. The spoke will be marked on the hub as completed
         or uncompleted acording to the returned value.
 
-        @rtype: bool
+        :rtype: bool
 
         """
 
@@ -165,7 +165,7 @@ class OSCAPSpoke(NormalSpoke):
         also the values themselves. The returned value will appear on the hub
         below the spoke's title.
 
-        @rtype: str
+        :rtype: str
 
         """
 

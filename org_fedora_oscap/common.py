@@ -62,10 +62,10 @@ def get_fix_rules_pre(profile, fpath, ds_id="", xccdf_id=""):
     Get fix rules for the pre-installation environment for a given profile in a
     given datastream and checklist in a given file.
 
-    @see: run_oscap_remediate
-    @see: _run_oscap_gen_fix
-    @return: fix rules for a given profile
-    @rtype: str
+    :see: run_oscap_remediate
+    :see: _run_oscap_gen_fix
+    :return: fix rules for a given profile
+    :rtype: str
 
     """
 
@@ -78,11 +78,11 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id=""):
     'system' attribute equal to a given template for a given datastream,
     checklist and profile.
 
-    @see: run_oscap_remediate
-    @param template: the value of the 'system' attribute of the fix elements
-    @type template: str
-    @return: oscap tool's stdout
-    @rtype: str
+    :see: run_oscap_remediate
+    :param template: the value of the 'system' attribute of the fix elements
+    :type template: str
+    :return: oscap tool's stdout
+    :rtype: str
 
     """
 
@@ -121,19 +121,19 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
     checklist that is a part of a given datastream. If requested, run in
     chroot.
 
-    @param profile: id of the profile that will drive the remediation
-    @type profile: str
-    @param fpath: path to a file with SCAP content
-    @type fpath: str
-    @param ds_id: ID of the datastream that contains the checklist defining
-    the profile
-    @type ds_id: str
-    @param xccdf_id: ID of the checklist that defines the profile
-    @type xccdf_id: str
-    @param chroot: path to the root the oscap tool should be run in
-    @type chroot: str
-    @return: oscap tool's stdout (summary of the rules, checks and fixes)
-    @rtype: str
+    :param profile: id of the profile that will drive the remediation
+    :type profile: str
+    :param fpath: path to a file with SCAP content
+    :type fpath: str
+    :param ds_id: ID of the datastream that contains the checklist defining
+                  the profile
+    :type ds_id: str
+    :param xccdf_id: ID of the checklist that defines the profile
+    :type xccdf_id: str
+    :param chroot: path to the root the oscap tool should be run in
+    :type chroot: str
+    :return: oscap tool's stdout (summary of the rules, checks and fixes)
+    :rtype: str
 
     """
 
@@ -216,8 +216,8 @@ class RuleData(object):
         """
         Method that handles a single rule line (e.g. "part /tmp").
 
-        @param rule: a single rule line
-        @type rule: str
+        :param rule: a single rule line
+        :type rule: str
 
         """
 
@@ -305,8 +305,8 @@ class PartRule(object):
         """
         Constructor initializing attributes.
 
-        @param mount_point: the mount point the object holds data for
-        @type mount_point: str
+        :param mount_point: the mount point the object holds data for
+        :type mount_point: str
 
         """
 
@@ -326,8 +326,8 @@ class PartRule(object):
         """
         Add  new mount options (do not add duplicates).
 
-        @param mount_options: list of mount options to be added
-        @type mount_options: list of strings
+        :param mount_options: list of mount options to be added
+        :type mount_options: list of strings
 
         """
 
