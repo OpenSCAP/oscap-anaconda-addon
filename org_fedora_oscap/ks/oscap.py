@@ -63,7 +63,7 @@ class OSCAPdata(AddonData):
         self.cpe_path = ""
 
         # certificate to verify HTTPS connection or signed data
-        self.certificate = ""
+        self.certificates = ""
 
     def __str__(self):
         """
@@ -90,8 +90,8 @@ class OSCAPdata(AddonData):
 
         ret += "\n%s" % key_value_pair("profile", self.profile_id)
 
-        if self.certificate:
-            ret += "\n%s" % key_value_pair("certificate", self.certificate)
+        if self.certificates:
+            ret += "\n%s" % key_value_pair("certificates", self.certificates)
 
         ret += "\n%end"
         return ret
@@ -132,6 +132,9 @@ class OSCAPdata(AddonData):
         # need to be checked?
         self.cpe_path = value
 
+    def _parse_certificates(self, value):
+        self.certificates = value
+
     def handle_line(self, line):
         """
         The handle_line method that is called with every line from this addon's
@@ -149,6 +152,7 @@ class OSCAPdata(AddonData):
                     "xccdf-id" : self._parse_xccdf_id,
                     "xccdf-path": self._parse_xccdf_path,
                     "cpe-path": self._parse_cpe_path,
+                    "certificates": self._parse_certificates,
                     }
 
         line = line.strip()
