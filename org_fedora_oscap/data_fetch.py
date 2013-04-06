@@ -7,6 +7,8 @@ certificate validation.
 import socket
 import ssl
 import re
+import os
+import os.path
 
 # everything else should be private
 __all__ = ["fetch_data"]
@@ -29,6 +31,11 @@ class CertificateValidationError(DataFetchError):
 
 class WrongRequestError(DataFetchError):
     """Class for the wrong combination of parameters errors."""
+
+    pass
+
+class UnknownURLformatError(DataFetchError):
+    """Class for invalid URL cases."""
 
     pass
 
@@ -59,6 +66,11 @@ def fetch_data(url, out_file, ca_certs=None):
     :raise FetchError: if data fetching fails (usually due to I/O errors)
 
     """
+
+    # create the directory for the out_file if it doesn't exist
+    out_dir = os.path.dirname(out_file)
+    if not os.path.isdir(out_dir):
+        os.makedirs(out_dir)
 
     if url.startswith("http://") or url.startswith("https://"):
         _fetch_http_data(url, out_file, ca_certs)
