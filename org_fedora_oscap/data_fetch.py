@@ -13,6 +13,9 @@ import os.path
 # everything else should be private
 __all__ = ["fetch_data"]
 
+# prefixes of the URLs that need network connection
+NET_URL_PREFIXES = ("http", "https")
+
 # TODO: needs improvements
 URL_RE_STR = r"(https?)://([^/]+)(/.*)"
 URL_RE = re.compile(URL_RE_STR)

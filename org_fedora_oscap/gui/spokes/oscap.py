@@ -23,9 +23,16 @@
 _ = lambda x: x
 N_ = lambda x: x
 
+import os.path
+
 # the path to addons is in sys.path so we can import things from org_fedora_oscap
 from org_fedora_oscap.gui.categories.security import SecurityCategory
+from org_fedora_oscap import common
+from org_fedora_oscap import data_fetch
+
 from pyanaconda.ui.gui.spokes import NormalSpoke
+from pyanaconda.threads import threadMgr, AnacondaThread
+from pyanaconda.ui.communication import hubQ
 
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
@@ -96,6 +103,8 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         NormalSpoke.__init__(self, data, storage, payload, instclass)
+        self._data_subtree = self.data.addons.org_fedora_oscap
+        self._ready = False
 
     def initialize(self):
         """
@@ -111,6 +120,45 @@ class OSCAPSpoke(NormalSpoke):
         column = self.builder.get_object("messageTypeColumn")
         renderer = self.builder.get_object("messageTypeRenderer")
         column.set_cell_data_func(renderer, render_message_type)
+
+        content_url = self._data_subtree.content_url
+        if not content_url:
+            # nothing more to be done now
+            return
+
+        # XXX: needs to depend on the content_type
+        installation_content = os.path.join(common.INSTALLATION_CONTENT_DIR,
+                                            common.INSTALLATION_CONTENT_DS_FILE)
+
+        if any(content_url.startswith(net_prefix)
+               for net_prefix in data_fetch.NET_URL_PREFIXES):
+            # need to fetch data over network
+            thread_name = common.wait_and_fetch_net_data(
+                                           self._data_subtree.content_url,
+                                           installation_content,
+                                           self._data_subtree.certificates)
+
+            hubQ.send_not_ready(self.__class__.__name__)
+            threadMgr.add(AnacondaThread(name="OSCAPguiWaitForDataFetchThread",
+                                         target=self._wait_for_ready,
+                                         args=(thread_name)))
+        else:
+            self._ready = True
+            hubQ.send_ready(self.__class__.__name__, True)
+
+    def _wait_for_ready(self, thread_name):
+        """
+        Waits for data fetching to be finished and marks the spoke as ready in
+        the end.
+
+        """
+
+        fetch_thread = threadMgr.get(thread_name)
+        if fetch_thread:
+            fetch_thread.join()
+
+        self._ready = True
+        hubQ.send_ready(self.__class__.__name__, True)
 
     def refresh(self):
         """
@@ -145,6 +193,18 @@ class OSCAPSpoke(NormalSpoke):
         pass
 
     @property
+    def ready(self):
+        """
+        The ready property that tells whether the spoke is ready (can be
+        visited) or not.
+
+        :rtype: bool
+
+        """
+
+        return self._ready
+
+    @property
     def completed(self):
         """
         The completed property that tells whether all mandatory items on the
@@ -155,7 +215,7 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        return False
+        return True
 
     @property
     def status(self):

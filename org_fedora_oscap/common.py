@@ -38,6 +38,8 @@ from org_fedora_oscap.data_fetch import fetch_data
 __all__ = ["run_oscap_remediate", "get_fix_rules_pre"]
 
 INSTALLATION_CONTENT_DIR = "/tmp/openscap_data"
+INSTALLATION_CONTENT_DS_FILE = "installation_ds.xml"
+
 RESULTS_PATH = "/root/openscap_data/eval_remediate_results.xml"
 
 PRE_INSTALL_FIX_SYSTEM_ATTR = "urn:redhat:anaconda:pre"
