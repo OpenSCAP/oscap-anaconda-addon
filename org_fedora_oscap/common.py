@@ -28,15 +28,29 @@ import os
 import os.path
 import subprocess
 
+from pyanaconda import constants
+from pyanaconda import nm
+from pyanaconda.threads import threadMgr, AnacondaThread
+
+from org_fedora_oscap.data_fetch import fetch_data
+
 # everything else should be private
 __all__ = ["run_oscap_remediate", "get_fix_rules_pre"]
 
+INSTALLATION_CONTENT_DIR = "/tmp/openscap_data"
 RESULTS_PATH = "/root/openscap_data/eval_remediate_results.xml"
 
 PRE_INSTALL_FIX_SYSTEM_ATTR = "urn:redhat:anaconda:pre"
 
+THREAD_FETCH_DATA = "AnaOSCAPdataFetchThread"
+
 class OSCAPaddonError(Exception):
     """Exception class for OSCAP addon related errors."""
+
+    pass
+
+class OSCAPaddonNetworkError(OSCAPaddonError):
+    """Exception class for OSCAP addon related network errors."""
 
     pass
 
@@ -165,3 +179,32 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
         raise OSCAPaddonError(msg)
 
     return stdout
+
+def wait_and_fetch_net_data(url, out_file, ca_certs=None):
+    """
+    Function that waits for network connection and starts a thread that fetches
+    data over network.
+
+    :see: org_fedora_oscap.data_fetch.fetch_data
+    :return: the name of the thread running fetch_data
+    :rtype: str
+
+    """
+
+    # get thread that tries to establish a network connection
+    nm_conn_thread = threadMgr.get(constants.THREAD_WAIT_FOR_CONNECTING_NM)
+    if nm_conn_thread:
+        # NM still connecting, wait for it to finish
+        nm_conn_thread.join()
+
+    if not nm.nm_is_connected():
+        raise OSCAPaddonNetworkError("Network connection needed to fetch data.")
+
+    fetch_data_thread = AnacondaThread(name=THREAD_FETCH_DATA,
+                                       target=fetch_data,
+                                       args=(url, out_file, ca_certs))
+
+    # register and run the thread
+    threadMgr.add(fetch_data_thread)
+
+    return THREAD_FETCH_DATA
