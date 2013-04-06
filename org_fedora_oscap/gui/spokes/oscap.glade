@@ -174,47 +174,11 @@
       <!-- column-name message -->
       <column type="gchararray"/>
     </columns>
-    <data>
-      <row>
-        <col id="0">0</col>
-        <col id="1" translatable="yes">/tmp is not on a separate partition</col>
-      </row>
-      <row>
-        <col id="0">0</col>
-        <col id="1" translatable="yes">/var/log is not on a separate partition</col>
-      </row>
-      <row>
-        <col id="0">1</col>
-        <col id="1" translatable="yes">root password may be not strong enough</col>
-      </row>
-    </data>
   </object>
   <object class="GtkListStore" id="profilesStore">
     <columns>
       <!-- column-name profileName -->
       <column type="gchararray"/>
     </columns>
-    <data>
-      <row>
-        <col id="0" translatable="yes">&lt;span weight='bold'&gt;Common Profile for General-Purpose Systems&lt;/span&gt;
-This profile contains items common to general-purpose desktop and server installations.</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">&lt;span weight='bold'&gt;Desktop Baseline&lt;/span&gt;
-This profile is for a desktop installation of RHEL 6.</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">&lt;span weight='bold'&gt;Server Baseline&lt;/span&gt;
-This profile is for RHEL 6 acting as a server.</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">&lt;span weight='bold'&gt;Pre-release Draft STIG for RHEL 6 Server&lt;/span&gt;
-This profile is being developed under the DoD consensus model to become a STIG in coordination with DISA FSO.</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">&lt;span weight='bold'&gt;Default&lt;/span&gt;
-The default profile.</col>
-      </row>
-    </data>
   </object>
 </interface>
