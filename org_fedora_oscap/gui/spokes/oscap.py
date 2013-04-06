@@ -123,8 +123,12 @@ class OSCAPSpoke(NormalSpoke):
 
         content_url = self._data_subtree.content_url
         if not content_url:
-            # nothing more to be done now
+            # nothing more to be done now, the spoke is ready
+            self._ready = True
+            hubQ.send_ready(self.__class__.__name__, True)
+
             return
+        # else fetch data
 
         # XXX: needs to depend on the content_type
         installation_content = os.path.join(common.INSTALLATION_CONTENT_DIR,
@@ -139,14 +143,13 @@ class OSCAPSpoke(NormalSpoke):
                                            self._data_subtree.certificates)
 
             hubQ.send_not_ready(self.__class__.__name__)
+            hubQ.send_message(self.__class__.__name__,
+                              _("Fetching content data"))
             threadMgr.add(AnacondaThread(name="OSCAPguiWaitForDataFetchThread",
-                                         target=self._wait_for_ready,
-                                         args=(thread_name)))
-        else:
-            self._ready = True
-            hubQ.send_ready(self.__class__.__name__, True)
+                                         target=self._wait_for_data_fetch,
+                                         args=(thread_name,)))
 
-    def _wait_for_ready(self, thread_name):
+    def _wait_for_data_fetch(self, thread_name):
         """
         Waits for data fetching to be finished and marks the spoke as ready in
         the end.
@@ -159,6 +162,7 @@ class OSCAPSpoke(NormalSpoke):
 
         self._ready = True
         hubQ.send_ready(self.__class__.__name__, True)
+        hubQ.send_message(self.__class__.__name__, self.status)
 
     def refresh(self):
         """
