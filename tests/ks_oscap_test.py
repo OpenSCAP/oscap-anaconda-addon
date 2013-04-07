@@ -8,12 +8,12 @@ class ParsingTest(unittest.TestCase):
     def setUp(self):
         self.oscap_data = OSCAPdata("org_fedora_oscap")
         for line in ["content-type = datastream\n",
-                     "content-url = https://example.com/hardening.xml\n",
+                     "content-url = \"https://example.com/hardening.xml\"\n",
                      "datastream-id = id_datastream_1\n",
                      "xccdf-id = id_xccdf_new\n",
                      "xccdf-path = /usr/share/oscap/xccdf.xml",
                      "cpe-path = /usr/share/oscap/cpe.xml",
-                     "profile = Web Server\n",
+                     "profile = \"Web Server\"\n",
                      ]:
             self.oscap_data.handle_line(line)
 

@@ -157,9 +157,12 @@ class OSCAPdata(AddonData):
 
         line = line.strip()
         (pre, sep, post) = line.partition("=")
+        pre = pre.strip()
+        post = post.strip()
+        post = post.strip('"')
 
         try:
-            actions[pre.strip()](post.strip())
+            actions[pre](post)
         except KeyError:
             msg = "Unknown item '%s' for %s addon" % (line, self.name)
             raise KickstartParseError(msg)
