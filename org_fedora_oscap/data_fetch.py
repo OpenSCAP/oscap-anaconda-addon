@@ -158,25 +158,25 @@ def _fetch_http_data(url, out_file, ca_certs=None):
                         % sslerr
         raise CertificateValidationError(msg)
 
-    sock.write("GET %s HTTP/1.0\r\n"
+    sock.sendall("GET %s HTTP/1.0\r\n"
                    "Host: %s\r\n\r\n" % (path, server))
 
     try:
         # read begining of the data
-        data = sock.read(READ_BYTES)
+        data = sock.recv(READ_BYTES)
 
         # throw away headers
         (done, rest) = _throw_away_headers(data)
         while not done:
-            data = sock.read(READ_BYTES)
+            data = sock.recv(READ_BYTES)
             (done, rest) = _throw_away_headers(data)
 
         # either we have something more or we need to fetch more data
-        data = rest or sock.read(READ_BYTES) # I like you, Perl! I mean, Python!
+        data = rest or sock.recv(READ_BYTES) # I like you, Perl! I mean, Python!
         with open(out_file, "w") as fobj:
             while data:
                 fobj.write(data)
-                data = sock.read(READ_BYTES)
+                data = sock.recv(READ_BYTES)
     except IOError as ioerr:
         msg = "Failed to fetch data: %s" % ioerr
         raise FetchError(msg)
