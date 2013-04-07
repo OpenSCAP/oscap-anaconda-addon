@@ -54,6 +54,8 @@ class OSCAPdata(AddonData):
         """
 
         AddonData.__init__(self, name)
+
+        # values from the kickstart section
         self.content_type = ""
         self.content_url = ""
         self.datastream_id = ""
@@ -61,6 +63,9 @@ class OSCAPdata(AddonData):
         self.profile_id = ""
         self.xccdf_path = ""
         self.cpe_path = ""
+
+        # internal values
+        self.content_name = ""
 
         # certificate to verify HTTPS connection or signed data
         self.certificates = ""
@@ -111,6 +116,13 @@ class OSCAPdata(AddonData):
         else:
             msg = "Unsupported url '%s' in the %s addon" % (value, self.name)
             raise KickstartValueError(msg)
+
+        parts = self.content_url.rsplit("/", 1)
+        if len(parts) != 2:
+            msg = "Unsupported url '%s' in the %s addon" % (value, self.name)
+            raise KickstartValueError(msg)
+        else:
+            self.content_name = parts[1]
 
     def _parse_datastream_id(self, value):
         # need to be checked?

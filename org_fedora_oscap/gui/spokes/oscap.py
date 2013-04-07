@@ -130,9 +130,8 @@ class OSCAPSpoke(NormalSpoke):
             return
         # else fetch data
 
-        # XXX: needs to depend on the content_type
         installation_content = os.path.join(common.INSTALLATION_CONTENT_DIR,
-                                            common.INSTALLATION_CONTENT_DS_FILE)
+                                            self._data_subtree.content_name)
 
         if any(content_url.startswith(net_prefix)
                for net_prefix in data_fetch.NET_URL_PREFIXES):

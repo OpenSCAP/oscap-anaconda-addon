@@ -26,6 +26,7 @@ class ParsingTest(unittest.TestCase):
         self.assertEqual(self.oscap_data.xccdf_path, "/usr/share/oscap/xccdf.xml")
         self.assertEqual(self.oscap_data.cpe_path, "/usr/share/oscap/cpe.xml")
         self.assertEqual(self.oscap_data.profile_id, "Web Server")
+        self.assertEqual(self.oscap_data.content_name, "hardening.xml")
 
     def str_test(self):
         str_ret = str(self.oscap_data)
