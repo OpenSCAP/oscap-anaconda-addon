@@ -32,6 +32,7 @@ from pyanaconda import constants
 from pyanaconda import nm
 from pyanaconda.threads import threadMgr, AnacondaThread
 
+from org_fedora_oscap import utils
 from org_fedora_oscap.data_fetch import fetch_data
 
 # everything else should be private
@@ -145,8 +146,7 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
     results_dir = os.path.dirname(RESULTS_PATH)
     if chroot:
         results_dir = os.path.normpath(chroot + "/" + results_dir)
-    if not os.path.isdir(results_dir):
-        os.makedirs(results_dir)
+    utils.ensure_dir_exists(results_dir)
 
     args = ["oscap", "xccdf", "eval"]
     args.append("--remediate")

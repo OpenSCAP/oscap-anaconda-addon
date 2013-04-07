@@ -10,6 +10,8 @@ import re
 import os
 import os.path
 
+from org_fedora_oscap import utils
+
 # everything else should be private
 __all__ = ["fetch_data"]
 
@@ -72,8 +74,7 @@ def fetch_data(url, out_file, ca_certs=None):
 
     # create the directory for the out_file if it doesn't exist
     out_dir = os.path.dirname(out_file)
-    if not os.path.isdir(out_dir):
-        os.makedirs(out_dir)
+    utils.ensure_dir_exists(out_dir)
 
     if url.startswith("http://") or url.startswith("https://"):
         _fetch_http_data(url, out_file, ca_certs)
