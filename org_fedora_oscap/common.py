@@ -141,6 +141,7 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
         """Helper function doing the chroot if requested."""
         if chroot and chroot != "/":
             os.chroot(chroot)
+            os.chdir("/")
 
     # make sure the directory for the results exists
     results_dir = os.path.dirname(RESULTS_PATH)
