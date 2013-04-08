@@ -20,8 +20,14 @@
 
 """Module with the OSCAPdata class."""
 
+import shutil
+import os.path
+
 from pyanaconda.addons import AddonData
+from pyanaconda.constants import ROOT_PATH
 from pykickstart.errors import KickstartParseError, KickstartValueError
+from org_fedora_oscap import utils
+from org_fedora_oscap import common
 
 # export OSCAPdata class to prevent Anaconda's collect method from taking
 # AddonData class instead of the OSCAPdata class
@@ -240,5 +246,18 @@ class OSCAPdata(AddonData):
 
         """
 
-        #TODO: call oscap remediate in chroot
-        pass
+        installation_content = os.path.join(common.INSTALLATION_CONTENT_DIR,
+                                            self.content_name)
+
+        # os.path.join("/abc", "/bcd") --> "/bcd"
+        target_content_dir = os.path.normpath(ROOT_PATH + "/" +
+                                              common.TARGET_CONTENT_DIR)
+        utils.ensure_dir_exists(target_content_dir)
+
+        # XXX: use copytree in case of content with multiple files
+        shutil.copy(installation_content, target_content_dir)
+
+        chroot_content = os.path.join(common.TARGET_CONTENT_DIR,
+                                      self.content_name)
+        common.run_oscap_remediate(self.profile_id, chroot_content,
+                                   chroot=ROOT_PATH)
