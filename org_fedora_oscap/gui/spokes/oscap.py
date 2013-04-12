@@ -19,7 +19,6 @@
 #
 
 # TODO: enable translations
-# will never be translated
 _ = lambda x: x
 N_ = lambda x: x
 
@@ -152,6 +151,9 @@ class OSCAPSpoke(NormalSpoke):
         """
         Waits for data fetching to be finished and marks the spoke as ready in
         the end.
+
+        :param thread_name: name of the thread to wait for
+        :type thread_name: str
 
         """
 
