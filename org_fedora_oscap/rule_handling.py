@@ -45,6 +45,12 @@ PASSWD_RULE_PARSER = optparse.OptionParser()
 PASSWD_RULE_PARSER.add_option("--minlen", dest="minlen", action="store",
                               default=0, type="int")
 
+PACKAGE_RULE_PARSER = optparse.OptionParser()
+PACKAGE_RULE_PARSER.add_option("--add", dest="add_pkgs", action="append",
+                               type="string")
+PACKAGE_RULE_PARSER.add_option("--remove", dest="remove_pkgs", action="append",
+                               type="string")
+
 class UknownRuleError(OSCAPaddonError):
     """Exception class for cases when an uknown rule is to be processed."""
 
@@ -58,6 +64,7 @@ class RuleData(object):
 
         self._part_rules = PartRules()
         self._passwd_rules = PasswdRules()
+        self._package_rules = PackageRules()
 
     def __str__(self):
         """Standard method useful for debugging and testing."""
@@ -72,6 +79,10 @@ class RuleData(object):
         if passwd_str:
             ret += "\n" + passwd_str
 
+        packages_str = str(self._package_rules)
+        if packages_str:
+            ret += "\n" + packages_str
+
         return ret
 
     def new_rule(self, rule):
@@ -85,6 +96,7 @@ class RuleData(object):
 
         actions = { "part" : self._new_part_rule,
                     "passwd" : self._new_passwd_rule,
+                    "package": self._new_package_rule,
                     }
 
         rule = rule.strip()
@@ -117,6 +129,13 @@ class RuleData(object):
         (opts, args) = PASSWD_RULE_PARSER.parse_args(args)
 
         self._passwd_rules.update_minlen(opts.minlen)
+
+    def _new_package_rule(self, rule):
+        args = rule.split()
+        (opts, args) = PACKAGE_RULE_PARSER.parse_args(args)
+
+        self._package_rules.add_packages(opts.add_pkgs)
+        self._package_rules.remove_packages(opts.remove_pkgs)
 
 class PartRules(object):
     """Simple class holding data from the rules affecting partitioning."""
@@ -217,3 +236,51 @@ class PasswdRules(object):
 
         if minlen > self._minlen:
             self._minlen = minlen
+
+class PackageRules(object):
+    """Simple class holding data from the rules affecting installed packages."""
+
+    def __init__(self):
+        """Constructor setting the initial value of attributes."""
+
+        self._add_pkgs = set()
+        self._remove_pkgs = set()
+
+    def add_packages(self, packages):
+        """
+        New packages that should be added.
+
+        :param packages: packages to be added
+        :type packages: iterable
+
+        """
+
+        if packages:
+            self._add_pkgs.update(packages)
+
+    def remove_packages(self, packages):
+        """
+        New packages that should be removed.
+
+        :param packages: packages to be removed
+        :type packages: iterable
+
+        """
+
+        if packages:
+            self._remove_pkgs.update(packages)
+
+    def __str__(self):
+        """Standard method useful for debugging and testing."""
+
+        ret = "packages"
+        adds = " ".join("--add=%s" % package for package in self._add_pkgs)
+        if adds:
+            ret += " " + adds
+
+        rems = " ".join("--remove=%s" % package
+                        for package in self._remove_pkgs)
+        if rems:
+            ret += " " + rems
+
+        return ret
