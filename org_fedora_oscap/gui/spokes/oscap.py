@@ -129,16 +129,13 @@ class OSCAPSpoke(NormalSpoke):
             return
         # else fetch data
 
-        installation_content = os.path.join(common.INSTALLATION_CONTENT_DIR,
-                                            self._data_subtree.content_name)
-
         if any(content_url.startswith(net_prefix)
                for net_prefix in data_fetch.NET_URL_PREFIXES):
             # need to fetch data over network
             thread_name = common.wait_and_fetch_net_data(
-                                           self._data_subtree.content_url,
-                                           installation_content,
-                                           self._data_subtree.certificates)
+                                           self._addon_data.content_url,
+                                           self._addon_data.preinst_content_path,
+                                           self._addon_data.certificates)
 
             hubQ.send_not_ready(self.__class__.__name__)
             hubQ.send_message(self.__class__.__name__,

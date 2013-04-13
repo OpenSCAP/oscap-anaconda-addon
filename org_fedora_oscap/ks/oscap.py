@@ -213,6 +213,11 @@ class OSCAPdata(AddonData):
                   "with '.rpm'"
             raise KickstartValueError(msg)
 
+    @property
+    def preinst_content_path(self):
+        return os.path.join(common.INSTALLATION_CONTENT_DIR,
+                            self.content_name)
+
     def setup(self, storage, ksdata, instclass):
         """
         The setup method that should make changes to the runtime environment
@@ -246,16 +251,13 @@ class OSCAPdata(AddonData):
 
         """
 
-        installation_content = os.path.join(common.INSTALLATION_CONTENT_DIR,
-                                            self.content_name)
-
         # os.path.join("/abc", "/bcd") --> "/bcd"
         target_content_dir = os.path.normpath(ROOT_PATH + "/" +
                                               common.TARGET_CONTENT_DIR)
         utils.ensure_dir_exists(target_content_dir)
 
         # XXX: use copytree in case of content with multiple files
-        shutil.copy(installation_content, target_content_dir)
+        shutil.copy(self.preinst_content_path, target_content_dir)
 
         chroot_content = os.path.join(common.TARGET_CONTENT_DIR,
                                       self.content_name)

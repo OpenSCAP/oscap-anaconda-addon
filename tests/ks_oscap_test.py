@@ -3,6 +3,7 @@
 import unittest
 from pykickstart.errors import KickstartValueError
 from org_fedora_oscap.ks.oscap import OSCAPdata
+from org_fedora_oscap import common
 
 class ParsingTest(unittest.TestCase):
     def setUp(self):
@@ -27,6 +28,11 @@ class ParsingTest(unittest.TestCase):
         self.assertEqual(self.oscap_data.cpe_path, "/usr/share/oscap/cpe.xml")
         self.assertEqual(self.oscap_data.profile_id, "Web Server")
         self.assertEqual(self.oscap_data.content_name, "hardening.xml")
+
+    def properties_test(self):
+        self.assertEqual(self.oscap_data.preinst_content_path,
+                         common.INSTALLATION_CONTENT_DIR + "/" +
+                         self.oscap_data.content_name)
 
     def str_test(self):
         str_ret = str(self.oscap_data)
@@ -108,7 +114,7 @@ class InvalidDataTest(unittest.TestCase):
         with self.assertRaises(KickstartValueError):
             self.oscap_data.finalize()
 
-class EverythinkOKtest(unittest.TestCase):
+class EverythingOKtest(unittest.TestCase):
     def setUp(self):
         self.oscap_data = OSCAPdata("org_fedora_oscap")
 
