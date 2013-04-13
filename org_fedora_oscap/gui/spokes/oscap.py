@@ -28,6 +28,7 @@ import os.path
 from org_fedora_oscap.gui.categories.security import SecurityCategory
 from org_fedora_oscap import common
 from org_fedora_oscap import data_fetch
+from org_fedora_oscap import rule_handling
 
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.threads import threadMgr, AnacondaThread
@@ -158,6 +159,19 @@ class OSCAPSpoke(NormalSpoke):
         fetch_thread = threadMgr.get(thread_name)
         if fetch_thread:
             fetch_thread.join()
+
+        # get pre-install fix rules from the content
+        rules = common.get_fix_rules_pre(self._addon_data.profile_id,
+                                         self._addon_data.preinst_content_path,
+                                         self._addon_data.datastream_id,
+                                         self._addon_data.xccdf_id)
+
+        # parse and store rules
+        self._rule_data = rule_handling.RuleData()
+        for rule in rules.splitlines():
+            self._rule_data.new_rule(rule)
+
+        # TODO: evaluate rules and save results in the data store
 
         self._ready = True
         hubQ.send_ready(self.__class__.__name__, True)
