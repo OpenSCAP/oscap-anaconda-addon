@@ -103,7 +103,7 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         NormalSpoke.__init__(self, data, storage, payload, instclass)
-        self._data_subtree = self.data.addons.org_fedora_oscap
+        self._addon_data = self.data.addons.org_fedora_oscap
         self._ready = False
 
     def initialize(self):
@@ -121,7 +121,7 @@ class OSCAPSpoke(NormalSpoke):
         renderer = self.builder.get_object("messageTypeRenderer")
         column.set_cell_data_func(renderer, render_message_type)
 
-        content_url = self._data_subtree.content_url
+        content_url = self._addon_data.content_url
         if not content_url:
             # nothing more to be done now, the spoke is ready
             self._ready = True
