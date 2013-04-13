@@ -129,6 +129,7 @@ class OSCAPSpoke(NormalSpoke):
             return
         # else fetch data
 
+        thread_name = None
         if any(content_url.startswith(net_prefix)
                for net_prefix in data_fetch.NET_URL_PREFIXES):
             # need to fetch data over network
@@ -137,20 +138,20 @@ class OSCAPSpoke(NormalSpoke):
                                            self._addon_data.preinst_content_path,
                                            self._addon_data.certificates)
 
-            hubQ.send_not_ready(self.__class__.__name__)
-            hubQ.send_message(self.__class__.__name__,
-                              _("Fetching content data"))
-            threadMgr.add(AnacondaThread(name="OSCAPguiWaitForDataFetchThread",
-                                         target=self._wait_for_data_fetch,
-                                         args=(thread_name,)))
+        hubQ.send_not_ready(self.__class__.__name__)
+        hubQ.send_message(self.__class__.__name__,
+                          _("Fetching content data"))
+        threadMgr.add(AnacondaThread(name="OSCAPguiWaitForDataFetchThread",
+                                     target=self._wait_for_data_fetch,
+                                     args=(thread_name,)))
 
     def _wait_for_data_fetch(self, thread_name):
         """
-        Waits for data fetching to be finished and marks the spoke as ready in
-        the end.
+        Waits for data fetching to be finished, evaluates pre-installation fixes
+        from the content and marks the spoke as ready in the end.
 
-        :param thread_name: name of the thread to wait for
-        :type thread_name: str
+        :param thread_name: name of the thread to wait for (if any)
+        :type thread_name: str or None
 
         """
 
