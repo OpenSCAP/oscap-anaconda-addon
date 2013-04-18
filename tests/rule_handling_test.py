@@ -61,6 +61,7 @@ class RuleDataParsingTest(unittest.TestCase):
         self.rule_data.new_rule("package --add=iptables")
         self.rule_data.new_rule(" package --add=firewalld --remove=telnet")
         self.rule_data.new_rule("package --remove=rlogin --remove=sshd")
+        self.rule_data.new_rule("bootloader --passwd")
 
         # both partitions should appear in self.rule_data._part_rules
         self.assertIn("/tmp", self.rule_data._part_rules)
@@ -76,11 +77,15 @@ class RuleDataParsingTest(unittest.TestCase):
         # minimal password length should be parsed and stored correctly
         self.assertEqual(self.rule_data._passwd_rules._minlen, 14)
 
+        # packages should be parsed correctly
         self.assertIn("iptables", self.rule_data._package_rules._add_pkgs)
         self.assertIn("firewalld", self.rule_data._package_rules._add_pkgs)
         self.assertIn("telnet", self.rule_data._package_rules._remove_pkgs)
         self.assertIn("rlogin", self.rule_data._package_rules._remove_pkgs)
         self.assertIn("sshd", self.rule_data._package_rules._remove_pkgs)
+
+        # bootloader should require password
+        self.assertTrue(self.rule_data._bootloader_rules._require_password)
 
     def real_output_test(self):
         output = """          

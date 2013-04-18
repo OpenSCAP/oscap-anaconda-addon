@@ -51,6 +51,10 @@ PACKAGE_RULE_PARSER.add_option("--add", dest="add_pkgs", action="append",
 PACKAGE_RULE_PARSER.add_option("--remove", dest="remove_pkgs", action="append",
                                type="string")
 
+BOOTLOADER_RULE_PARSER = optparse.OptionParser()
+BOOTLOADER_RULE_PARSER.add_option("--passwd", dest="passwd", action="store_true",
+                                  default=False)
+
 class UknownRuleError(OSCAPaddonError):
     """Exception class for cases when an uknown rule is to be processed."""
 
@@ -65,6 +69,7 @@ class RuleData(object):
         self._part_rules = PartRules()
         self._passwd_rules = PasswdRules()
         self._package_rules = PackageRules()
+        self._bootloader_rules = BootloaderRules()
 
     def __str__(self):
         """Standard method useful for debugging and testing."""
@@ -97,6 +102,7 @@ class RuleData(object):
         actions = { "part" : self._new_part_rule,
                     "passwd" : self._new_passwd_rule,
                     "package": self._new_package_rule,
+                    "bootloader": self._new_bootloader_rule,
                     }
 
         rule = rule.strip()
@@ -136,6 +142,13 @@ class RuleData(object):
 
         self._package_rules.add_packages(opts.add_pkgs)
         self._package_rules.remove_packages(opts.remove_pkgs)
+
+    def _new_bootloader_rule(self, rule):
+        args = rule.split()
+        (opts, args) = BOOTLOADER_RULE_PARSER.parse_args(args)
+
+        if opts.passwd:
+            self._bootloader_rules.require_password()
 
 class PartRules(object):
     """Simple class holding data from the rules affecting partitioning."""
@@ -282,5 +295,28 @@ class PackageRules(object):
                         for package in self._remove_pkgs)
         if rems:
             ret += " " + rems
+
+        return ret
+
+class BootloaderRules(object):
+    """Simple class holding data from the rules affecting bootloader."""
+
+    def __init__(self):
+        """Constructor setting the initial value of attributes."""
+
+        self._require_password = False
+
+    def require_password(self):
+        """Requests the bootloader password should be required."""
+
+        self._require_password = True
+
+    def __str__(self):
+        """Standard method useful for debugging and testing."""
+
+        ret = "bootloader"
+
+        if self._require_password:
+            ret += " --passwd"
 
         return ret
