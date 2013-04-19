@@ -38,7 +38,7 @@ from org_fedora_oscap import utils
 from org_fedora_oscap.data_fetch import fetch_data
 
 # everything else should be private
-__all__ = ["run_oscap_remediate", "get_fix_rules_pre"]
+__all__ = ["run_oscap_remediate", "get_fix_rules_pre", "OSCAPaddonError"]
 
 INSTALLATION_CONTENT_DIR = "/tmp/openscap_data"
 TARGET_CONTENT_DIR = "/root/openscap_data"
