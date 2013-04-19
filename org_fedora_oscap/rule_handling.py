@@ -25,10 +25,14 @@ Module with various classes for handling pre-installation rules.
 
 import optparse
 
-from org_fedora_oscap.common import OSCAPaddonError
+from org_fedora_oscap import common
+from org_fedora_oscap.common import OSCAPaddonError, RuleMessage
 
 # everything else should be private
 __all__ = ["RuleData"]
+
+# TODO: enable translations
+_ = lambda x: x
 
 # TODO: use set instead of list for mount options?
 def parse_csv(option, opt_str, value, parser):
@@ -58,20 +62,24 @@ BOOTLOADER_RULE_PARSER.add_option("--passwd", dest="passwd", action="store_true"
 class RuleHandler(object):
     """Base class for the rule handlers."""
 
-    def eval_rules(self, ksdata, storage):
+    def eval_rules(self, ksdata, storage, report_only=False):
         """
         Method that should check the current state (as defined by the ksdata and
         storage parameters) against the rules the instance of RuleHandler
-        holds. It should fix the state with changes that can be done
-        automatically and return the list of warnings and errors for fixes that
-        need to be done manually together with info messages about the automatic
-        changes.
+        holds. Depending on the value of report_only it should fix the state
+        with changes that can be done automatically or not and return the list
+        of warnings and errors for fixes that need to be done manually together
+        with info messages about the automatic changes. One should make sure
+        this method is called with report_only set to False at least once so
+        that the automatic fixes are done.
 
         :param ksdata: data representing the values set by user
         :type ksdata: pykickstart.base.BaseHandler
         :param storage: object storing storage-related information
                         (disks, partitioning, bootloader, etc.)
         :type storage: blivet.Blivet
+        :param report_only: whether to do fixing or just report information
+        :type report_only: bool
         :return: errors and warnings for fixes that need to be done manually and
                  info messages about the automatic changes
         :rtype: list of common.RuleMessage objects
@@ -85,7 +93,7 @@ class UknownRuleError(OSCAPaddonError):
 
     pass
 
-class RuleData(object):
+class RuleData(RuleHandler):
     """Class holding data parsed from the applied rules."""
 
     def __init__(self):
@@ -141,6 +149,18 @@ class RuleData(object):
             # should never happen
             # TODO: only log error instead?
             raise UknownRuleError("Unknown rule: '%s'" % first_word)
+
+    def eval_rules(self, ksdata, storage, report_only=False):
+        """:see: RuleHandler.eval_rules"""
+
+        messages = []
+
+        # evaluate all subgroups of rules
+        for rule_handler in (self._part_rules, self._passwd_rules,
+                             self._package_rules, self._bootloader_rules,):
+            messages += rule_handler.eval_rules(ksdata, storage, report_only)
+
+        return messages
 
     def _new_part_rule(self, rule):
         args = rule.split()
@@ -217,6 +237,15 @@ class PartRules(RuleHandler):
         if mount_point not in self._rules:
             self._rules[mount_point] = PartRule(mount_point)
 
+    def eval_rules(self, ksdata, storage, report_only=False):
+        """:see: RuleHandler.eval_rules"""
+
+        messages = []
+        for part_rule in self._rules.itervalues():
+            messages += part_rule.eval_rules(ksdata, storage, report_only)
+
+        return messages
+
 class PartRule(RuleHandler):
     """Simple class holding rule data for a single partition/mount point."""
 
@@ -253,6 +282,38 @@ class PartRule(RuleHandler):
         self._mount_options.extend(opt for opt in mount_options
                                    if opt not in self._mount_options)
 
+    def eval_rules(self, ksdata, storage, report_only=False):
+        """:see: RuleHandler.eval_rules"""
+
+        messages = []
+        if self._mount_point not in storage.mountpoints:
+            msg = _("%s must be on a separate partition or logical "
+                    "volume" % self._mount_point)
+            messages.append(RuleMessage(common.MESSAGE_TYPE_FATAL, msg))
+
+            # mount point doesn't exist, nothing more can be found here
+            return messages
+
+        # mount point to be created during installation
+        target_mount_point = storage.mountpoints[self._mount_point]
+
+        # new options that should be added
+        new_opts = (opt for opt in self._mount_options
+                    if opt not in target_mount_point.format.options.split(","))
+
+        new_opts_str = ""
+        for opt in new_opts:
+            new_opts_str += ",%s" % opt
+            msg = _("mount option %s added for the mount point %s" % (opt,
+                                                             self._mount_point))
+            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+
+        # add new options to the target mount point
+        if not report_only:
+            target_mount_point.format.options += new_opts_str
+
+        return messages
+
 class PasswdRules(RuleHandler):
     """Simple class holding data from the rules affecting passwords."""
 
@@ -274,6 +335,17 @@ class PasswdRules(RuleHandler):
 
         if minlen > self._minlen:
             self._minlen = minlen
+
+    def eval_rules(self, *args):
+        """:see: RuleHandler.eval_rules"""
+
+        if self._minlen > 0:
+            # password length enforcement is not suported in the Anaconda yet
+            msg = _("make sure to create password with minimal length of %d "
+                    "characters" % self._minlen)
+            return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
+        else:
+            return []
 
 class PackageRules(RuleHandler):
     """Simple class holding data from the rules affecting installed packages."""
@@ -323,6 +395,30 @@ class PackageRules(RuleHandler):
 
         return ret
 
+    def eval_rules(self, ksdata, storage, report_only=False):
+        """:see: RuleHandler.eval_rules"""
+
+        messages = []
+        for pkg in self._add_pkgs:
+            # add the package unless already added
+            if not report_only and pkg not in ksdata.packages.packageList:
+                ksdata.packages.packageList.append(pkg)
+
+            msg = _("package %s has been added to the list of to be installed "
+                    "packages" % pkg)
+            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+
+        for pkg in self._remove_pkgs:
+            # exclude the package unless already excluded
+            if not report_only and pkg not in ksdata.packages.excludedList:
+                ksdata.packages.excludedList.append(pkg)
+
+            msg = _("package %s has been added to the list of excluded "
+                    "packages" % pkg)
+            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+
+        return messages
+
 class BootloaderRules(RuleHandler):
     """Simple class holding data from the rules affecting bootloader."""
 
@@ -345,3 +441,7 @@ class BootloaderRules(RuleHandler):
             ret += " --passwd"
 
         return ret
+
+    # TODO: check if the bootloader password is set in eval_rules and return
+    #       warning if not (cannot return error, since Anaconda doesn't support
+    #       bootloader password setup in the GUI)

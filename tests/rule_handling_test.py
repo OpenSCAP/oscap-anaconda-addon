@@ -21,7 +21,9 @@
 """Module with unit tests for the rule_handling.py module"""
 
 import unittest
-from org_fedora_oscap import rule_handling
+import mock
+
+from org_fedora_oscap import rule_handling, common
 
 class PartRulesSyntaxSupportTest(unittest.TestCase):
     """Test functionality of the PartRules' methods with syntax support."""
@@ -103,3 +105,274 @@ class RuleDataParsingTest(unittest.TestCase):
         self.assertEqual(str(self.rule_data._part_rules),
                          "part /tmp --mountoptions=nodev")
 
+class RuleEvaluationTest(unittest.TestCase):
+    """Test if the rule evaluation works properly."""
+
+    def setUp(self):
+        self.rule_data = rule_handling.RuleData()
+        self.ksdata_mock = mock.Mock()
+        self.storage_mock = mock.Mock()
+
+    def existing_part_must_exist_rules_test(self):
+        for rule in ["part /tmp", "part /"]:
+            self.rule_data.new_rule(rule)
+
+        tmp_part_mock = mock.Mock()
+        tmp_part_mock.format.options = "defaults"
+        root_part_mock = mock.Mock()
+        root_part_mock.format.options = "defaults"
+
+        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
+                                          "/": root_part_mock,
+                                          }
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # partitions exist --> no errors, warnings or additional info
+        self.assertEqual(messages, [])
+
+        # no additional mount options specified
+        self.assertEqual(tmp_part_mock.format.options, "defaults")
+        self.assertEqual(root_part_mock.format.options, "defaults")
+
+    def nonexisting_part_must_exist_test(self):
+        for rule in ["part /tmp", "part /"]:
+            self.rule_data.new_rule(rule)
+
+        tmp_part_mock = mock.Mock()
+        tmp_part_mock.format.options = "defaults"
+
+        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
+                                          }
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # / mount point missing --> one error
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_FATAL)
+
+        # error has to mention the mount point
+        self.assertIn("/", messages[0].text)
+
+    def add_mount_options_test(self):
+        for rule in ["part /tmp --mountoptions=nodev",
+                     "part / --mountoptions=defaults,noauto"]:
+            self.rule_data.new_rule(rule)
+
+        tmp_part_mock = mock.Mock()
+        tmp_part_mock.format.options = "defaults"
+        root_part_mock = mock.Mock()
+        root_part_mock.format.options = "defaults"
+
+        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
+                                          "/": root_part_mock,
+                                          }
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # two mount options added --> two info messages
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_INFO)
+        self.assertEqual(messages[1].type, common.MESSAGE_TYPE_INFO)
+
+        # newly added mount options should be mentioned in the messages together
+        # with their mount points
+        nodev_found = False
+        noauto_found = False
+
+        for message in messages:
+            if "nodev" in message.text:
+                self.assertIn("/tmp", message.text)
+                nodev_found = True
+            elif "noauto" in message.text:
+                self.assertIn("/", message.text)
+                noauto_found = True
+
+        self.assertTrue(all([nodev_found, noauto_found]))
+        self.assertEqual(self.storage_mock.mountpoints["/tmp"].format.options,
+                         "defaults,nodev")
+        self.assertEqual(self.storage_mock.mountpoints["/"].format.options,
+                         "defaults,noauto")
+
+    def add_mount_options_report_only_test(self):
+        for rule in ["part /tmp --mountoptions=nodev",
+                     "part / --mountoptions=defaults,noauto"]:
+            self.rule_data.new_rule(rule)
+
+        tmp_part_mock = mock.Mock()
+        tmp_part_mock.format.options = "defaults"
+        root_part_mock = mock.Mock()
+        root_part_mock.format.options = "defaults"
+
+        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
+                                          "/": root_part_mock,
+                                          }
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock, report_only=True)
+
+        # two mount options added --> two info messages
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_INFO)
+        self.assertEqual(messages[1].type, common.MESSAGE_TYPE_INFO)
+
+        # newly added mount options should be mentioned in the messages together
+        # with their mount points
+        nodev_found = False
+        noauto_found = False
+
+        for message in messages:
+            if "nodev" in message.text:
+                self.assertIn("/tmp", message.text)
+                nodev_found = True
+            elif "noauto" in message.text:
+                self.assertIn("/", message.text)
+                noauto_found = True
+
+        self.assertTrue(all([nodev_found, noauto_found]))
+
+    def add_mount_option_prefix_test(self):
+        for rule in ["part /tmp --mountoptions=nodev",
+                     "part / --mountoptions=defaults,noauto"]:
+            self.rule_data.new_rule(rule)
+
+        tmp_part_mock = mock.Mock()
+        tmp_part_mock.format.options = "defaults,nodevice"
+        root_part_mock = mock.Mock()
+        root_part_mock.format.options = "defaults"
+
+        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
+                                          "/": root_part_mock,
+                                          }
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # two mount options added (even though it is a prefix of another one)
+        #   --> two info messages
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_INFO)
+        self.assertEqual(messages[1].type, common.MESSAGE_TYPE_INFO)
+
+        # the option should be added even though it is a prefix of another one
+        self.assertEqual(self.storage_mock.mountpoints["/tmp"].format.options,
+                         "defaults,nodevice,nodev")
+
+    def add_mount_options_nonexisting_part_test(self):
+        for rule in ["part /tmp --mountoptions=nodev",
+                     "part / --mountoptions=defaults,noauto"]:
+            self.rule_data.new_rule(rule)
+
+        tmp_part_mock = mock.Mock()
+        tmp_part_mock.format.options = "defaults"
+        root_part_mock = mock.Mock()
+        root_part_mock.format.options = "defaults"
+
+        self.storage_mock.mountpoints = { "/": root_part_mock,
+                                          }
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # one mount option added, one mount point missing (mount options
+        # cannot be added) --> one info, one error
+        self.assertEqual(len(messages), 2)
+        self.assertTrue(any(message.type == common.MESSAGE_TYPE_INFO
+                            for message in messages))
+        self.assertTrue(any(message.type == common.MESSAGE_TYPE_FATAL
+                            for message in messages))
+
+        # the info message should report mount options added to the existing
+        # mount point, the error message shoud contain the missing mount point
+        # and not the mount option
+        for message in messages:
+            if message.type == common.MESSAGE_TYPE_INFO:
+                self.assertIn("/", message.text)
+                self.assertIn("noauto", message.text)
+            elif message.type == common.MESSAGE_TYPE_FATAL:
+                self.assertIn("/tmp", message.text)
+                self.assertNotIn("nodev", message.text)
+
+    def passwd_minlen_test(self):
+        self.rule_data.new_rule("passwd --minlen=8")
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # minimal password length required --> one warning
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_WARNING)
+
+        # warning has to mention the length
+        self.assertIn("8", messages[0].text)
+
+    def package_rules_test(self):
+        self.rule_data.new_rule("package --add=firewalld --remove=telnet "
+                                "--add=iptables")
+
+        self.ksdata_mock.packages.packageList = []
+        self.ksdata_mock.packages.excludedList = []
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # one info message for each added/removed package
+        self.assertEqual(len(messages), 3)
+        self.assertTrue(all(message.type == common.MESSAGE_TYPE_INFO
+                            for message in messages))
+
+        # all packages should appear in the messages
+        must_see = ["firewalld", "telnet", "iptables"]
+        for message in messages:
+            if "firewalld" in message.text:
+                must_see.remove("firewalld")
+            elif "telnet" in message.text:
+                must_see.remove("telnet")
+            elif "iptables":
+                must_see.remove("iptables")
+
+        self.assertEqual(must_see, [])
+        self.assertEqual(set(self.ksdata_mock.packages.packageList),
+                         {"firewalld", "iptables"})
+        self.assertEqual(set(self.ksdata_mock.packages.excludedList),
+                         {"telnet"})
+
+    def package_rules_report_only_test(self):
+        self.rule_data.new_rule("package --add=firewalld --remove=telnet "
+                                "--add=iptables")
+
+        self.ksdata_mock.packages.packageList = []
+        self.ksdata_mock.packages.excludedList = []
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock, report_only=True)
+
+        # one info message for each added/removed package
+        self.assertEqual(len(messages), 3)
+        self.assertTrue(all(message.type == common.MESSAGE_TYPE_INFO
+                            for message in messages))
+
+        # all packages should appear in the messages
+        must_see = ["firewalld", "telnet", "iptables"]
+        for message in messages:
+            if "firewalld" in message.text:
+                must_see.remove("firewalld")
+            elif "telnet" in message.text:
+                must_see.remove("telnet")
+            elif "iptables":
+                must_see.remove("iptables")
+
+        self.assertEqual(must_see, [])
+
+        # report_only --> no packages should be added or excluded
+        self.assertEqual(self.ksdata_mock.packages.packageList, [])
+        self.assertEqual(self.ksdata_mock.packages.excludedList, [])
+
+    def various_rules_test(self):
+        for rule in ["part /tmp", "part /", "passwd --minlen=14",
+                     "package --add=firewalld",]:
+            self.rule_data.new_rule(rule)
+
+        self.storage_mock.mountpoints = dict()
+        self.ksdata_mock.packages.packageList = []
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # four rules, all fail --> four messages
+        self.assertEqual(len(messages), 4)
