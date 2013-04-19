@@ -26,8 +26,7 @@ import os.path
 from pyanaconda.addons import AddonData
 from pyanaconda.constants import ROOT_PATH
 from pykickstart.errors import KickstartParseError, KickstartValueError
-from org_fedora_oscap import utils
-from org_fedora_oscap import common
+from org_fedora_oscap import utils, common, rule_handling
 
 # export OSCAPdata class to prevent Anaconda's collect method from taking
 # AddonData class instead of the OSCAPdata class
@@ -43,6 +42,11 @@ SUPPORTED_URL_PREFIXES = ("http://", "https://",
                           )
 
 REQUIRED_PACKAGES = ("openscap", "openscap-utils", )
+
+class MisconfigurationError(common.OSCAPaddonError):
+    """Exception for reporting misconfiguration."""
+
+    pass
 
 class OSCAPdata(AddonData):
     """
@@ -70,11 +74,12 @@ class OSCAPdata(AddonData):
         self.xccdf_path = ""
         self.cpe_path = ""
 
-        # internal values
-        self.content_name = ""
-
         # certificate to verify HTTPS connection or signed data
         self.certificates = ""
+
+        # internal values
+        self.content_name = ""
+        self.rule_data = rule_handling.RuleData()
 
     def __str__(self):
         """
@@ -233,6 +238,13 @@ class OSCAPdata(AddonData):
         :type instclass: pyanaconda.installclass.BaseInstallClass
 
         """
+
+        # evaluate rules do automatic fixes and stop if something that cannot
+        # be fixed automatically is wrong
+        messages = self.rule_data.eval_rules(ksdata, storage)
+        if any(message.type == common.MESSAGE_TYPE_FATAL
+               for message in messages):
+            raise MisconfigurationError("Wrong configuration detected!")
 
         # add packages needed on the target system to the list of packages
         # that are requested to be installed

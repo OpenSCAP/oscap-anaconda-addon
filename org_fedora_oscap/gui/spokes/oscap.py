@@ -103,6 +103,7 @@ class OSCAPSpoke(NormalSpoke):
 
         NormalSpoke.__init__(self, data, storage, payload, instclass)
         self._addon_data = self.data.addons.org_fedora_oscap
+        self._storage = storage
         self._ready = False
 
     def initialize(self):
@@ -119,6 +120,9 @@ class OSCAPSpoke(NormalSpoke):
         column = self.builder.get_object("messageTypeColumn")
         renderer = self.builder.get_object("messageTypeRenderer")
         column.set_cell_data_func(renderer, render_message_type)
+
+        # the store that holds the messages that come from the rules evaluation
+        self._message_store = self.builder.get_object("changesStore")
 
         content_url = self._addon_data.content_url
         if not content_url:
@@ -166,15 +170,42 @@ class OSCAPSpoke(NormalSpoke):
                                          self._addon_data.xccdf_id)
 
         # parse and store rules
-        self._rule_data = rule_handling.RuleData()
+        self._addon_data.rule_data = rule_handling.RuleData()
         for rule in rules.splitlines():
-            self._rule_data.new_rule(rule)
+            self._addon_data.rule_data.new_rule(rule)
 
-        # TODO: evaluate rules and save results in the data store
+        self._update_message_store()
 
         self._ready = True
         hubQ.send_ready(self.__class__.__name__, True)
         hubQ.send_message(self.__class__.__name__, self.status)
+
+    def _add_message(self, message):
+        """
+        Add message to the store.
+
+        :param message: message to be added
+        :type message: org_fedora_oscap.common.RuleMessage
+
+        """
+
+        self._message_store.append([message.type, message.text])
+
+    def _update_message_store(self, report_only=False):
+        """
+        Updates the message store with messages from rule evaluation.
+
+        :param report_only: wheter to do changes in configuration or just report
+        :type report_only: bool
+
+        """
+
+        self._message_store.clear()
+
+        messages = self._addon_data.rule_data.eval_rules(self.data, self._storage,
+                                                         report_only)
+        for msg in messages:
+            self._add_message(msg)
 
     def refresh(self):
         """
@@ -186,7 +217,7 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        pass
+        self._update_message_store()
 
     def apply(self):
         """
@@ -231,7 +262,9 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        return True
+        # no error message in the store
+        return all(row[0] != common.MESSAGE_TYPE_FATAL
+                   for row in self._message_store)
 
     @property
     def status(self):
@@ -245,4 +278,18 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        return _("Misconfiguration detected")
+        # update message store, something may changed from the last update
+        self._update_message_store(report_only=True)
+
+        warning_found = False
+        for row in self._message_store:
+            if row[0] == common.MESSAGE_TYPE_FATAL:
+                return _("Misconfiguration detected")
+            elif row[0] == common.MESSAGE_TYPE_WARNING:
+                warning_found = True
+
+        # TODO: at least the last two status messages need a better wording
+        if warning_found:
+            return _("Warnings appeared")
+
+        return _("Everything okay")
