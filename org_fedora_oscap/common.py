@@ -28,6 +28,8 @@ import os
 import os.path
 import subprocess
 
+from collections import namedtuple
+
 from pyanaconda import constants
 from pyanaconda import nm
 from pyanaconda.threads import threadMgr, AnacondaThread
@@ -211,3 +213,13 @@ def wait_and_fetch_net_data(url, out_file, ca_certs=None):
     threadMgr.add(fetch_data_thread)
 
     return THREAD_FETCH_DATA
+
+
+MESSAGE_TYPE_FATAL = 0
+MESSAGE_TYPE_WARNING = 1
+MESSAGE_TYPE_INFO = 2
+
+# namedtuple for messages returned from the rules evaluation
+#   type -- one of the MESSAGE_TYPE_* constants defined above
+#   text -- the actual message that should be displayed, logged, ...
+RuleMessage = namedtuple("RuleMessage", ["type", "text"])

@@ -37,17 +37,16 @@ from pyanaconda.ui.communication import hubQ
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
 
-MESSAGE_TYPE_FATAL = 0
-MESSAGE_TYPE_WARNING = 1
-
 def render_message_type(column, renderer, model, itr, user_data=None):
     #get message type from the first column
     value = model[itr][0]
 
-    if value == MESSAGE_TYPE_FATAL:
+    if value == common.MESSAGE_TYPE_FATAL:
         renderer.set_property("stock-id", "gtk-dialog-error")
-    elif value == MESSAGE_TYPE_WARNING:
+    elif value == common.MESSAGE_TYPE_WARNING:
         renderer.set_property("stock-id", "gtk-dialog-warning")
+    elif value == common.MESSAGE_TYPE_INFO:
+        renderer.set_property("stock-id", "gtk-info")
     else:
         renderer.set_property("stock-id", "gtk-dialog-question")
 
