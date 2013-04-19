@@ -231,6 +231,12 @@ class RuleEvaluationTest(unittest.TestCase):
 
         self.assertTrue(all([nodev_found, noauto_found]))
 
+        # no changes should be made
+        self.assertEqual(self.storage_mock.mountpoints["/tmp"].format.options,
+                         "defaults")
+        self.assertEqual(self.storage_mock.mountpoints["/"].format.options,
+                         "defaults")
+
     def add_mount_option_prefix_test(self):
         for rule in ["part /tmp --mountoptions=nodev",
                      "part / --mountoptions=defaults,noauto"]:
