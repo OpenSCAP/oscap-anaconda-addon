@@ -24,6 +24,7 @@
         <title>My testing profile</title>
         <description>A profile for testing purposes.</description>
         <select selected="true" idref="xccdf_moc.elpmaxe.www_rule_first"/>
+        <select selected="true" idref="xccdf_com.example_rule_tmp_part"/>
       </Profile>
       <Rule selected="false" id="xccdf_moc.elpmaxe.www_rule_first">
         <fix reboot="false" disruption="low" system="urn:xccdf:fix:script:sh">
@@ -32,6 +33,11 @@
         <check system="http://oval.mitre.org/XMLSchema/oval-definitions-5">
           <check-content-ref href="scap-mycheck-oval.xml" name="oval:org.open-scap.f14:def:20000"/>
         </check>
+      </Rule>
+      <Rule selected="false" id="xccdf_com.example_rule_tmp_part">
+        <fix reboot="false" disruption="high" system="urn:redhat:anaconda:pre">
+          part /tmp
+        </fix>
       </Rule>
     </Benchmark>
   </ds:component>
