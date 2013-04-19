@@ -55,6 +55,31 @@ BOOTLOADER_RULE_PARSER = optparse.OptionParser()
 BOOTLOADER_RULE_PARSER.add_option("--passwd", dest="passwd", action="store_true",
                                   default=False)
 
+class RuleHandler(object):
+    """Base class for the rule handlers."""
+
+    def eval_rules(self, ksdata, storage):
+        """
+        Method that should check the current state (as defined by the ksdata and
+        storage parameters) against the rules the instance of RuleHandler
+        holds. It should fix the state with changes that can be done
+        automatically and return the list of warnings and errors for fixes that
+        need to be done manually together with info messages about the automatic
+        changes.
+
+        :param ksdata: data representing the values set by user
+        :type ksdata: pykickstart.base.BaseHandler
+        :param storage: object storing storage-related information
+                        (disks, partitioning, bootloader, etc.)
+        :type storage: blivet.Blivet
+        :return: errors and warnings for fixes that need to be done manually and
+                 info messages about the automatic changes
+        :rtype: list of common.RuleMessage objects
+
+        """
+
+        return []
+
 class UknownRuleError(OSCAPaddonError):
     """Exception class for cases when an uknown rule is to be processed."""
 
@@ -150,7 +175,7 @@ class RuleData(object):
         if opts.passwd:
             self._bootloader_rules.require_password()
 
-class PartRules(object):
+class PartRules(RuleHandler):
     """Simple class holding data from the rules affecting partitioning."""
 
     def __init__(self):
@@ -192,7 +217,7 @@ class PartRules(object):
         if mount_point not in self._rules:
             self._rules[mount_point] = PartRule(mount_point)
 
-class PartRule(object):
+class PartRule(RuleHandler):
     """Simple class holding rule data for a single partition/mount point."""
 
     def __init__(self, mount_point):
@@ -228,7 +253,7 @@ class PartRule(object):
         self._mount_options.extend(opt for opt in mount_options
                                    if opt not in self._mount_options)
 
-class PasswdRules(object):
+class PasswdRules(RuleHandler):
     """Simple class holding data from the rules affecting passwords."""
 
     def __init__(self):
@@ -250,7 +275,7 @@ class PasswdRules(object):
         if minlen > self._minlen:
             self._minlen = minlen
 
-class PackageRules(object):
+class PackageRules(RuleHandler):
     """Simple class holding data from the rules affecting installed packages."""
 
     def __init__(self):
@@ -298,7 +323,7 @@ class PackageRules(object):
 
         return ret
 
-class BootloaderRules(object):
+class BootloaderRules(RuleHandler):
     """Simple class holding data from the rules affecting bootloader."""
 
     def __init__(self):
