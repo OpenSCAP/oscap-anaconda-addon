@@ -465,6 +465,14 @@ class BootloaderRules(RuleHandler):
 
         return ret
 
-    # TODO: check if the bootloader password is set in eval_rules and return
-    #       warning if not (cannot return error, since Anaconda doesn't support
-    #       bootloader password setup in the GUI)
+    def eval_rules(self, ksdata, storage, report_only=False):
+        """:see: RuleHandler.eval_rules"""
+
+        if self._require_password and not storage.bootloader.password:
+            # Anaconda doesn't provide a way to set bootloader password, so
+            # users cannot do much about that --> we shouldn't stop the
+            # installation, should we?
+            return [RuleMessage(common.MESSAGE_TYPE_WARNING,
+                               "boot loader password not set up")]
+        else:
+            return []

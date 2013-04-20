@@ -491,6 +491,27 @@ class RuleEvaluationTest(unittest.TestCase):
         self.assertEqual(self.ksdata_mock.packages.packageList, [])
         self.assertEqual(self.ksdata_mock.packages.excludedList, [])
 
+    def bootloader_passwd_not_set_test(self):
+        self.rule_data.new_rule("bootloader --passwd")
+
+        self.storage_mock.bootloader.password = None
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # bootloader password not set --> one warning
+        self.assertEqual(len(messages), 1)
+        self.assertTrue(messages[0].type == common.MESSAGE_TYPE_WARNING)
+
+    def bootloader_passwd_set_test(self):
+        self.rule_data.new_rule("bootloader --passwd")
+
+        self.storage_mock.bootloader.password = "aaaaa"
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # bootloader password set --> no warnings
+        self.assertEqual(messages, [])
+
     def various_rules_test(self):
         for rule in ["part /tmp", "part /", "passwd --minlen=14",
                      "package --add=firewalld",]:
