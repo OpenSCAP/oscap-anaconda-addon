@@ -348,9 +348,10 @@ class RuleEvaluationTest(unittest.TestCase):
                 self.assertIn("/tmp", message.text)
                 self.assertNotIn("'nodev'", message.text)
 
-    def passwd_minlen_test(self):
+    def passwd_minlen_no_passwd_test(self):
         self.rule_data.new_rule("passwd --minlen=8")
 
+        self.ksdata_mock.rootpw.password = ""
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
         # minimal password length required --> one warning
@@ -359,6 +360,75 @@ class RuleEvaluationTest(unittest.TestCase):
 
         # warning has to mention the length
         self.assertIn("8", messages[0].text)
+
+    def passwd_minlen_short_passwd_test(self):
+        self.rule_data.new_rule("passwd --minlen=8")
+
+        self.ksdata_mock.rootpw.password = "aaaa"
+        self.ksdata_mock.rootpw.isCrypted = False
+
+        # run twice --> first run removes the password, but the second one should
+        #               also mention the old password
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # minimal password length greater than actual length --> one warning
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_WARNING)
+
+        # warning has to mention the length
+        self.assertIn("8", messages[0].text)
+
+        # warning should mention that something happened to the old password
+        self.assertIn("was", messages[0].text)
+
+        # doing changes --> password should be cleared
+        self.assertEqual(self.ksdata_mock.rootpw.password, "")
+
+    def passwd_minlen_short_passwd_report_only_test(self):
+        self.rule_data.new_rule("passwd --minlen=8")
+
+        self.ksdata_mock.rootpw.password = "aaaa"
+        self.ksdata_mock.rootpw.isCrypted = False
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock,
+                                             report_only=True)
+
+        # minimal password length greater than actual length --> one warning
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_WARNING)
+
+        # warning has to mention the length
+        self.assertIn("8", messages[0].text)
+
+        # report only --> password shouldn't be cleared
+        self.assertEqual(self.ksdata_mock.rootpw.password, "aaaa")
+
+    def passwd_minlen_crypted_passwd_test(self):
+        self.rule_data.new_rule("passwd --minlen=8")
+
+        self.ksdata_mock.rootpw.password = "aaaa"
+        self.ksdata_mock.rootpw.isCrypted = True
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # minimal password length greater than actual length --> one warning
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_WARNING)
+
+        # warning has to mention that the password cannot be checked
+        self.assertIn("cannot check", messages[0].text)
+
+    def passwd_minlen_good_passwd_test(self):
+        self.rule_data.new_rule("passwd --minlen=8")
+
+        self.ksdata_mock.rootpw.password = "aaaaaaaaaaaaaaaaa"
+        self.ksdata_mock.rootpw.isCrypted = False
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # minimal password length less than actual length --> no warning
+        self.assertEqual(messages, [])
 
     def package_rules_test(self):
         self.rule_data.new_rule("package --add=firewalld --remove=telnet "

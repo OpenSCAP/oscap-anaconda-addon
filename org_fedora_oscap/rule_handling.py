@@ -324,6 +324,7 @@ class PasswdRules(RuleHandler):
         """Constructor initializing attributes."""
 
         self._minlen = 0
+        self._passwd_removed = False
 
     def __str__(self):
         """Standard method useful for debugging and testing."""
@@ -339,16 +340,35 @@ class PasswdRules(RuleHandler):
         if minlen > self._minlen:
             self._minlen = minlen
 
-    def eval_rules(self, *args):
+    def eval_rules(self, ksdata, storage, report_only):
         """:see: RuleHandler.eval_rules"""
 
-        if self._minlen > 0:
+        if self._minlen == 0:
+            # no password restrictions, nothing to be done here
+            return []
+
+        if not ksdata.rootpw.password and not self._passwd_removed:
+            # root password was not set
+
             # password length enforcement is not suported in the Anaconda yet
             msg = _("make sure to create password with minimal length of %d "
                     "characters" % self._minlen)
             return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
         else:
-            return []
+            # root password set
+            if ksdata.rootpw.isCrypted:
+                msg = _("cannot check root password length (password is crypted)")
+                return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
+            elif len(ksdata.rootpw.password) < self._minlen or self._passwd_removed:
+                # too short or already removed
+                msg = _("root password was too short a longer one with at least "
+                        "%d characters will be required" % self._minlen)
+                if not report_only:
+                    self._passwd_removed = True
+                    ksdata.rootpw.password = ""
+                return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
+            else:
+                return []
 
 class PackageRules(RuleHandler):
     """Simple class holding data from the rules affecting installed packages."""
