@@ -188,10 +188,10 @@ class RuleEvaluationTest(unittest.TestCase):
         noauto_found = False
 
         for message in messages:
-            if "nodev" in message.text:
+            if "'nodev'" in message.text:
                 self.assertIn("/tmp", message.text)
                 nodev_found = True
-            elif "noauto" in message.text:
+            elif "'noauto'" in message.text:
                 self.assertIn("/", message.text)
                 noauto_found = True
 
@@ -229,10 +229,10 @@ class RuleEvaluationTest(unittest.TestCase):
         noauto_found = False
 
         for message in messages:
-            if "nodev" in message.text:
+            if "'nodev'" in message.text:
                 self.assertIn("/tmp", message.text)
                 nodev_found = True
-            elif "noauto" in message.text:
+            elif "'noauto'" in message.text:
                 self.assertIn("/", message.text)
                 noauto_found = True
 
@@ -299,10 +299,10 @@ class RuleEvaluationTest(unittest.TestCase):
         for message in messages:
             if message.type == common.MESSAGE_TYPE_INFO:
                 self.assertIn("/", message.text)
-                self.assertIn("noauto", message.text)
+                self.assertIn("'noauto'", message.text)
             elif message.type == common.MESSAGE_TYPE_FATAL:
                 self.assertIn("/tmp", message.text)
-                self.assertNotIn("nodev", message.text)
+                self.assertNotIn("'nodev'", message.text)
 
     def passwd_minlen_test(self):
         self.rule_data.new_rule("passwd --minlen=8")
@@ -333,11 +333,11 @@ class RuleEvaluationTest(unittest.TestCase):
         # all packages should appear in the messages
         must_see = ["firewalld", "telnet", "iptables"]
         for message in messages:
-            if "firewalld" in message.text:
+            if "'firewalld'" in message.text:
                 must_see.remove("firewalld")
-            elif "telnet" in message.text:
+            elif "'telnet'" in message.text:
                 must_see.remove("telnet")
-            elif "iptables":
+            elif "'iptables'":
                 must_see.remove("iptables")
 
         self.assertEqual(must_see, [])
@@ -364,11 +364,11 @@ class RuleEvaluationTest(unittest.TestCase):
         # all packages should appear in the messages
         must_see = ["firewalld", "telnet", "iptables"]
         for message in messages:
-            if "firewalld" in message.text:
+            if "'firewalld'" in message.text:
                 must_see.remove("firewalld")
-            elif "telnet" in message.text:
+            elif "'telnet'" in message.text:
                 must_see.remove("telnet")
-            elif "iptables":
+            elif "'iptables'":
                 must_see.remove("iptables")
 
         self.assertEqual(must_see, [])

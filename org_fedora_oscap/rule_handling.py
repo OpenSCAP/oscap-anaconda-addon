@@ -305,7 +305,7 @@ class PartRule(RuleHandler):
         new_opts_str = ""
         for opt in new_opts:
             new_opts_str += ",%s" % opt
-            msg = _("mount option %s added for the mount point %s" % (opt,
+            msg = _("mount option '%s' added for the mount point %s" % (opt,
                                                              self._mount_point))
             messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
 
@@ -405,7 +405,7 @@ class PackageRules(RuleHandler):
             if not report_only and pkg not in ksdata.packages.packageList:
                 ksdata.packages.packageList.append(pkg)
 
-            msg = _("package %s has been added to the list of to be installed "
+            msg = _("package '%s' has been added to the list of to be installed "
                     "packages" % pkg)
             messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
 
@@ -414,7 +414,7 @@ class PackageRules(RuleHandler):
             if not report_only and pkg not in ksdata.packages.excludedList:
                 ksdata.packages.excludedList.append(pkg)
 
-            msg = _("package %s has been added to the list of excluded "
+            msg = _("package '%s' has been added to the list of excluded "
                     "packages" % pkg)
             messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
 
