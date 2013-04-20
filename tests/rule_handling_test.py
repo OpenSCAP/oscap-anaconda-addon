@@ -163,7 +163,7 @@ class RuleEvaluationTest(unittest.TestCase):
 
     def add_mount_options_test(self):
         for rule in ["part /tmp --mountoptions=nodev",
-                     "part / --mountoptions=defaults,noauto"]:
+                     "part / --mountoptions=noauto"]:
             self.rule_data.new_rule(rule)
 
         tmp_part_mock = mock.Mock()
@@ -179,8 +179,8 @@ class RuleEvaluationTest(unittest.TestCase):
 
         # two mount options added --> two info messages
         self.assertEqual(len(messages), 2)
-        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_INFO)
-        self.assertEqual(messages[1].type, common.MESSAGE_TYPE_INFO)
+        self.assertTrue(all(message.type == common.MESSAGE_TYPE_INFO
+                            for message in messages))
 
         # newly added mount options should be mentioned in the messages together
         # with their mount points
@@ -201,9 +201,53 @@ class RuleEvaluationTest(unittest.TestCase):
         self.assertEqual(self.storage_mock.mountpoints["/"].format.options,
                          "defaults,noauto")
 
+    def add_mount_options_no_duplicates_test(self):
+        for rule in ["part /tmp --mountoptions=nodev",
+                     "part / --mountoptions=noauto"]:
+            self.rule_data.new_rule(rule)
+
+        tmp_part_mock = mock.Mock()
+        tmp_part_mock.format.options = "defaults"
+        root_part_mock = mock.Mock()
+        root_part_mock.format.options = "defaults"
+
+        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
+                                          "/": root_part_mock,
+                                          }
+
+        # evaluate twice, so that duplicates could possible by created
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # two mount options added --> two info messages
+        self.assertEqual(len(messages), 2)
+        self.assertTrue(all(message.type == common.MESSAGE_TYPE_INFO
+                            for message in messages))
+
+        # newly added mount options should be mentioned in the messages together
+        # with their mount points
+        nodev_found = False
+        noauto_found = False
+
+        for message in messages:
+            if "'nodev'" in message.text:
+                self.assertIn("/tmp", message.text)
+                nodev_found = True
+            elif "'noauto'" in message.text:
+                self.assertIn("/", message.text)
+                noauto_found = True
+
+        self.assertTrue(all([nodev_found, noauto_found]))
+
+        # no duplicates should be added (each new mount option only once)
+        self.assertEqual(self.storage_mock.mountpoints["/tmp"].format.options,
+                         "defaults,nodev")
+        self.assertEqual(self.storage_mock.mountpoints["/"].format.options,
+                         "defaults,noauto")
+
     def add_mount_options_report_only_test(self):
         for rule in ["part /tmp --mountoptions=nodev",
-                     "part / --mountoptions=defaults,noauto"]:
+                     "part / --mountoptions=noauto"]:
             self.rule_data.new_rule(rule)
 
         tmp_part_mock = mock.Mock()
@@ -246,7 +290,7 @@ class RuleEvaluationTest(unittest.TestCase):
 
     def add_mount_option_prefix_test(self):
         for rule in ["part /tmp --mountoptions=nodev",
-                     "part / --mountoptions=defaults,noauto"]:
+                     "part / --mountoptions=noauto"]:
             self.rule_data.new_rule(rule)
 
         tmp_part_mock = mock.Mock()
@@ -272,7 +316,7 @@ class RuleEvaluationTest(unittest.TestCase):
 
     def add_mount_options_nonexisting_part_test(self):
         for rule in ["part /tmp --mountoptions=nodev",
-                     "part / --mountoptions=defaults,noauto"]:
+                     "part / --mountoptions=noauto"]:
             self.rule_data.new_rule(rule)
 
         tmp_part_mock = mock.Mock()

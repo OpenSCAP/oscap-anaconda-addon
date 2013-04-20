@@ -295,6 +295,13 @@ class PartRule(RuleHandler):
             # mount point doesn't exist, nothing more can be found here
             return messages
 
+        # add message for every mount option added
+        # TODO: messages only for mount options really added
+        for opt in self._mount_options:
+            msg = _("mount option '%s' added for the mount point %s" % (opt,
+                                                             self._mount_point))
+            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+
         # mount point to be created during installation
         target_mount_point = storage.mountpoints[self._mount_point]
 
@@ -302,16 +309,11 @@ class PartRule(RuleHandler):
         new_opts = (opt for opt in self._mount_options
                     if opt not in target_mount_point.format.options.split(","))
 
-        new_opts_str = ""
-        for opt in new_opts:
-            new_opts_str += ",%s" % opt
-            msg = _("mount option '%s' added for the mount point %s" % (opt,
-                                                             self._mount_point))
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+        new_opts_str = ",".join(new_opts)
 
         # add new options to the target mount point
-        if not report_only:
-            target_mount_point.format.options += new_opts_str
+        if not report_only and new_opts_str:
+            target_mount_point.format.options += ",%s" % new_opts_str
 
         return messages
 
