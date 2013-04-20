@@ -89,6 +89,13 @@ class RuleDataParsingTest(unittest.TestCase):
         # bootloader should require password
         self.assertTrue(self.rule_data._bootloader_rules._require_password)
 
+    def quoted_opt_values_test(self):
+        self.rule_data.new_rule('part /tmp --mountoptions="nodev,noauto"')
+
+        self.assertIn("nodev", self.rule_data._part_rules["/tmp"]._mount_options)
+        self.assertIn("noauto", self.rule_data._part_rules["/tmp"]._mount_options)
+        self.assertNotIn('"', self.rule_data._part_rules["/tmp"]._mount_options)
+
     def real_output_test(self):
         output = """          
       part /tmp

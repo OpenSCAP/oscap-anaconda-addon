@@ -24,6 +24,7 @@ Module with various classes for handling pre-installation rules.
 """
 
 import optparse
+import shlex
 
 from org_fedora_oscap import common
 from org_fedora_oscap.common import OSCAPaddonError, RuleMessage
@@ -163,7 +164,7 @@ class RuleData(RuleHandler):
         return messages
 
     def _new_part_rule(self, rule):
-        args = rule.split()
+        args = shlex.split(rule)
         (opts, args) = PART_RULE_PARSER.parse_args(args)
 
         # args contain both "part" and mount point (e.g. "/tmp")
@@ -176,20 +177,20 @@ class RuleData(RuleHandler):
             part_data.add_mount_options(opts.mount_options)
 
     def _new_passwd_rule(self, rule):
-        args = rule.split()
+        args = shlex.split(rule)
         (opts, args) = PASSWD_RULE_PARSER.parse_args(args)
 
         self._passwd_rules.update_minlen(opts.minlen)
 
     def _new_package_rule(self, rule):
-        args = rule.split()
+        args = shlex.split(rule)
         (opts, args) = PACKAGE_RULE_PARSER.parse_args(args)
 
         self._package_rules.add_packages(opts.add_pkgs)
         self._package_rules.remove_packages(opts.remove_pkgs)
 
     def _new_bootloader_rule(self, rule):
-        args = rule.split()
+        args = shlex.split(rule)
         (opts, args) = BOOTLOADER_RULE_PARSER.parse_args(args)
 
         if opts.passwd:
