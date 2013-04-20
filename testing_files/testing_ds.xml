@@ -36,7 +36,7 @@
       </Rule>
       <Rule selected="false" id="xccdf_com.example_rule_tmp_part">
         <fix reboot="false" disruption="high" system="urn:redhat:anaconda:pre">
-          part /tmp
+          part /tmp --mountoptions="nodev,noauto"
         </fix>
       </Rule>
     </Benchmark>
