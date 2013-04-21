@@ -4,11 +4,10 @@ certificate validation.
 
 """
 
-import socket
-import ssl
 import re
 import os
 import os.path
+import pycurl
 
 from org_fedora_oscap import utils
 
@@ -19,8 +18,8 @@ __all__ = ["fetch_data"]
 NET_URL_PREFIXES = ("http", "https")
 
 # TODO: needs improvements
-URL_RE_STR = r"(https?)://([^/]+)(/.*)"
-URL_RE = re.compile(URL_RE_STR)
+HTTP_URL_RE_STR = r"(https?)://(.*)"
+HTTP_URL_RE = re.compile(HTTP_URL_RE_STR)
 
 READ_BYTES = 4096
 
@@ -82,32 +81,6 @@ def fetch_data(url, out_file, ca_certs=None):
         msg = "Cannot fetch data from '%s': unknown URL format" % url
         raise UnknownURLformatError(msg)
 
-def _throw_away_headers(data):
-    """
-    Function that throws away HTTP headers from given data.
-
-    :param data: data (usually HTTP response)
-    :param data: str
-    :return: a tuple containing two items -- a bool value indicating if the end
-             of the headers has been found and a string containing the rest of
-             the data after removing headers
-    :rtype: tuple(bool, str)
-
-    """
-
-    match = re.search("\r\n\r\n", data)
-    if not match:
-        # not found, still getting headers
-        # TODO: check we are really getting headers
-        return (False, "")
-
-    if match.end() < len(data):
-        # something more than just headers
-        return (True, data[match.end():])
-    else:
-        # just headers
-        return (True, "")
-
 def _fetch_http_data(url, out_file, ca_certs=None):
     """
     Function that fetches data and writes it out to the given file path. If a
@@ -129,56 +102,39 @@ def _fetch_http_data(url, out_file, ca_certs=None):
 
     """
 
-    match = URL_RE.match(url)
+    match = HTTP_URL_RE.match(url)
     if not match:
-        msg = "Wrong url not matching '%s'" % URL_RE_STR
+        msg = "Wrong url not matching '%s'" % HTTP_URL_RE_STR
         raise WrongRequestError(msg)
 
-    protocol, server, path = match.groups()
+    # the first group contains the protocol, the second one the rest
+    protocol = match.groups()[0]
 
     if not out_file:
         raise WrongRequestError("out_file cannot be an empty string")
 
     if ca_certs and protocol != "https":
-        msg = "Cannot verify server certificate when using simple HTTP"
+        msg = "Cannot verify server certificate when using plain HTTP"
         raise WrongRequestError(msg)
 
-    port_num = 80
-    if protocol == "https":
-        port_num = 443
+    curl = pycurl.Curl()
+    curl.setopt(pycurl.URL, url)
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    if ca_certs:
-        sock = ssl.wrap_socket(sock, ca_certs=ca_certs,
-                               cert_reqs=ssl.CERT_REQUIRED)
-    try:
-        sock.connect((server, port_num))
-    except ssl.SSLError as sslerr:
-        msg = "Failed to connect to server and validate its certificate: %s"\
-                        % sslerr
-        raise CertificateValidationError(msg)
-
-    sock.sendall("GET %s HTTP/1.0\r\n"
-                   "Host: %s\r\n\r\n" % (path, server))
+    if ca_certs and protocol == "https":
+        # the strictest verification
+        curl.setopt(pycurl.SSL_VERIFYHOST, 2)
+        curl.setopt(pycurl.CAINFO, ca_certs)
 
     try:
-        # read begining of the data
-        data = sock.recv(READ_BYTES)
-
-        # throw away headers
-        (done, rest) = _throw_away_headers(data)
-        while not done:
-            data = sock.recv(READ_BYTES)
-            (done, rest) = _throw_away_headers(data)
-
-        # either we have something more or we need to fetch more data
-        data = rest or sock.recv(READ_BYTES) # I like you, Perl! I mean, Python!
         with open(out_file, "w") as fobj:
-            while data:
-                fobj.write(data)
-                data = sock.recv(READ_BYTES)
-    except IOError as ioerr:
-        msg = "Failed to fetch data: %s" % ioerr
-        raise FetchError(msg)
-
+            curl.setopt(pycurl.WRITEDATA, fobj)
+            curl.perform()
+    except pycurl.error as err:
+        # first arg is the error code
+        if err.args[0] == pycurl.E_SSL_CACERT:
+            msg = "Failed to connect to server and validate its "\
+                  "certificate: %s" % err
+            raise CertificateValidationError(msg)
+        else:
+            msg = "Failed to fetch data: %s" % err
+            raise FetchError(msg)

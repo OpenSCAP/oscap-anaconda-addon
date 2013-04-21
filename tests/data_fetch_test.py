@@ -23,25 +23,4 @@
 import unittest
 from org_fedora_oscap import data_fetch
 
-class HeadersHandlingTest(unittest.TestCase):
-    """Test if the headers are handled correctly (thrown away)"""
-
-    def headers_only_incomplete_test(self):
-        data = "header1: value\r\nheader2: value\r\n\r\n"
-        done, rest = data_fetch._throw_away_headers(data)
-        self.assertTrue(done)
-        self.assertIs(rest, "")
-
-    def headers_only_complete_test(self):
-        data = "header1: value\r\nheader2: value\r\n"
-        done, rest = data_fetch._throw_away_headers(data)
-        self.assertFalse(done)
-        self.assertIs(rest, "")
-
-    def headers_and_data_test(self):
-        data = "Begining of the data"
-        headers_data = "header1: value\r\nheader2: value\r\n\r\n%s" % data
-        done, rest = data_fetch._throw_away_headers(headers_data)
-        self.assertTrue(done)
-        self.assertEqual(rest, data)
-
+# no tests here yet
