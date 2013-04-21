@@ -33,6 +33,10 @@ def ensure_dir_exists(dirpath):
 
     """
 
+    if not dirpath:
+        # nothing can be done for an empty string
+        return
+
     if not os.path.isdir(dirpath):
         os.makedirs(dirpath)
 

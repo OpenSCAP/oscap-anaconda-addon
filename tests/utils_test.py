@@ -53,3 +53,7 @@ class EnsureDirExistTest(unittest.TestCase):
 
         self.mock_os.path.isdir.assert_called_with("/tmp/dir_test")
         self.mock_os.makedirs.assert_called_with("/tmp/dir_test")
+
+    def no_dir_test(self):
+        # shouldn't raise an exception
+        self.ensure_dir_exists("")
