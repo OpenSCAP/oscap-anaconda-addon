@@ -361,11 +361,13 @@ class PasswdRules(RuleHandler):
                 return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
             elif len(ksdata.rootpw.password) < self._minlen or self._passwd_removed:
                 # too short or already removed
-                msg = _("root password was too short a longer one with at least "
-                        "%d characters will be required" % self._minlen)
+                msg = _("root password was too short, a longer one with at "
+                        "least %d characters will be required" % self._minlen)
                 if not report_only:
+                    # remove the password and reset the seen flag no to confuse Anaconda
                     self._passwd_removed = True
                     ksdata.rootpw.password = ""
+                    ksdata.rootpw.seen = False
                 return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
             else:
                 return []
