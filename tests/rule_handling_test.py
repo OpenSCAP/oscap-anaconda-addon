@@ -162,7 +162,7 @@ class RuleEvaluationTest(unittest.TestCase):
         self.assertIn("/", messages[0].text)
 
     def add_mount_options_test(self):
-        for rule in ["part /tmp --mountoptions=nodev",
+        for rule in ["part /tmp --mountoptions=defaults,nodev",
                      "part / --mountoptions=noauto"]:
             self.rule_data.new_rule(rule)
 
@@ -202,7 +202,7 @@ class RuleEvaluationTest(unittest.TestCase):
                          "defaults,noauto")
 
     def add_mount_options_no_duplicates_test(self):
-        for rule in ["part /tmp --mountoptions=nodev",
+        for rule in ["part /tmp --mountoptions=defaults,nodev",
                      "part / --mountoptions=noauto"]:
             self.rule_data.new_rule(rule)
 
@@ -432,14 +432,14 @@ class RuleEvaluationTest(unittest.TestCase):
 
     def package_rules_test(self):
         self.rule_data.new_rule("package --add=firewalld --remove=telnet "
-                                "--add=iptables")
+                                "--add=iptables --add=vim")
 
-        self.ksdata_mock.packages.packageList = []
+        self.ksdata_mock.packages.packageList = ["vim"]
         self.ksdata_mock.packages.excludedList = []
 
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
-        # one info message for each added/removed package
+        # one info message for each (really) added/removed package
         self.assertEqual(len(messages), 3)
         self.assertTrue(all(message.type == common.MESSAGE_TYPE_INFO
                             for message in messages))
@@ -456,7 +456,7 @@ class RuleEvaluationTest(unittest.TestCase):
 
         self.assertEqual(must_see, [])
         self.assertEqual(set(self.ksdata_mock.packages.packageList),
-                         {"firewalld", "iptables"})
+                         {"firewalld", "iptables", "vim"})
         self.assertEqual(set(self.ksdata_mock.packages.excludedList),
                          {"telnet"})
 
@@ -519,8 +519,139 @@ class RuleEvaluationTest(unittest.TestCase):
 
         self.storage_mock.mountpoints = dict()
         self.ksdata_mock.packages.packageList = []
+        self.ksdata_mock.packages.excludedList = []
 
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
         # four rules, all fail --> four messages
         self.assertEqual(len(messages), 4)
+
+class RevertingTest(unittest.TestCase):
+    """Test for reverting changes done by the rule evaluation."""
+
+    def setUp(self):
+        self.rule_data = rule_handling.RuleData()
+        self.ksdata_mock = mock.Mock()
+        self.storage_mock = mock.Mock()
+
+    def revert_mount_options_test(self):
+        self.rule_data.new_rule("part /tmp --mountoptions=nodev")
+        self.storage_mock.mountpoints = dict()
+        self.storage_mock.mountpoints["/tmp"] = mock.Mock()
+        self.storage_mock.mountpoints["/tmp"].format.options = "defaults"
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # mount option added --> one message
+        self.assertEqual(len(messages), 1)
+
+        # "nodev" option should be added
+        self.assertEqual(self.storage_mock.mountpoints["/tmp"].format.options,
+                         "defaults,nodev")
+
+        self.rule_data.revert_changes(self.ksdata_mock, self.storage_mock)
+
+        # should be reverted to the original value
+        self.assertEqual(self.storage_mock.mountpoints["/tmp"].format.options,
+                         "defaults")
+
+        ### another cycle of the same ###
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # mount option added --> one message
+        self.assertEqual(len(messages), 1)
+
+        # "nodev" option should be added
+        self.assertEqual(self.storage_mock.mountpoints["/tmp"].format.options,
+                         "defaults,nodev")
+
+        self.rule_data.revert_changes(self.ksdata_mock, self.storage_mock)
+
+        # should be reverted to the original value
+        self.assertEqual(self.storage_mock.mountpoints["/tmp"].format.options,
+                         "defaults")
+
+    def revert_password_changes_test(self):
+        self.rule_data.new_rule("passwd --minlen=8")
+
+        self.ksdata_mock.rootpw.password = "aaaa"
+        self.ksdata_mock.rootpw.isCrypted = False
+
+        # run twice --> first run removes the password, but the second one should
+        #               also mention the old password
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # password removed --> one message
+        self.assertEqual(len(messages), 1)
+
+        # weak password should be removed
+        self.assertEqual(self.ksdata_mock.rootpw.password, "")
+        self.assertFalse(self.ksdata_mock.rootpw.seen)
+
+        self.rule_data.revert_changes(self.ksdata_mock, self.storage_mock)
+
+        # changes should be reverted
+        self.assertEqual(self.ksdata_mock.rootpw.password, "aaaa")
+        self.assertTrue(self.ksdata_mock.rootpw.seen)
+
+        ### another run of the same ###
+
+        # run twice --> first run removes the password, but the second one should
+        #               also mention the old password
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # password removed --> one message
+        self.assertEqual(len(messages), 1)
+
+        # weak password should be removed
+        self.assertEqual(self.ksdata_mock.rootpw.password, "")
+        self.assertFalse(self.ksdata_mock.rootpw.seen)
+
+        self.rule_data.revert_changes(self.ksdata_mock, self.storage_mock)
+
+        # changes should be reverted
+        self.assertEqual(self.ksdata_mock.rootpw.password, "aaaa")
+        self.assertTrue(self.ksdata_mock.rootpw.seen)
+
+        ### with long enough password this time ###
+        self.ksdata_mock.rootpw.password = "aaaaaaaaaaaaa"
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # revert should have cleared everything, long enough password
+        # entered --> no message
+        self.assertEqual(messages, [])
+
+    def revert_package_rules_test(self):
+        self.rule_data.new_rule("package --add=firewalld --remove=telnet "
+                                "--add=iptables --add=vim")
+
+        self.ksdata_mock.packages.packageList = ["vim"]
+        self.ksdata_mock.packages.excludedList = []
+
+        # run twice --> nothing should be different in the second run
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # one info message for each added/removed package
+        self.assertEqual(len(messages), 3)
+
+        self.rule_data.revert_changes(self.ksdata_mock, self.storage_mock)
+
+        # (only) added and excluded packages should have been removed from the list
+        self.assertEqual(self.ksdata_mock.packages.packageList, ["vim"])
+        self.assertEqual(self.ksdata_mock.packages.excludedList, [])
+
+        ### now do the same again ###
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # one info message for each added/removed package
+        self.assertEqual(len(messages), 3)
+
+        self.rule_data.revert_changes(self.ksdata_mock, self.storage_mock)
+
+        # (only) added and excluded packages should have been removed from the list
+        self.assertEqual(self.ksdata_mock.packages.packageList, ["vim"])
+        self.assertEqual(self.ksdata_mock.packages.excludedList, [])

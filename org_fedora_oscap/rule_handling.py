@@ -89,6 +89,18 @@ class RuleHandler(object):
 
         return []
 
+    def revert_changes(self, ksdata, storage):
+        """
+        Method that should revert all changes done by the previous calls of the
+        eval_rules method with the report_only set to False.
+
+        :see: eval_rules
+
+        """
+
+        # inheriting classes are supposed to override this
+        pass
+
 class UknownRuleError(OSCAPaddonError):
     """Exception class for cases when an uknown rule is to be processed."""
 
@@ -104,6 +116,10 @@ class RuleData(RuleHandler):
         self._passwd_rules = PasswdRules()
         self._package_rules = PackageRules()
         self._bootloader_rules = BootloaderRules()
+
+        self._rule_handlers = (self._part_rules, self._passwd_rules,
+                               self._package_rules, self._bootloader_rules,
+                               )
 
     def __str__(self):
         """Standard method useful for debugging and testing."""
@@ -157,11 +173,17 @@ class RuleData(RuleHandler):
         messages = []
 
         # evaluate all subgroups of rules
-        for rule_handler in (self._part_rules, self._passwd_rules,
-                             self._package_rules, self._bootloader_rules,):
+        for rule_handler in self._rule_handlers:
             messages += rule_handler.eval_rules(ksdata, storage, report_only)
 
         return messages
+
+    def revert_changes(self, ksdata, storage):
+        """:see: RuleHandler.revert_changes"""
+
+        # revert changes in all subgroups of rules
+        for rule_handler in self._rule_handlers:
+            rule_handler.revert_changes(ksdata, storage)
 
     def _new_part_rule(self, rule):
         args = shlex.split(rule)
@@ -247,6 +269,12 @@ class PartRules(RuleHandler):
 
         return messages
 
+    def revert_changes(self, ksdata, storage):
+        """:see: RuleHandler.revert_changes"""
+
+        for part_rule in self._rules.itervalues():
+            part_rule.revert_changes(ksdata, storage)
+
 class PartRule(RuleHandler):
     """Simple class holding rule data for a single partition/mount point."""
 
@@ -261,6 +289,7 @@ class PartRule(RuleHandler):
 
         self._mount_point = mount_point
         self._mount_options = []
+        self._added_mount_options = []
 
     def __str__(self):
         """Standard method useful for debugging and testing."""
@@ -295,27 +324,62 @@ class PartRule(RuleHandler):
             # mount point doesn't exist, nothing more can be found here
             return messages
 
-        # add message for every mount option added
-        # TODO: messages only for mount options really added
-        for opt in self._mount_options:
-            msg = _("mount option '%s' added for the mount point %s" % (opt,
-                                                             self._mount_point))
+        # template for the message
+        msg_tmpl = _("mount option '%(mount_option)s' added for "
+                     "the mount point %(mount_point)s")
+
+        # add message for every option already added
+        for opt in self._added_mount_options:
+            msg = msg_tmpl % { "mount_option": opt,
+                               "mount_point": self._mount_point }
             messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
 
         # mount point to be created during installation
         target_mount_point = storage.mountpoints[self._mount_point]
 
-        # new options that should be added
+        # generator for the new options that should be added
         new_opts = (opt for opt in self._mount_options
                     if opt not in target_mount_point.format.options.split(","))
 
-        new_opts_str = ",".join(new_opts)
+        # add message for every mount option added
+        for opt in new_opts:
+            msg = msg_tmpl % { "mount_option": opt,
+                               "mount_point": self._mount_point }
 
-        # add new options to the target mount point
-        if not report_only and new_opts_str:
-            target_mount_point.format.options += ",%s" % new_opts_str
+            # add message for the mount option in any case
+            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+
+            # add new options to the target mount point if not reporting only
+            if not report_only:
+                target_mount_point.format.options += ",%s" % opt
+                self._added_mount_options.append(opt)
 
         return messages
+
+    def revert_changes(self, ksdata, storage):
+        """
+        Removes the mount options added to the mount point by this PartRule
+        instance.
+
+        :see: RuleHandler.revert_changes
+
+        """
+
+        # mount point to be created during installation
+        target_mount_point = storage.mountpoints[self._mount_point]
+
+        # mount options to be defined for the created mount point
+        tgt_mount_options = target_mount_point.format.options
+
+        # generator of the options that should remain
+        result_opts = (opt for opt in tgt_mount_options.split(",")
+                       if opt not in self._added_mount_options)
+
+        # set the new list of options
+        target_mount_point.format.options = ",".join(result_opts)
+
+        # reset the remembered added mount options
+        self._added_mount_options = []
 
 class PasswdRules(RuleHandler):
     """Simple class holding data from the rules affecting passwords."""
@@ -324,7 +388,7 @@ class PasswdRules(RuleHandler):
         """Constructor initializing attributes."""
 
         self._minlen = 0
-        self._passwd_removed = False
+        self._removed_password = None
 
     def __str__(self):
         """Standard method useful for debugging and testing."""
@@ -347,7 +411,7 @@ class PasswdRules(RuleHandler):
             # no password restrictions, nothing to be done here
             return []
 
-        if not ksdata.rootpw.password and not self._passwd_removed:
+        if not ksdata.rootpw.password and self._removed_password is None:
             # root password was not set
 
             # password length enforcement is not suported in the Anaconda yet
@@ -359,18 +423,29 @@ class PasswdRules(RuleHandler):
             if ksdata.rootpw.isCrypted:
                 msg = _("cannot check root password length (password is crypted)")
                 return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
-            elif len(ksdata.rootpw.password) < self._minlen or self._passwd_removed:
+            elif len(ksdata.rootpw.password) < self._minlen or \
+                    self._removed_password is not None:
                 # too short or already removed
                 msg = _("root password was too short, a longer one with at "
                         "least %d characters will be required" % self._minlen)
-                if not report_only:
+                if not report_only and self._removed_password is None:
                     # remove the password and reset the seen flag no to confuse Anaconda
-                    self._passwd_removed = True
+                    self._removed_password = ksdata.rootpw.password
                     ksdata.rootpw.password = ""
                     ksdata.rootpw.seen = False
                 return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
             else:
                 return []
+
+    def revert_changes(self, ksdata, storage):
+        """:see: RuleHandler.revert_changes"""
+
+        # set the old password back
+        if self._removed_password is not None:
+            ksdata.rootpw.password = self._removed_password
+            ksdata.rootpw.seen = True
+
+            self._removed_password = None
 
 class PackageRules(RuleHandler):
     """Simple class holding data from the rules affecting installed packages."""
@@ -380,6 +455,9 @@ class PackageRules(RuleHandler):
 
         self._add_pkgs = set()
         self._remove_pkgs = set()
+
+        self._added_pkgs = set()
+        self._removed_pkgs = set()
 
     def add_packages(self, packages):
         """
@@ -424,18 +502,43 @@ class PackageRules(RuleHandler):
         """:see: RuleHandler.eval_rules"""
 
         messages = []
-        for pkg in self._add_pkgs:
+
+        # add messages for the already added packages
+        for pkg in self._added_pkgs:
+            msg = _("package '%s' has been added to the list of to be installed "
+                    "packages" % pkg)
+            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+
+        # packages, that should be added
+        packages_to_add = (pkg for pkg in self._add_pkgs
+                           if pkg not in ksdata.packages.packageList)
+
+        for pkg in packages_to_add:
             # add the package unless already added
-            if not report_only and pkg not in ksdata.packages.packageList:
+            if not report_only:
+                self._added_pkgs.add(pkg)
                 ksdata.packages.packageList.append(pkg)
 
             msg = _("package '%s' has been added to the list of to be installed "
                     "packages" % pkg)
             messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
 
-        for pkg in self._remove_pkgs:
+        ### now do the same for the packages that should be excluded
+
+        # add messages for the already excluded packages
+        for pkg in self._removed_pkgs:
+            msg = _("package '%s' has been added to the list of excluded "
+                    "packages" % pkg)
+            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+
+        # packages, that should be added
+        packages_to_remove = (pkg for pkg in self._remove_pkgs
+                              if pkg not in ksdata.packages.excludedList)
+
+        for pkg in packages_to_remove:
             # exclude the package unless already excluded
-            if not report_only and pkg not in ksdata.packages.excludedList:
+            if not report_only:
+                self._removed_pkgs.add(pkg)
                 ksdata.packages.excludedList.append(pkg)
 
             msg = _("package '%s' has been added to the list of excluded "
@@ -443,6 +546,22 @@ class PackageRules(RuleHandler):
             messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
 
         return messages
+
+    def revert_changes(self, ksdata, storage):
+        """:see: RuleHander.revert_changes"""
+
+        # remove all packages this handler added
+        for pkg in self._added_pkgs:
+            if pkg in ksdata.packages.packageList:
+                ksdata.packages.packageList.remove(pkg)
+
+        # remove all packages this handler excluded
+        for pkg in self._removed_pkgs:
+            if pkg in ksdata.packages.excludedList:
+                ksdata.packages.excludedList.remove(pkg)
+
+        self._added_pkgs = set()
+        self._removed_pkgs = set()
 
 class BootloaderRules(RuleHandler):
     """Simple class holding data from the rules affecting bootloader."""
@@ -478,3 +597,5 @@ class BootloaderRules(RuleHandler):
                                "boot loader password not set up")]
         else:
             return []
+
+    # nothing to be reverted for now
