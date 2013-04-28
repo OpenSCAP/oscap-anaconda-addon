@@ -340,7 +340,7 @@ class PasswdRules(RuleHandler):
         if minlen > self._minlen:
             self._minlen = minlen
 
-    def eval_rules(self, ksdata, storage, report_only):
+    def eval_rules(self, ksdata, storage, report_only=False):
         """:see: RuleHandler.eval_rules"""
 
         if self._minlen == 0:
