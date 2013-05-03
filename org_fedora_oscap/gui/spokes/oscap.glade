@@ -83,6 +83,7 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="model">dsStore</property>
+                                <signal name="changed" handler="on_ds_combo_changed" swapped="no"/>
                                 <child>
                                   <object class="GtkCellRendererText" id="dsComboCellrenderertext">
                                     <property name="ellipsize">end</property>
@@ -128,6 +129,7 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="model">xccdfStore</property>
+                                <signal name="changed" handler="on_xccdf_combo_changed" swapped="no"/>
                                 <child>
                                   <object class="GtkCellRendererText" id="xccdfComboCellrenderertext">
                                     <property name="ellipsize">end</property>
@@ -179,7 +181,9 @@
                         <property name="model">profilesStore</property>
                         <property name="headers_visible">False</property>
                         <child internal-child="selection">
-                          <object class="GtkTreeSelection" id="profilesSelection"/>
+                          <object class="GtkTreeSelection" id="profilesSelection">
+                            <signal name="changed" handler="on_profiles_selection_changed" swapped="no"/>
+                          </object>
                         </child>
                         <child>
                           <object class="GtkTreeViewColumn" id="profileColumn">

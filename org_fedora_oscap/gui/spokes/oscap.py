@@ -28,6 +28,7 @@ from org_fedora_oscap.gui.categories.security import SecurityCategory
 from org_fedora_oscap import common
 from org_fedora_oscap import data_fetch
 from org_fedora_oscap import rule_handling
+from org_fedora_oscap import content_handling
 
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.threads import threadMgr, AnacondaThread
@@ -35,6 +36,45 @@ from pyanaconda.ui.communication import hubQ
 
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
+
+# helper functions
+def set_combo_selection(combo, item):
+    """
+    Set selected item of the combobox.
+
+    :return: True if successfully set, False otherwise
+    :rtype: bool
+
+    """
+
+    model = combo.get_model()
+    if not model:
+        return False
+
+    itr = model.get_iter_first()
+    while itr:
+        if model[itr][0] == item:
+            combo.set_active_iter(itr)
+            return True
+
+        itr = model.iter_next(itr)
+
+        return False
+
+def get_combo_selection(combo):
+    """
+    Get the selected item of the combobox.
+
+    :return: selected item or None
+
+    """
+
+    model = combo.get_model()
+    itr = combo.get_active_iter()
+    if not itr or not model:
+        return None
+
+    return model[itr][0]
 
 def render_message_type(column, renderer, model, itr, user_data=None):
     #get message type from the first column
@@ -66,7 +106,9 @@ class OSCAPSpoke(NormalSpoke):
 
     # list all top-level objects from the .glade file that should be exposed
     # to the spoke or leave empty to extract everything
-    builderObjects = ["OSCAPspokeWindow", "profilesStore", "changesStore"]
+    builderObjects = ["OSCAPspokeWindow", "profilesStore", "changesStore",
+                      "dsStore", "xccdfStore", "profilesStore",
+                      ]
 
     # the name of the main window widget
     mainWidgetName = "OSCAPspokeWindow"
@@ -106,6 +148,9 @@ class OSCAPSpoke(NormalSpoke):
         self._storage = storage
         self._ready = False
 
+        self._ds_handler = None
+        self._ds_checklists = None
+
     def initialize(self):
         """
         The initialize method that is called after the instance is created.
@@ -123,6 +168,18 @@ class OSCAPSpoke(NormalSpoke):
 
         # the store that holds the messages that come from the rules evaluation
         self._message_store = self.builder.get_object("changesStore")
+
+        # stores with data streams, checklists and profiles
+        self._ds_store = self.builder.get_object("dsStore")
+        self._xccdf_store = self.builder.get_object("xccdfStore")
+        self._profiles_store = self.builder.get_object("profilesStore")
+
+        # comboboxes for data streams and checklists
+        self._ds_combo = self.builder.get_object("dsCombo")
+        self._xccdf_combo = self.builder.get_object("xccdfCombo")
+
+        # profile selection
+        self._profiles_selection = self.builder.get_object("profilesSelection")
 
         content_url = self._addon_data.content_url
         if not content_url:
@@ -151,8 +208,9 @@ class OSCAPSpoke(NormalSpoke):
 
     def _wait_for_data_fetch(self, thread_name):
         """
-        Waits for data fetching to be finished, evaluates pre-installation fixes
-        from the content and marks the spoke as ready in the end.
+        Waits for data fetching to be finished, populates the stores and
+        evaluates pre-installation fixes from the content and marks the spoke as
+        ready in the end.
 
         :param thread_name: name of the thread to wait for (if any)
         :type thread_name: str or None
@@ -162,6 +220,13 @@ class OSCAPSpoke(NormalSpoke):
         fetch_thread = threadMgr.get(thread_name)
         if fetch_thread:
             fetch_thread.join()
+
+        # populate the stores from items from the content
+        self._ds_handler = content_handling.DataStreamHandler(\
+                                          self._addon_data.preinst_content_path)
+        self._ds_checklists = self._ds_handler.get_data_streams_checklists()
+        for dstream in self._ds_checklists.iterkeys():
+            self._add_ds_id(dstream)
 
         # get pre-install fix rules from the content
         rules = common.get_fix_rules_pre(self._addon_data.profile_id,
@@ -179,6 +244,59 @@ class OSCAPSpoke(NormalSpoke):
         self._ready = True
         hubQ.send_ready(self.__class__.__name__, True)
         hubQ.send_message(self.__class__.__name__, self.status)
+
+    @property
+    def _current_ds_id(self):
+        return get_combo_selection(self._ds_combo)
+
+    @property
+    def _current_xccdf_id(self):
+        return get_combo_selection(self._xccdf_combo)
+
+    def _add_ds_id(self, ds_id):
+        """
+        Add data stream ID to the data streams store.
+
+        :param ds_id: data stream ID
+        :type ds_id: str
+
+        """
+
+        self._ds_store.append([ds_id])
+
+    def _update_xccdfs_store(self):
+        """
+        Clears and repopulates the store with XCCDF IDs from the currently
+        selected data stream.
+
+        """
+
+        if self._ds_checklists is None:
+            # not initialized, cannot do anything
+            return
+
+        self._xccdf_store.clear()
+        for xccdf_id in self._ds_checklists[self._current_ds_id]:
+            self._xccdf_store.append([xccdf_id])
+
+    def _update_profiles_store(self):
+        """
+        Clears and repopulates the store with profiles from the currently
+        selected data stream and checklist.
+
+        """
+
+        if self._ds_handler is None or self._ds_checklists is None:
+            # not initialized, cannot do anything
+            return
+
+        self._profiles_store.clear()
+        for profile in self._ds_handler.get_profiles(self._current_ds_id,
+                                                     self._current_xccdf_id):
+            profile_markup = '<span weight="bold">%s</span>\n%s' \
+                                % (profile.title, profile.description)
+            self._profiles_store.append([profile.id,
+                                         profile_markup])
 
     def _add_message(self, message):
         """
@@ -217,6 +335,21 @@ class OSCAPSpoke(NormalSpoke):
         :see: pyanaconda.ui.common.UIObject.refresh
 
         """
+
+        if self._addon_data.datastream_id:
+            set_combo_selection(self._ds_combo,
+                                self._addon_data.datastream_id)
+        else:
+            try:
+                default_ds = self._ds_checklists.iterkeys().next()
+                set_combo_selection(self._ds_combo, default_ds)
+            except StopIteration:
+                # no data stream available
+                pass
+
+        if self._addon_data.datastream_id and self._addon_data.xccdf_id:
+            set_combo_selection(self._xccdf_combo,
+                                self._addon_data.xccdf_id)
 
         self._update_message_store()
 
@@ -294,3 +427,21 @@ class OSCAPSpoke(NormalSpoke):
             return _("Warnings appeared")
 
         return _("Everything okay")
+
+    def on_ds_combo_changed(self, *args):
+        """Handler for the datastream ID change."""
+
+        self._update_xccdfs_store()
+
+        ds_id = self._current_ds_id
+        first_checklist = self._ds_checklists[ds_id][0]
+
+        set_combo_selection(self._xccdf_combo, first_checklist)
+
+    def on_xccdf_combo_changed(self, *args):
+        """Handler for the XCCDF ID change."""
+
+        self._update_profiles_store()
+
+    def on_profiles_selection_changed(self, *args):
+        pass
