@@ -139,13 +139,15 @@ class DataStreamHandler(object):
         Method to get data streams and their checklists found in the data stream
         collection.
 
-        :return: list of pairs consisting of the IDs of the data streams and
-                 lists of their checklists' IDs
-        :rtype: list of pairs with a string and list of strings
+        :return: a dictionary consisting of the IDs of the data streams as keys
+                 and lists of their checklists' IDs as values
+        :rtype: dict(str -> list of strings)
 
         """
 
-        return self._items.items()
+        # easy, we already have exactly what should be returned, just create a
+        # copy, so that the caller cannot modify our internal attributes
+        return dict(self._items)
 
     def get_checklists(self, data_stream_id):
         """
