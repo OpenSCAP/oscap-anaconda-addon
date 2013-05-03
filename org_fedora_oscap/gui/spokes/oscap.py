@@ -22,9 +22,8 @@
 _ = lambda x: x
 N_ = lambda x: x
 
-import os.path
-
-# the path to addons is in sys.path so we can import things from org_fedora_oscap
+# the path to addons is in sys.path so we can import things
+# from org_fedora_oscap
 from org_fedora_oscap.gui.categories.security import SecurityCategory
 from org_fedora_oscap import common
 from org_fedora_oscap import data_fetch
@@ -52,9 +51,10 @@ def render_message_type(column, renderer, model, itr, user_data=None):
 
 class OSCAPSpoke(NormalSpoke):
     """
-    Class for the Hello world spoke. This spoke will be in the Hello world
-    category and thus on the Summary hub. It is a very simple example of
-    a unit for the Anaconda's graphical user interface.
+    Main class of the OSCAP addon spoke that will appear in the Security
+    category on the Summary hub. It allows interactive choosing of the data
+    stream, checklist and profile driving the evaluation and remediation of the
+    available SCAP content in the installation process.
 
     :see: pyanaconda.ui.common.UIObject
     :see: pyanaconda.ui.common.Spoke
@@ -138,13 +138,13 @@ class OSCAPSpoke(NormalSpoke):
                for net_prefix in data_fetch.NET_URL_PREFIXES):
             # need to fetch data over network
             thread_name = common.wait_and_fetch_net_data(
-                                           self._addon_data.content_url,
-                                           self._addon_data.preinst_content_path,
-                                           self._addon_data.certificates)
+                                          self._addon_data.content_url,
+                                          self._addon_data.preinst_content_path,
+                                          self._addon_data.certificates)
 
-        hubQ.send_not_ready(self.__class__.__name__)
         hubQ.send_message(self.__class__.__name__,
                           _("Fetching content data"))
+        hubQ.send_not_ready(self.__class__.__name__)
         threadMgr.add(AnacondaThread(name="OSCAPguiWaitForDataFetchThread",
                                      target=self._wait_for_data_fetch,
                                      args=(thread_name,)))
@@ -202,7 +202,8 @@ class OSCAPSpoke(NormalSpoke):
 
         self._message_store.clear()
 
-        messages = self._addon_data.rule_data.eval_rules(self.data, self._storage,
+        messages = self._addon_data.rule_data.eval_rules(self.data,
+                                                         self._storage,
                                                          report_only)
         for msg in messages:
             self._add_message(msg)
