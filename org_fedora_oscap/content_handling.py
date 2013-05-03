@@ -24,7 +24,7 @@ it.
 
 """
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from openscap_api import OSCAP
 
 class ContentHandlingError(Exception):
@@ -91,7 +91,7 @@ class DataStreamHandler(object):
             raise DataStreamHandlingError(msg)
 
         # dictionary holding the items gathered from DSC processing
-        self._items = dict()
+        self._items = OrderedDict()
 
         # create an sds index for the content
         self._sds_idx = OSCAP.xccdf_session_get_sds_idx(self._session)
