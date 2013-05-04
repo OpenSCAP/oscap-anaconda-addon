@@ -30,9 +30,10 @@ from org_fedora_oscap import data_fetch
 from org_fedora_oscap import rule_handling
 from org_fedora_oscap import content_handling
 
-from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.threads import threadMgr, AnacondaThread
+from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
+from pyanaconda.ui.gui.utils import gtk_action_wait, busied_cursor
 
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
@@ -75,6 +76,34 @@ def get_combo_selection(combo):
         return None
 
     return model[itr][0]
+
+def set_treeview_selection(treeview, item, col=0):
+    """
+    Select the given item in the given treeview and scroll to it.
+
+    :param treeview: treeview to select and item in
+    :type treeview: GtkTreeView
+    :param item: item to be selected
+    :type item: str
+    :param col: column to search for the item in
+    :type col: int
+
+    """
+
+    model = treeview.get_model()
+    itr = model.get_iter_first()
+    while itr and not model[itr][col] == item:
+        itr = model.iter_next(itr)
+
+    if not itr:
+        # item not found, cannot be selected
+        return
+
+    # otherwise select the item and scroll to it
+    selection = treeview.get_selection()
+    selection.select_iter(itr)
+    path = model.get_path(itr)
+    treeview.scroll_to_cell(path)
 
 def render_message_type(column, renderer, model, itr, user_data=None):
     #get message type from the first column
@@ -148,8 +177,18 @@ class OSCAPSpoke(NormalSpoke):
         self._storage = storage
         self._ready = False
 
+        # the first status provided
+        self._unitialized_status = _("Not ready")
+
         self._ds_handler = None
         self._ds_checklists = None
+
+        # used for changing profiles, stored as self._addon_data.rule_data when
+        # leaving the spoke
+        self._rule_data = None
+
+        # used to check if the profile was changed or not
+        self._active_profile = None
 
     def initialize(self):
         """
@@ -178,8 +217,12 @@ class OSCAPSpoke(NormalSpoke):
         self._ds_combo = self.builder.get_object("dsCombo")
         self._xccdf_combo = self.builder.get_object("xccdfCombo")
 
-        # profile selection
+        # profiles view and selection
+        self._profiles_view = self.builder.get_object("profilesView")
         self._profiles_selection = self.builder.get_object("profilesSelection")
+
+        # button for switching profiles
+        self._choose_button = self.builder.get_object("chooseProfileButton")
 
         content_url = self._addon_data.content_url
         if not content_url:
@@ -231,20 +274,20 @@ class OSCAPSpoke(NormalSpoke):
         for dstream in self._ds_checklists.iterkeys():
             self._add_ds_id(dstream)
 
-        # get pre-install fix rules from the content
-        rules = common.get_fix_rules_pre(self._addon_data.profile_id,
-                                         self._addon_data.preinst_content_path,
-                                         self._addon_data.datastream_id,
-                                         self._addon_data.xccdf_id)
+        # refresh UI elements
+        self.refresh()
 
-        # parse and store rules
-        self._addon_data.rule_data = rule_handling.RuleData()
-        for rule in rules.splitlines():
-            self._addon_data.rule_data.new_rule(rule)
+        # try to switch to the chosen profile (if any)
+        self._switch_profile()
 
-        self._update_message_store()
+        # initialize the self._addon_data.rule_data
+        self._addon_data.rule_data = self._rule_data
+
+        # no more being unitialized
+        self._unitialized_status = None
 
         self._ready = True
+        # pylint: disable-msg=E1101
         hubQ.send_ready(self.__class__.__name__, True)
         hubQ.send_message(self.__class__.__name__, self.status)
 
@@ -255,6 +298,14 @@ class OSCAPSpoke(NormalSpoke):
     @property
     def _current_xccdf_id(self):
         return get_combo_selection(self._xccdf_combo)
+
+    @property
+    def _current_profile_id(self):
+        store, itr = self._profiles_selection.get_selected()
+        if not store or not itr:
+            return None
+        else:
+            return store[itr][0]
 
     def _add_ds_id(self, ds_id):
         """
@@ -321,14 +372,49 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
+        if not self._rule_data:
+            # RuleData instance not initialized, cannot do anything
+            return
+
         self._message_store.clear()
 
-        messages = self._addon_data.rule_data.eval_rules(self.data,
-                                                         self._storage,
-                                                         report_only)
+        messages = self._rule_data.eval_rules(self.data, self._storage,
+                                              report_only)
         for msg in messages:
             self._add_message(msg)
 
+    def _switch_profile(self):
+        """Switches to a current selected profile."""
+
+        ds = self._current_ds_id
+        xccdf = self._current_xccdf_id
+        profile = self._current_profile_id
+
+        if not all((ds, xccdf, profile)):
+            # something is not set -> do nothing
+            return
+
+        # revert changes done by the previous profile
+        if self._rule_data:
+            self._rule_data.revert_changes(self.data, self._storage)
+
+        # get pre-install fix rules from the content
+        rules = common.get_fix_rules_pre(profile,
+                                         self._addon_data.preinst_content_path,
+                                         ds, xccdf)
+
+        # parse and store rules with a clean RuleData instance
+        self._rule_data = rule_handling.RuleData()
+        for rule in rules.splitlines():
+            self._rule_data.new_rule(rule)
+
+        self._update_message_store()
+
+        # make the selection button insensitive and remember the active profile
+        self._choose_button.set_sensitive(False)
+        self._active_profile = self._current_profile_id
+
+    @gtk_action_wait
     def refresh(self):
         """
         The refresh method that is called every time the spoke is displayed.
@@ -354,6 +440,12 @@ class OSCAPSpoke(NormalSpoke):
             set_combo_selection(self._xccdf_combo,
                                 self._addon_data.xccdf_id)
 
+        if self._addon_data.profile_id:
+            set_treeview_selection(self._profiles_view,
+                                   self._addon_data.profile_id)
+
+        self._rule_data = self._addon_data.rule_data
+
         self._update_message_store()
 
     def apply(self):
@@ -363,7 +455,12 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        pass
+        # store currently selected values to the addon data attributes
+        self._addon_data.datastream_id = self._current_ds_id
+        self._addon_data.xccdf_id = self._current_xccdf_id
+        self._addon_data.profile_id = self._active_profile
+
+        self._addon_data.rule_data = self._rule_data
 
     def execute(self):
         """
@@ -415,6 +512,10 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
+        if self._unitialized_status:
+            # not initialized
+            return self._unitialized_status
+
         # update message store, something may changed from the last update
         self._update_message_store(report_only=True)
 
@@ -444,7 +545,30 @@ class OSCAPSpoke(NormalSpoke):
     def on_xccdf_combo_changed(self, *args):
         """Handler for the XCCDF ID change."""
 
-        self._update_profiles_store()
+        # may take a while
+        with busied_cursor():
+            self._update_profiles_store()
 
     def on_profiles_selection_changed(self, *args):
-        pass
+        """Handler for the profile selection change."""
+
+        cur_profile = self._current_profile_id
+        if cur_profile:
+            if cur_profile != self._active_profile:
+                # new profile selected, make the selection button sensitive
+                self._choose_button.set_sensitive(True)
+            else:
+                # current active profile selected
+                self._choose_button.set_sensitive(False)
+
+    def on_profile_chosen(self, *args):
+        """
+        Handler for the profile being chosen (e.g. "Select profile" button hit).
+
+        """
+
+        # may take a while
+        with busied_cursor():
+            # switch profile
+            self._switch_profile()
+

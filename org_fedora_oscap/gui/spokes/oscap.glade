@@ -204,6 +204,23 @@
                       </packing>
                     </child>
                     <child>
+                      <object class="GtkButton" id="chooseProfileButton">
+                        <property name="label" translatable="yes">_Select profile</property>
+                        <property name="use_underline">True</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="halign">center</property>
+                        <signal name="activate" handler="on_profile_chosen" swapped="no"/>
+                        <signal name="clicked" handler="on_profile_chosen" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">3</property>
+                      </packing>
+                    </child>
+                    <child>
                       <object class="GtkLabel" id="changesLabel">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -214,7 +231,7 @@
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">3</property>
+                        <property name="position">4</property>
                       </packing>
                     </child>
                     <child>
@@ -251,7 +268,7 @@
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">4</property>
+                        <property name="position">5</property>
                       </packing>
                     </child>
                   </object>
@@ -286,7 +303,7 @@
   </object>
   <object class="GtkListStore" id="dsStore">
     <columns>
-      <!-- column-name Data stream id -->
+      <!-- column-name Data -->
       <column type="gchararray"/>
     </columns>
   </object>
@@ -300,7 +317,7 @@
   </object>
   <object class="GtkListStore" id="xccdfStore">
     <columns>
-      <!-- column-name Checklist ID -->
+      <!-- column-name Checklist -->
       <column type="gchararray"/>
     </columns>
   </object>
