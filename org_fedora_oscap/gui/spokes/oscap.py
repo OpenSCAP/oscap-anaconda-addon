@@ -126,7 +126,7 @@ class OSCAPSpoke(NormalSpoke):
     # title of the spoke (will be displayed on the hub)
     title = N_("_SECURITY PROFILE")
 
-    ### methods defined by API ###
+    ### methods defined by API and helper methods ###
     def __init__(self, data, storage, payload, instclass):
         """
         :see: pyanaconda.ui.common.Spoke.__init__
@@ -185,6 +185,7 @@ class OSCAPSpoke(NormalSpoke):
         if not content_url:
             # nothing more to be done now, the spoke is ready
             self._ready = True
+            # pylint: disable-msg=E1101
             hubQ.send_ready(self.__class__.__name__, True)
 
             return
@@ -199,8 +200,10 @@ class OSCAPSpoke(NormalSpoke):
                                           self._addon_data.preinst_content_path,
                                           self._addon_data.certificates)
 
+        # pylint: disable-msg=E1101
         hubQ.send_message(self.__class__.__name__,
                           _("Fetching content data"))
+        # pylint: disable-msg=E1101
         hubQ.send_not_ready(self.__class__.__name__)
         threadMgr.add(AnacondaThread(name="OSCAPguiWaitForDataFetchThread",
                                      target=self._wait_for_data_fetch,
