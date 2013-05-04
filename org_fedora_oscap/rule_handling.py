@@ -365,6 +365,10 @@ class PartRule(RuleHandler):
 
         """
 
+        if not self._mount_point in storage.mountpoints:
+            # mount point doesn't exist, nothing can be reverted
+            return
+
         # mount point to be created during installation
         target_mount_point = storage.mountpoints[self._mount_point]
 

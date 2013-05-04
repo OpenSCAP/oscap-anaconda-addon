@@ -534,6 +534,20 @@ class RevertingTest(unittest.TestCase):
         self.ksdata_mock = mock.Mock()
         self.storage_mock = mock.Mock()
 
+    def revert_mount_options_nonexistent_test(self):
+        self.rule_data.new_rule("part /tmp --mountoptions=nodev")
+        self.storage_mock.mountpoints = dict()
+
+        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+
+        # mount point doesn't exist -> one message, nothing done
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(self.storage_mock.mountpoints, dict())
+
+        # mount point doesn't exist -> shouldn't do anything
+        self.rule_data.revert_changes(self.ksdata_mock, self.storage_mock)
+        self.assertEqual(self.storage_mock.mountpoints, dict())
+
     def revert_mount_options_test(self):
         self.rule_data.new_rule("part /tmp --mountoptions=nodev")
         self.storage_mock.mountpoints = dict()
