@@ -29,6 +29,12 @@
         <select selected="true" idref="xccdf_com.example_rule_telnet_not_installed"/>
         <select selected="true" idref="xccdf_com.example_rule_iptables_installed"/>
       </Profile>
+      <Profile id="xccdf_com.example_profile_my_profile2">
+        <title>My testing profile2</title>
+        <description>Another profile for testing purposes.</description>
+        <select selected="true" idref="xccdf_com.example_rule_telnet_not_installed"/>
+        <select selected="true" idref="xccdf_com.example_rule_iptables_installed"/>
+      </Profile>
       <Rule selected="false" id="xccdf_moc.elpmaxe.www_rule_first">
         <fix reboot="false" disruption="low" system="urn:xccdf:fix:script:sh">
           touch /root/must_exist.txt
@@ -63,6 +69,11 @@
     <Benchmark xmlns="http://checklists.nist.gov/xccdf/1.2" id="xccdf_moc.elpmaxe.www_benchmark_second">
       <status>incomplete</status>
       <version>1.0</version>
+      <Profile id="xccdf_com.example_profile_my_profile3">
+        <title>My testing profile3</title>
+        <description>Yet another profile for testing purposes.</description>
+        <select selected="true" idref="xccdf_moc.elpmaxe.www_rule_second"/>
+      </Profile>
       <Rule selected="true" id="xccdf_moc.elpmaxe.www_rule_second">
         <fix reboot="false" disruption="low" system="urn:xccdf:fix:script:sh">
           touch /root/must_exist.txt
