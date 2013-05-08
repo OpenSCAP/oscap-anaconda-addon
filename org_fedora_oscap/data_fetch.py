@@ -21,8 +21,6 @@ NET_URL_PREFIXES = ("http", "https")
 HTTP_URL_RE_STR = r"(https?)://(.*)"
 HTTP_URL_RE = re.compile(HTTP_URL_RE_STR)
 
-READ_BYTES = 4096
-
 class DataFetchError(Exception):
     """Parent class for the exception classes defined in this module."""
 
