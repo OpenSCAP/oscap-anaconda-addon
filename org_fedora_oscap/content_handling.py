@@ -39,6 +39,11 @@ class DataStreamHandlingError(ContentHandlingError):
 
     pass
 
+class BenchmarkHandlingError(ContentHandlingError):
+    """Exception class for errors related to benchmark handling."""
+
+    pass
+
 # namedtuple class (not a constant, pylint!) for info about a XCCDF profile
 # pylint: disable-msg=C0103
 ProfileInfo = namedtuple("ProfileInfo", ["id", "title", "description"])
@@ -222,3 +227,53 @@ class DataStreamHandler(object):
         self._profiles_cache[cache_id] = profiles
 
         return profiles
+
+class BenchmarkHandler(object):
+    """
+    Class for handling XCCDF benchmark and retrieving data from it (mainly the
+    list of profiles).
+
+    """
+
+    def __init__(self, xccdf_file_path):
+        """
+        Constructor for the BenchmarkHandler class.
+
+        :param xccdf_file_path: path to a file with an XCCDF benchmark
+        :type xccdf_file_path: str
+
+        """
+
+        if not os.path.exists(xccdf_file_path):
+            msg = "Invalid file path: '%s'" % xccdf_file_path
+            raise BenchmarkHandlingError(msg)
+
+        # stores a list of profiles in the benchmark
+        self._profiles = []
+
+        # get the benchmark object
+        benchmark = OSCAP.xccdf_benchmark_import(xccdf_file_path)
+        if not benchmark:
+            msg = "Not a valid benchmark file: '%s'" % xccdf_file_path
+            raise BenchmarkHandlingError(msg)
+
+        # iterate over the profiles in the benchmark and store them
+        profile_itr = OSCAP.xccdf_benchmark_get_profiles(benchmark)
+        while OSCAP.xccdf_profile_iterator_has_more(profile_itr):
+            profile = OSCAP.xccdf_profile_iterator_next(profile_itr)
+
+            id_ = OSCAP.xccdf_profile_get_id(profile)
+            title = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_title(profile))
+            desc = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile))
+            info = ProfileInfo(id_, title, desc)
+
+            self._profiles.append(info)
+
+        OSCAP.xccdf_profile_iterator_free(profile_itr)
+        OSCAP.xccdf_benchmark_free(benchmark)
+
+    @property
+    def profiles(self):
+        """Property for the list of profiles defined in the benchmark."""
+
+        return self._profiles
