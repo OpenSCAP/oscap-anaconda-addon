@@ -24,6 +24,8 @@ it.
 
 """
 
+import os.path
+
 from collections import namedtuple, OrderedDict
 from openscap_api import OSCAP
 
@@ -79,7 +81,7 @@ class DataStreamHandler(object):
         # is used to speed up getting lists of profiles
         self._profiles_cache = dict()
 
-        if not dsc_file_path:
+        if not os.path.exists(dsc_file_path):
             msg = "Invalid file path: '%s'" % dsc_file_path
             raise DataStreamHandlingError(msg)
 
