@@ -27,6 +27,7 @@ specific to any installation mode (tui, gui, ks).
 import os
 import os.path
 import subprocess
+import zipfile
 
 from collections import namedtuple
 
@@ -56,6 +57,11 @@ class OSCAPaddonError(Exception):
 
 class OSCAPaddonNetworkError(OSCAPaddonError):
     """Exception class for OSCAP addon related network errors."""
+
+    pass
+
+class ExtractionError(OSCAPaddonError):
+    """Exception class for the extraction errors."""
 
     pass
 
@@ -223,5 +229,33 @@ def wait_and_fetch_net_data(url, out_file, ca_certs=None):
 
     return THREAD_FETCH_DATA
 
+def extract_data(archive, out_dir, ensure_has_file=None):
+    """
+    Fuction that extracts the given archive to the given output directory. It
+    tries to find out the archive type by the file name.
 
+    :param archive: path to the archive file that should be extracted
+    :type archive: str
+    :param out_dir: output directory the archive should be extracted to
+    :type out_dir: str
+    :param ensure_has_file: a name of the file that must exist in the file
+    :type ensure_has_file: str
 
+    """
+
+    if archive.endswith(".zip"):
+        # ZIP file
+        zf = zipfile.ZipFile(archive, "r")
+
+        if ensure_has_file and not any(ensure_has_file in name
+                                       for name in zf.namelist()):
+            msg = "File '%s' not found in the archive '%s'" % (ensure_has_file,
+                                                               archive)
+            raise ExtractionError(msg)
+
+        utils.ensure_dir_exists(out_dir)
+        zf.extractall(path=out_dir)
+        zf.close()
+    #elif other types of archives
+    else:
+        raise ExtractionError("Unsuported archive type")
