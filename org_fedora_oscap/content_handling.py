@@ -251,8 +251,14 @@ class BenchmarkHandler(object):
         # stores a list of profiles in the benchmark
         self._profiles = []
 
+        session = OSCAP.xccdf_session_new(xccdf_file_path)
+        if OSCAP.xccdf_session_load(session) != 0:
+            raise BenchmarkHandlingError(OSCAP.oscap_err_desc())
+
         # get the benchmark object
-        benchmark = OSCAP.xccdf_benchmark_import(xccdf_file_path)
+        policy_model = OSCAP.xccdf_session_get_policy_model(session)
+        benchmark = OSCAP.xccdf_policy_model_get_benchmark(policy_model)
+
         if not benchmark:
             msg = "Not a valid benchmark file: '%s'" % xccdf_file_path
             raise BenchmarkHandlingError(msg)
@@ -270,7 +276,7 @@ class BenchmarkHandler(object):
             self._profiles.append(info)
 
         OSCAP.xccdf_profile_iterator_free(profile_itr)
-        OSCAP.xccdf_benchmark_free(benchmark)
+        OSCAP.xccdf_session_free(session)
 
     @property
     def profiles(self):
