@@ -59,6 +59,15 @@ class OSCAPaddonNetworkError(OSCAPaddonError):
 
     pass
 
+MESSAGE_TYPE_FATAL = 0
+MESSAGE_TYPE_WARNING = 1
+MESSAGE_TYPE_INFO = 2
+
+# namedtuple for messages returned from the rules evaluation
+#   type -- one of the MESSAGE_TYPE_* constants defined above
+#   text -- the actual message that should be displayed, logged, ...
+RuleMessage = namedtuple("RuleMessage", ["type", "text"])
+
 def get_fix_rules_pre(profile, fpath, ds_id="", xccdf_id=""):
     """
     Get fix rules for the pre-installation environment for a given profile in a
@@ -215,11 +224,4 @@ def wait_and_fetch_net_data(url, out_file, ca_certs=None):
     return THREAD_FETCH_DATA
 
 
-MESSAGE_TYPE_FATAL = 0
-MESSAGE_TYPE_WARNING = 1
-MESSAGE_TYPE_INFO = 2
 
-# namedtuple for messages returned from the rules evaluation
-#   type -- one of the MESSAGE_TYPE_* constants defined above
-#   text -- the actual message that should be displayed, logged, ...
-RuleMessage = namedtuple("RuleMessage", ["type", "text"])
