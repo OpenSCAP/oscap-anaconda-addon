@@ -28,6 +28,7 @@ import os
 import os.path
 import subprocess
 import zipfile
+import tarfile
 
 from collections import namedtuple
 
@@ -256,6 +257,45 @@ def extract_data(archive, out_dir, ensure_has_file=None):
         utils.ensure_dir_exists(out_dir)
         zfile.extractall(path=out_dir)
         zfile.close()
+    elif archive.endswith(".tar"):
+        # plain tarball
+        _extract_tarball(archive, out_dir, ensure_has_file, None)
+    elif archive.endswith(".tar.gz"):
+        # gzipped tarball
+        _extract_tarball(archive, out_dir, ensure_has_file, "gz")
+    elif archive.endswith(".tar.bz2"):
+        # bzipped tarball
+        _extract_tarball(archive, out_dir, ensure_has_file, "bz2")
     #elif other types of archives
     else:
         raise ExtractionError("Unsuported archive type")
+
+def _extract_tarball(archive, out_dir, ensure_has_file, alg):
+    """
+    Extract the given TAR archive to the given output directory and make sure
+    the given file exists in the archive.
+
+    :see: extract_data
+    :param alg: compression algorithm used for the tarball
+    :type alg: str (one of "gz", "bz2") or None
+
+    """
+
+    if alg and alg not in ("gz", "bz2",):
+        raise ExtractionError("Unsupported compression algorithm")
+
+    mode = "r"
+    if alg:
+        mode += ":%s" % alg
+
+    tfile = tarfile.TarFile.open(archive, mode)
+
+    if ensure_has_file and not any(ensure_has_file in name
+                                   for name in tfile.getnames()):
+        msg = "File '%s' not found in the archive '%s'" % (ensure_has_file,
+                                                           archive)
+        raise ExtractionError(msg)
+
+    utils.ensure_dir_exists(out_dir)
+    tfile.extractall(path=out_dir)
+    tfile.close()
