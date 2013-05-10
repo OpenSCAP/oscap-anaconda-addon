@@ -167,3 +167,40 @@ class EverythingOKtest(unittest.TestCase):
             self.oscap_data.handle_line(line)
 
         self.oscap_data.finalize()
+
+class ArchiveHandlingTest(unittest.TestCase):
+    """Tests for handling archives."""
+
+    def setUp(self):
+        self.oscap_data = OSCAPdata("org_fedora_oscap")
+
+    def archive_preinst_content_path_test(self):
+        for line in ["content-url = http://example.com/oscap_content.tar",
+                     "content-type = archive",
+                     "profile = Web Server",
+                     "xccdf-path = oscap/xccdf.xml"
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        self.oscap_data.finalize()
+
+        # content_name should be the archive's name
+        self.assertEqual(self.oscap_data.content_name, "oscap_content.tar")
+
+        # content path should end with the xccdf path
+        self.assertTrue(self.oscap_data.preinst_content_path.endswith(
+                                                         "oscap/xccdf.xml"))
+
+    def ds_preinst_content_path_test(self):
+        for line in ["content-url = http://example.com/scap_content.xml",
+                     "content-type = datastream",
+                     "profile = Web Server",
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        self.oscap_data.finalize()
+
+        # both content_name and content path should point to the data stream XML
+        self.assertEqual(self.oscap_data.content_name, "scap_content.xml")
+        self.assertTrue(self.oscap_data.preinst_content_path.endswith(
+                                                         "scap_content.xml"))

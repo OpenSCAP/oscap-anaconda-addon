@@ -228,8 +228,12 @@ class OSCAPdata(AddonData):
 
     @property
     def preinst_content_path(self):
-        return os.path.join(common.INSTALLATION_CONTENT_DIR,
-                            self.content_name)
+        if self.content_type == "datastream":
+            return os.path.join(common.INSTALLATION_CONTENT_DIR,
+                                self.content_name)
+        else:
+            return os.path.join(common.INSTALLATION_CONTENT_DIR,
+                                self.xccdf_path)
 
     def setup(self, storage, ksdata, instclass):
         """
@@ -247,7 +251,7 @@ class OSCAPdata(AddonData):
 
         """
 
-        # evaluate rules do automatic fixes and stop if something that cannot
+        # evaluate rules, do automatic fixes and stop if something that cannot
         # be fixed automatically is wrong
         messages = self.rule_data.eval_rules(ksdata, storage)
         if any(message.type == common.MESSAGE_TYPE_FATAL
