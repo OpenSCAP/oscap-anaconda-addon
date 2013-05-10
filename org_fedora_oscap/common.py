@@ -245,17 +245,17 @@ def extract_data(archive, out_dir, ensure_has_file=None):
 
     if archive.endswith(".zip"):
         # ZIP file
-        zf = zipfile.ZipFile(archive, "r")
+        zfile = zipfile.ZipFile(archive, "r")
 
         if ensure_has_file and not any(ensure_has_file in name
-                                       for name in zf.namelist()):
+                                       for name in zfile.namelist()):
             msg = "File '%s' not found in the archive '%s'" % (ensure_has_file,
                                                                archive)
             raise ExtractionError(msg)
 
         utils.ensure_dir_exists(out_dir)
-        zf.extractall(path=out_dir)
-        zf.close()
+        zfile.extractall(path=out_dir)
+        zfile.close()
     #elif other types of archives
     else:
         raise ExtractionError("Unsuported archive type")
