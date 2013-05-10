@@ -34,6 +34,10 @@ class ParsingTest(unittest.TestCase):
                          common.INSTALLATION_CONTENT_DIR + "/" +
                          self.oscap_data.content_name)
 
+        self.assertEqual(self.oscap_data.postinst_content_path,
+                         common.TARGET_CONTENT_DIR + "/" +
+                         self.oscap_data.content_name)
+
     def str_test(self):
         str_ret = str(self.oscap_data)
         self.assertEqual(str_ret,

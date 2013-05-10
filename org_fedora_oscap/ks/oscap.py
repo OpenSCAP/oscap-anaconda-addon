@@ -235,6 +235,15 @@ class OSCAPdata(AddonData):
             return os.path.join(common.INSTALLATION_CONTENT_DIR,
                                 self.xccdf_path)
 
+    @property
+    def postinst_content_path(self):
+        if self.content_type == "datastream":
+            return os.path.join(common.TARGET_CONTENT_DIR,
+                                self.content_name)
+        else:
+            return os.path.join(common.TARGET_CONTENT_DIR,
+                                self.xccdf_path)
+
     def setup(self, storage, ksdata, instclass):
         """
         The setup method that should make changes to the runtime environment
@@ -282,16 +291,10 @@ class OSCAPdata(AddonData):
 
         if self.content_type == "datastream":
             shutil.copy2(self.preinst_content_path, target_content_dir)
-
-            chroot_content = os.path.join(common.TARGET_CONTENT_DIR,
-                                          self.content_name)
-            common.run_oscap_remediate(self.profile_id, chroot_content,
-                                       chroot=ROOT_PATH)
         else:
             utils.universal_copy(os.path.join(common.INSTALLATION_CONTENT_DIR,
                                               "*"),
                                  target_content_dir)
-            chroot_content = os.path.join(common.TARGET_CONTENT_DIR,
-                                          self.xccdf_path)
-            common.run_oscap_remediate(self.profile_id, chroot_content,
-                                       chroot=ROOT_PATH)
+
+        common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
+                                   chroot=ROOT_PATH)
