@@ -22,6 +22,8 @@
 
 import os
 import os.path
+import shutil
+import glob
 
 def ensure_dir_exists(dirpath):
     """
@@ -40,3 +42,33 @@ def ensure_dir_exists(dirpath):
     if not os.path.isdir(dirpath):
         os.makedirs(dirpath)
 
+def universal_copy(src, dst):
+    """
+    Function that copies the files or directories specified by the src argument
+    to the destination given by the dst argument. It should follow the same
+    rules as the standard 'cp' utility.
+
+    :param src: source to copy -- may be a glob, file path or a directory path
+    :type src: str
+    :param dst: destination to copy to
+    :type src: str
+
+    """
+
+    if glob.has_magic(src):
+        # src is a glob
+        sources = glob.glob(src)
+    else:
+        # not a glob
+        sources = [src]
+
+    for item in sources:
+        if os.path.isdir(item):
+            if os.path.isdir(dst):
+                item = item.rstrip("/")
+                dirname = item.rsplit("/", 1)[-1]
+                shutil.copytree(item, os.path.join(dst, dirname))
+            else:
+                shutil.copytree(item, dst)
+        else:
+            shutil.copy2(item, dst)
