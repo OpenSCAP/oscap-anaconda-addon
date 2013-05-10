@@ -297,4 +297,5 @@ class OSCAPdata(AddonData):
                                  target_content_dir)
 
         common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
+                                   self.datastream_id, self.xccdf_id,
                                    chroot=ROOT_PATH)
