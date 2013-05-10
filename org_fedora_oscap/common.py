@@ -51,6 +51,8 @@ PRE_INSTALL_FIX_SYSTEM_ATTR = "urn:redhat:anaconda:pre"
 
 THREAD_FETCH_DATA = "AnaOSCAPdataFetchThread"
 
+SUPPORTED_ARCHIVES = (".zip", ".tar", ".tar.gz", ".tar.bz2", )
+
 class OSCAPaddonError(Exception):
     """Exception class for OSCAP addon related errors."""
 

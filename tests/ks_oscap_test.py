@@ -114,6 +114,27 @@ class InvalidDataTest(unittest.TestCase):
         with self.assertRaises(KickstartValueError):
             self.oscap_data.finalize()
 
+    def archive_without_path_test(self):
+        for line in ["content-url = http://example.com/oscap_content.tar",
+                     "content-type = archive",
+                     "profile = Web Server",
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        with self.assertRaises(KickstartValueError):
+            self.oscap_data.finalize()
+
+    def unsupported_archive_type_test(self):
+        for line in ["content-url = http://example.com/oscap_content.tbz",
+                     "content-type = archive",
+                     "profile = Web Server",
+                     "xccdf-path = xccdf.xml"
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        with self.assertRaises(KickstartValueError):
+            self.oscap_data.finalize()
+
 class EverythingOKtest(unittest.TestCase):
     def setUp(self):
         self.oscap_data = OSCAPdata("org_fedora_oscap")
@@ -130,6 +151,16 @@ class EverythingOKtest(unittest.TestCase):
     def enough_for_rpm_test(self):
         for line in ["content-url = http://example.com/oscap_content.rpm",
                      "content-type = RPM",
+                     "profile = Web Server",
+                     "xccdf-path = /usr/share/oscap/xccdf.xml"
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        self.oscap_data.finalize()
+
+    def enough_for_archive_test(self):
+        for line in ["content-url = http://example.com/oscap_content.tar",
+                     "content-type = archive",
                      "profile = Web Server",
                      "xccdf-path = /usr/share/oscap/xccdf.xml"
                      ]:

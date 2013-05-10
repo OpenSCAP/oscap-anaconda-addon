@@ -27,14 +27,14 @@ from pyanaconda.addons import AddonData
 from pyanaconda.constants import ROOT_PATH
 from pykickstart.errors import KickstartParseError, KickstartValueError
 from org_fedora_oscap import utils, common, rule_handling
+from org_fedora_oscap.common import SUPPORTED_ARCHIVES
 
 # export OSCAPdata class to prevent Anaconda's collect method from taking
 # AddonData class instead of the OSCAPdata class
 # @see: pyanaconda.kickstart.AnacondaKSHandler.__init__
 __all__ = ["OSCAPdata"]
 
-SUPPORTED_CONTENT_TYPES = ("datastream", "RPM",
-                           # tarball?
+SUPPORTED_CONTENT_TYPES = ("datastream", "RPM", "archive",
                            )
 
 SUPPORTED_URL_PREFIXES = ("http://", "https://",
@@ -208,15 +208,23 @@ class OSCAPdata(AddonData):
         if not self.profile_id:
             raise KickstartValueError(tmpl % ("profile", self.name))
 
-        if self.content_type == "RPM" and not self.xccdf_path:
+        if self.content_type in ("RPM", "archive") and not self.xccdf_path:
             msg = "Path to the XCCDF file has to be given if content in RPM "\
-                  "is used"
+                  "or archive is used"
             raise KickstartValueError(msg)
 
         if self.content_type == "RPM" and not self.content_url.endswith(".rpm"):
             msg = "Content type set to RPM, but the content URL doesn't end "\
                   "with '.rpm'"
             raise KickstartValueError(msg)
+
+        if self.content_type == "archive":
+            supported_archive = any(self.content_url.endswith(arch_type)
+                                    for arch_type in SUPPORTED_ARCHIVES)
+            if not supported_archive:
+                msg = "Unsupported archive type of the content "\
+                      "file '%s'" % self.content_url
+                raise KickstartValueError(msg)
 
     @property
     def preinst_content_path(self):
