@@ -280,10 +280,18 @@ class OSCAPdata(AddonData):
                                               common.TARGET_CONTENT_DIR)
         utils.ensure_dir_exists(target_content_dir)
 
-        # XXX: use copytree in case of content with multiple files
-        shutil.copy(self.preinst_content_path, target_content_dir)
+        if self.content_type == "datastream":
+            shutil.copy2(self.preinst_content_path, target_content_dir)
 
-        chroot_content = os.path.join(common.TARGET_CONTENT_DIR,
-                                      self.content_name)
-        common.run_oscap_remediate(self.profile_id, chroot_content,
-                                   chroot=ROOT_PATH)
+            chroot_content = os.path.join(common.TARGET_CONTENT_DIR,
+                                          self.content_name)
+            common.run_oscap_remediate(self.profile_id, chroot_content,
+                                       chroot=ROOT_PATH)
+        else:
+            utils.universal_copy(os.path.join(common.INSTALLATION_CONTENT_DIR,
+                                              "*"),
+                                 target_content_dir)
+            chroot_content = os.path.join(common.TARGET_CONTENT_DIR,
+                                          self.xccdf_path)
+            common.run_oscap_remediate(self.profile_id, chroot_content,
+                                       chroot=ROOT_PATH)
