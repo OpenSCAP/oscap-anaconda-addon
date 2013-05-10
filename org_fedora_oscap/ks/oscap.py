@@ -227,7 +227,16 @@ class OSCAPdata(AddonData):
                 raise KickstartValueError(msg)
 
     @property
+    def raw_content_path(self):
+        """Path to the raw (unextracted, ...) content file"""
+
+        return os.path.join(common.INSTALLATION_CONTENT_DIR,
+                            self.content_name)
+
+    @property
     def preinst_content_path(self):
+        """Path to the pre-installation content file"""
+
         if self.content_type == "datastream":
             return os.path.join(common.INSTALLATION_CONTENT_DIR,
                                 self.content_name)
@@ -237,6 +246,8 @@ class OSCAPdata(AddonData):
 
     @property
     def postinst_content_path(self):
+        """Path to the post-installation content file"""
+
         if self.content_type == "datastream":
             return os.path.join(common.TARGET_CONTENT_DIR,
                                 self.content_name)
