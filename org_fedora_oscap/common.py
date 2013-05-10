@@ -239,8 +239,8 @@ def extract_data(archive, out_dir, ensure_has_file=None):
     :type archive: str
     :param out_dir: output directory the archive should be extracted to
     :type out_dir: str
-    :param ensure_has_file: a name of the file that must exist in the file
-    :type ensure_has_file: str
+    :param ensure_has_file: a relative path to the file that must exist in the archive
+    :type ensure_has_file: str or None
 
     """
 
@@ -248,8 +248,11 @@ def extract_data(archive, out_dir, ensure_has_file=None):
         # ZIP file
         zfile = zipfile.ZipFile(archive, "r")
 
-        if ensure_has_file and not any(ensure_has_file in name
-                                       for name in zfile.namelist()):
+        # generator for the paths of the files found in the archive (dirs end
+        # with "/")
+        files = (info.filename for info in zfile.filelist
+                 if not info.filename.endswith("/"))
+        if ensure_has_file and not ensure_has_file in files:
             msg = "File '%s' not found in the archive '%s'" % (ensure_has_file,
                                                                archive)
             raise ExtractionError(msg)
@@ -290,8 +293,11 @@ def _extract_tarball(archive, out_dir, ensure_has_file, alg):
 
     tfile = tarfile.TarFile.open(archive, mode)
 
-    if ensure_has_file and not any(ensure_has_file in name
-                                   for name in tfile.getnames()):
+    # generator for the paths of the files found in the archive
+    files = (member.path for member in tfile.getmembers()
+             if member.isfile())
+
+    if ensure_has_file and not ensure_has_file in files:
         msg = "File '%s' not found in the archive '%s'" % (ensure_has_file,
                                                            archive)
         raise ExtractionError(msg)
