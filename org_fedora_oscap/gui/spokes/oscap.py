@@ -183,7 +183,7 @@ class OSCAPSpoke(NormalSpoke):
         # the first status provided
         self._unitialized_status = _("Not ready")
 
-        self._ds_handler = None
+        self._content_handler = None
         self._ds_checklists = None
 
         # used for changing profiles, stored as self._addon_data.rule_data when
@@ -217,6 +217,7 @@ class OSCAPSpoke(NormalSpoke):
         self._profiles_store = self.builder.get_object("profilesStore")
 
         # comboboxes for data streams and checklists
+        self._ids_box = self.builder.get_object("idsBox")
         self._ds_combo = self.builder.get_object("dsCombo")
         self._xccdf_combo = self.builder.get_object("xccdfCombo")
 
@@ -243,7 +244,7 @@ class OSCAPSpoke(NormalSpoke):
             # need to fetch data over network
             thread_name = common.wait_and_fetch_net_data(
                                           self._addon_data.content_url,
-                                          self._addon_data.preinst_content_path,
+                                          self._addon_data.raw_content_path,
                                           self._addon_data.certificates)
 
         # pylint: disable-msg=E1101
@@ -257,9 +258,9 @@ class OSCAPSpoke(NormalSpoke):
 
     def _wait_for_data_fetch(self, thread_name):
         """
-        Waits for data fetching to be finished, populates the stores and
-        evaluates pre-installation fixes from the content and marks the spoke as
-        ready in the end.
+        Waits for data fetching to be finished, extracts it (if needed),
+        populates the stores and evaluates pre-installation fixes from the
+        content and marks the spoke as ready in the end.
 
         :param thread_name: name of the thread to wait for (if any)
         :type thread_name: str or None
@@ -270,12 +271,30 @@ class OSCAPSpoke(NormalSpoke):
         if fetch_thread:
             fetch_thread.join()
 
-        # populate the stores from items from the content
-        self._ds_handler = content_handling.DataStreamHandler(\
+        if self._addon_data.content_type == "archive":
+            # extract the content
+            common.extract_data(self._addon_data.raw_content_path,
+                                common.INSTALLATION_CONTENT_DIR,
+                                self._addon_data.xccdf_path)
+
+        # initialize the right content handler
+        if self._using_ds:
+            self._content_handler = content_handling.DataStreamHandler(\
                                           self._addon_data.preinst_content_path)
-        self._ds_checklists = self._ds_handler.get_data_streams_checklists()
-        for dstream in self._ds_checklists.iterkeys():
-            self._add_ds_id(dstream)
+        else:
+            self._content_handler = content_handling.BenchmarkHandler(\
+                                          self._addon_data.preinst_content_path)
+
+        if self._using_ds:
+            # populate the stores from items from the content
+            self._ds_checklists = self._content_handler.get_data_streams_checklists()
+            for dstream in self._ds_checklists.iterkeys():
+                self._add_ds_id(dstream)
+        else:
+            # hide the labels and comboboxes for datastream-id and xccdf-id
+            # selection
+            self._ids_box.hide()
+            self._ids_box.set_no_show_all(True)
 
         # refresh UI elements
         self.refresh()
@@ -293,6 +312,10 @@ class OSCAPSpoke(NormalSpoke):
         # pylint: disable-msg=E1101
         hubQ.send_ready(self.__class__.__name__, True)
         hubQ.send_message(self.__class__.__name__, self.status)
+
+    @property
+    def _using_ds(self):
+        return self._addon_data.content_type == "datastream"
 
     @property
     def _current_ds_id(self):
@@ -343,13 +366,24 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        if self._ds_handler is None or self._ds_checklists is None:
+        if self._content_handler is None:
+            # not initialized, cannot do anything
+            return
+
+        if self._using_ds and self._ds_checklists is None:
             # not initialized, cannot do anything
             return
 
         self._profiles_store.clear()
-        for profile in self._ds_handler.get_profiles(self._current_ds_id,
-                                                     self._current_xccdf_id):
+
+        if self._using_ds:
+            profiles = self._content_handler.get_profiles(self._current_ds_id,
+                                                     self._current_xccdf_id)
+        else:
+            # pylint: disable-msg=E1103
+            profiles = self._content_handler.profiles
+
+        for profile in profiles:
             profile_markup = '<span weight="bold">%s</span>\n%s' \
                                 % (profile.title, profile.description)
             self._profiles_store.append([profile.id,
@@ -389,13 +423,20 @@ class OSCAPSpoke(NormalSpoke):
     def _switch_profile(self):
         """Switches to a current selected profile."""
 
-        ds = self._current_ds_id
-        xccdf = self._current_xccdf_id
         profile = self._current_profile_id
+        if self._using_ds:
+            ds = self._current_ds_id
+            xccdf = self._current_xccdf_id
 
-        if not all((ds, xccdf, profile)):
-            # something is not set -> do nothing
-            return
+            if not all((ds, xccdf, profile)):
+                # something is not set -> do nothing
+                return
+        else:
+            ds = None
+            xccdf = None
+            if not profile:
+                # profile not set -> do nothing
+                return
 
         # revert changes done by the previous profile
         if self._rule_data:
@@ -428,20 +469,24 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        if self._addon_data.datastream_id:
-            set_combo_selection(self._ds_combo,
-                                self._addon_data.datastream_id)
-        else:
-            try:
-                default_ds = self._ds_checklists.iterkeys().next()
-                set_combo_selection(self._ds_combo, default_ds)
-            except StopIteration:
-                # no data stream available
-                pass
+        if self._using_ds:
+            if self._addon_data.datastream_id:
+                set_combo_selection(self._ds_combo,
+                                    self._addon_data.datastream_id)
+            else:
+                try:
+                    default_ds = self._ds_checklists.iterkeys().next()
+                    set_combo_selection(self._ds_combo, default_ds)
+                except StopIteration:
+                    # no data stream available
+                    pass
 
-        if self._addon_data.datastream_id and self._addon_data.xccdf_id:
-            set_combo_selection(self._xccdf_combo,
-                                self._addon_data.xccdf_id)
+                if self._addon_data.datastream_id and self._addon_data.xccdf_id:
+                    set_combo_selection(self._xccdf_combo,
+                                        self._addon_data.xccdf_id)
+        else:
+            # no combobox changes --> need to update profiles store manually
+            self._update_profiles_store()
 
         if self._addon_data.profile_id:
             set_treeview_selection(self._profiles_view,
@@ -459,8 +504,10 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         # store currently selected values to the addon data attributes
-        self._addon_data.datastream_id = self._current_ds_id
-        self._addon_data.xccdf_id = self._current_xccdf_id
+        if self._using_ds:
+            self._addon_data.datastream_id = self._current_ds_id
+            self._addon_data.xccdf_id = self._current_xccdf_id
+
         self._addon_data.profile_id = self._active_profile
 
         self._addon_data.rule_data = self._rule_data
