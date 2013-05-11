@@ -87,6 +87,8 @@ def set_treeview_selection(treeview, item, col=0):
     :type item: str
     :param col: column to search for the item in
     :type col: int
+    :return: if successfully selected or not
+    :rtype: bool
 
     """
 
@@ -97,13 +99,14 @@ def set_treeview_selection(treeview, item, col=0):
 
     if not itr:
         # item not found, cannot be selected
-        return
+        return False
 
     # otherwise select the item and scroll to it
     selection = treeview.get_selection()
     selection.select_iter(itr)
     path = model.get_path(itr)
     treeview.scroll_to_cell(path)
+    return True
 
 def render_message_type(column, renderer, model, itr, user_data=None):
     #get message type from the first column
