@@ -33,7 +33,7 @@ from org_fedora_oscap import content_handling
 from pyanaconda.threads import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
-from pyanaconda.ui.gui.utils import gtk_action_wait, busied_cursor
+from pyanaconda.ui.gui.utils import gtk_action_wait
 
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
@@ -546,8 +546,7 @@ class OSCAPSpoke(NormalSpoke):
         """Handler for the XCCDF ID change."""
 
         # may take a while
-        with busied_cursor():
-            self._update_profiles_store()
+        self._update_profiles_store()
 
     def on_profiles_selection_changed(self, *args):
         """Handler for the profile selection change."""
@@ -567,8 +566,6 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        # may take a while
-        with busied_cursor():
-            # switch profile
-            self._switch_profile()
+        # switch profile
+        self._switch_profile()
 
