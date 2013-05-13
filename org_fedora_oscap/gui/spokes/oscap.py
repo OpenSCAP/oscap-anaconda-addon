@@ -417,6 +417,15 @@ class OSCAPSpoke(NormalSpoke):
 
         messages = self._rule_data.eval_rules(self.data, self._storage,
                                               report_only)
+        if not messages:
+            # no messages from the rules, add a message informing about that
+            message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
+                              _("No rules for the pre-installation phase"))
+            self._add_message(message)
+
+            # nothing more to be done
+            return
+
         for msg in messages:
             self._add_message(msg)
 
