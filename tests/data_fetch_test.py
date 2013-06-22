@@ -23,4 +23,12 @@
 import unittest
 from org_fedora_oscap import data_fetch
 
-# no tests here yet
+class CanFetchFromTest(unittest.TestCase):
+    """Tests for the can_fetch_from function"""
+
+    def supported_url_test(self):
+        self.assertTrue(data_fetch.can_fetch_from("http://example.com"))
+        self.assertTrue(data_fetch.can_fetch_from("https://example.com"))
+
+    def unsupported_url_test(self):
+        self.assertFalse(data_fetch.can_fetch_from("aaaaa"))

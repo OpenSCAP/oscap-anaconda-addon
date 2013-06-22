@@ -12,7 +12,7 @@ import pycurl
 from org_fedora_oscap import utils
 
 # everything else should be private
-__all__ = ["fetch_data"]
+__all__ = ["fetch_data", "can_fetch_from"]
 
 # prefixes of the URLs that need network connection
 NET_URL_PREFIXES = ("http", "https")
@@ -48,6 +48,20 @@ class FetchError(DataFetchError):
     """
 
     pass
+
+def can_fetch_from(url):
+    """
+    Function telling whether the fetch_data function understands the type of
+    given URL or not.
+
+    :param url: URL
+    :type url: str
+    :return: whether the type of the URL is supported or not
+    :rtype: str
+
+    """
+
+    return any(url.startswith(prefix) for prefix in NET_URL_PREFIXES)
 
 def fetch_data(url, out_file, ca_certs=None):
     """
