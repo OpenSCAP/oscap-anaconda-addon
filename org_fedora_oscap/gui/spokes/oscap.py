@@ -33,10 +33,14 @@ from org_fedora_oscap import content_handling
 from pyanaconda.threads import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
-from pyanaconda.ui.gui.utils import gtk_action_wait
+from pyanaconda.ui.gui.utils import gtk_action_wait, really_hide, really_show
 
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
+
+# pages in the main notebook
+SET_PARAMS_PAGE = 0
+GET_CONTENT_PAGE = 1
 
 # helper functions
 def set_combo_selection(combo, item):
@@ -208,6 +212,10 @@ class OSCAPSpoke(NormalSpoke):
         renderer = self.builder.get_object("messageTypeRenderer")
         column.set_cell_data_func(renderer, render_message_type)
 
+        # the main notebook containing two pages -- for settings parameters and
+        # for entering content URL
+        self._main_notebook = self.builder.get_object("mainNotebook")
+
         # the store that holds the messages that come from the rules evaluation
         self._message_store = self.builder.get_object("changesStore")
 
@@ -228,18 +236,38 @@ class OSCAPSpoke(NormalSpoke):
         # button for switching profiles
         self._choose_button = self.builder.get_object("chooseProfileButton")
 
-        content_url = self._addon_data.content_url
-        if not content_url:
+        # content URL entering, content fetching, ...
+        self._content_url_entry = self.builder.get_object("urlEntry")
+        self._fetch_button = self.builder.get_object("fetchButton")
+        self._progress_box = self.builder.get_object("progressBox")
+        self._progress_spinner = self.builder.get_object("progressSpinner")
+        self._progress_label = self.builder.get_object("progressLabel")
+
+        if not self._addon_data.content_url:
+            # switch  to the page allowing user to enter content URL and fetch it
+            self._main_notebook.set_current_page(GET_CONTENT_PAGE)
+
+            # hide the progress box, no progress now
+            really_hide(self._progress_box)
+
             # nothing more to be done now, the spoke is ready
             self._ready = True
+
+            # no more being unitialized
+            self._unitialized_status = None
+
             # pylint: disable-msg=E1101
             hubQ.send_ready(self.__class__.__name__, True)
+        else:
+            self._main_notebook.set_current_page(SET_PARAMS_PAGE)
+            # else fetch data
+            self._fetch_data_and_initialize()
 
-            return
-        # else fetch data
+    def _fetch_data_and_initialize(self, callback=None):
+        """Fetch data from a specified URL and initialize everything."""
 
         thread_name = None
-        if any(content_url.startswith(net_prefix)
+        if any(self._addon_data.content_url.startswith(net_prefix)
                for net_prefix in data_fetch.NET_URL_PREFIXES):
             # need to fetch data over network
             thread_name = common.wait_and_fetch_net_data(
@@ -254,9 +282,9 @@ class OSCAPSpoke(NormalSpoke):
         hubQ.send_not_ready(self.__class__.__name__)
         threadMgr.add(AnacondaThread(name="OSCAPguiWaitForDataFetchThread",
                                      target=self._wait_for_data_fetch,
-                                     args=(thread_name,)))
+                                     args=(thread_name, callback)))
 
-    def _wait_for_data_fetch(self, thread_name):
+    def _wait_for_data_fetch(self, thread_name, callback=None):
         """
         Waits for data fetching to be finished, extracts it (if needed),
         populates the stores and evaluates pre-installation fixes from the
@@ -264,12 +292,20 @@ class OSCAPSpoke(NormalSpoke):
 
         :param thread_name: name of the thread to wait for (if any)
         :type thread_name: str or None
+        :param callback: callback that should be called when the data is fetched
+                         taking a boolean value indicating whether the fetching
+                         was successfull or not
+        :type callback: bool -> None
 
         """
 
-        fetch_thread = threadMgr.get(thread_name)
-        if fetch_thread:
-            fetch_thread.join()
+        try:
+            fetch_thread = threadMgr.wait(thread_name)
+        except:
+            # TODO: specify the exception
+            if callback:
+                callback(False)
+            return
 
         if self._addon_data.content_type == "archive":
             # extract the content
@@ -312,6 +348,9 @@ class OSCAPSpoke(NormalSpoke):
         # pylint: disable-msg=E1101
         hubQ.send_ready(self.__class__.__name__, True)
         hubQ.send_message(self.__class__.__name__, self.status)
+
+        if callback:
+            callback(True)
 
     @property
     def _using_ds(self):
@@ -468,6 +507,19 @@ class OSCAPSpoke(NormalSpoke):
         self._active_profile = self._current_profile_id
 
     @gtk_action_wait
+    def _entered_data_fetch_callback(self, succ):
+        """Callback for post-processing fetching data from entered URL."""
+
+        if not succ:
+            self._addon_data.content_url = ""
+            self._addon_data.content_type = ""
+            really_hide(self._progress_spinner)
+            self._progress_label.set_text(_("Failed to fetch content. Enter "
+                                            "a different URL, please."))
+        else:
+            self._main_notebook.set_current_page(SET_PARAMS_PAGE)
+
+    @gtk_action_wait
     def refresh(self):
         """
         The refresh method that is called every time the spoke is displayed.
@@ -477,6 +529,10 @@ class OSCAPSpoke(NormalSpoke):
         :see: pyanaconda.ui.common.UIObject.refresh
 
         """
+
+        if not self._addon_data.content_url:
+            # nothing to do here
+            return
 
         if self._using_ds:
             if self._addon_data.datastream_id:
@@ -575,6 +631,9 @@ class OSCAPSpoke(NormalSpoke):
             # not initialized
             return self._unitialized_status
 
+        if not self._addon_data.content_url:
+            return _("No content found")
+
         # update message store, something may changed from the last update
         self._update_message_store(report_only=True)
 
@@ -628,3 +687,22 @@ class OSCAPSpoke(NormalSpoke):
         # switch profile
         self._switch_profile()
 
+    def on_fetch_button_clicked(self, *args):
+        """Handler for the Fetch button"""
+
+        url = self._content_url_entry.get_text()
+        really_show(self._progress_box)
+        really_show(self._progress_spinner)
+
+        if not data_fetch.can_fetch_from(url):
+            # cannot start fetching
+            really_hide(self._progress_spinner)
+            self._progress_label.set_text(_("Invalid or unsupported URL"))
+            return
+
+        self._progress_label.set_text(_("Fetching content..."))
+        self._progress_spinner.start()
+        self._addon_data.content_url = url
+        self._addon_data.content_type = "datastream"
+
+        self._fetch_data_and_initialize(self._entered_data_fetch_callback)
