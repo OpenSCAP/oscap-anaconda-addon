@@ -78,7 +78,6 @@ class OSCAPdata(AddonData):
         self.certificates = ""
 
         # internal values
-        self.content_name = ""
         self.rule_data = rule_handling.RuleData()
 
     def __str__(self):
@@ -127,13 +126,6 @@ class OSCAPdata(AddonData):
         else:
             msg = "Unsupported url '%s' in the %s addon" % (value, self.name)
             raise KickstartValueError(msg)
-
-        parts = self.content_url.rsplit("/", 1)
-        if len(parts) != 2:
-            msg = "Unsupported url '%s' in the %s addon" % (value, self.name)
-            raise KickstartValueError(msg)
-        else:
-            self.content_name = parts[1]
 
     def _parse_datastream_id(self, value):
         # need to be checked?
@@ -225,6 +217,16 @@ class OSCAPdata(AddonData):
                 msg = "Unsupported archive type of the content "\
                       "file '%s'" % self.content_url
                 raise KickstartValueError(msg)
+
+    @property
+    def content_name(self):
+        parts = self.content_url.rsplit("/", 1)
+        if len(parts) != 2:
+            msg = "Unsupported url '%s' in the %s addon" % (self.content_url,
+                                                            self.name)
+            raise KickstartValueError(msg)
+
+        return parts[1]
 
     @property
     def raw_content_path(self):
