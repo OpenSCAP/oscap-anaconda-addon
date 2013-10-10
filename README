@@ -1,0 +1,3 @@
+OSCAP Anaconda addon is an addon for the Anaconda installer that integrates
+OpenSCAP to the installation process and allows installation of system following
+some SCAP-defined restrictions and recommendations.
