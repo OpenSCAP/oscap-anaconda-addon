@@ -3,8 +3,10 @@ NAME = oscap-anaconda-addon
 VERSION = 0.1
 
 ADDON = org_fedora_oscap
+TESTS = tests
 
 FILES = $(ADDON) \
+	$(TESTS) \
 	COPYING \
 	Makefile \
 	README
