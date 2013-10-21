@@ -17,6 +17,8 @@ Source0:        %{name}-%{version}.tar.gz
 BuildArch:      noarch
 BuildRequires:	python2-devel
 BuildRequires:  python-mock
+BuildRequires:  python-nose
+BuildRequires:  anaconda >= 19
 Requires:       anaconda >= 19
 Requires:       openscap openscap-utils openscap-python
 
