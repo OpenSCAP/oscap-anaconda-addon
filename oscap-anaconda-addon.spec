@@ -1,5 +1,5 @@
 Name:           oscap-anaconda-addon
-Version:        0.1
+Version:        0.2
 Release:        1%{?dist}
 Summary:        Anaconda addon integrating OpenSCAP to the installation process
 
@@ -56,5 +56,5 @@ make install DESTDIR=%{buildroot}
 %doc COPYING ChangeLog README
 
 %changelog
-* Thu Oct 10 2013 Vratislav Podzimek <vpodzime@redhat.com> - 0.1-1
+* Mon Oct 21 2013 Vratislav Podzimek <vpodzime@redhat.com> - 0.2-1
 - Initial RPM for the oscap-anaconda-addon
