@@ -41,17 +41,7 @@ make test
 make install DESTDIR=%{buildroot}
 
 %files
-%dir %{_datadir}/anaconda/addons/org_fedora_oscap/
-%dir %{_datadir}/anaconda/addons/org_fedora_oscap/ks
-%dir %{_datadir}/anaconda/addons/org_fedora_oscap/gui
-%dir %{_datadir}/anaconda/addons/org_fedora_oscap/gui/spokes
-%dir %{_datadir}/anaconda/addons/org_fedora_oscap/gui/categories
-%{_datadir}/anaconda/addons/org_fedora_oscap/*.py*
-%{_datadir}/anaconda/addons/org_fedora_oscap/ks/*.py*
-%{_datadir}/anaconda/addons/org_fedora_oscap/gui/*.py*
-%{_datadir}/anaconda/addons/org_fedora_oscap/gui/spokes/*.py*
-%{_datadir}/anaconda/addons/org_fedora_oscap/gui/spokes/*.glade
-%{_datadir}/anaconda/addons/org_fedora_oscap/gui/categories/*.py*
+%{_datadir}/anaconda/addons/org_fedora_oscap
 
 %doc COPYING ChangeLog README
 
