@@ -56,4 +56,4 @@ dist:
 	rm -rf $(DISTNAME)
 
 test:
-	PYTHONPATH=. nosetests -vw tests/
+	PYTHONPATH=. nosetests --processes=-1 -vw tests/
