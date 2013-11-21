@@ -329,9 +329,13 @@ def _extract_rpm(rpm_path, ensure_has_files=None, root="/"):
     # get entries from the archive (supports only iteration over entries)
     entries = set(entry for entry in archive)
 
+    # XXX: needs some tweaks?
+    entry_names = [entry.name for entry in entries]
+
     for fpath in ensure_has_files or ():
-        msg = "File '%s' not found in the archive '%s'" % (fpath, rpm_path)
-        raise ExtractionError(msg)
+        if not fpath in entry_names:
+            msg = "File '%s' not found in the archive '%s'" % (fpath, rpm_path)
+            raise ExtractionError(msg)
 
     # TODO: actually extract the RPM by reading and writing out the contents of
     # entries, making missing directories along the way
