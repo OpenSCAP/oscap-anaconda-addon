@@ -311,7 +311,7 @@ class OSCAPSpoke(NormalSpoke):
             # extract the content
             common.extract_data(self._addon_data.raw_content_path,
                                 common.INSTALLATION_CONTENT_DIR,
-                                self._addon_data.xccdf_path)
+                                [self._addon_data.xccdf_path])
 
         # initialize the right content handler
         if self._using_ds:

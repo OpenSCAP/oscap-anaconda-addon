@@ -232,7 +232,7 @@ def wait_and_fetch_net_data(url, out_file, ca_certs=None):
 
     return THREAD_FETCH_DATA
 
-def extract_data(archive, out_dir, ensure_has_file=None):
+def extract_data(archive, out_dir, ensure_has_files=None):
     """
     Fuction that extracts the given archive to the given output directory. It
     tries to find out the archive type by the file name.
@@ -241,8 +241,8 @@ def extract_data(archive, out_dir, ensure_has_file=None):
     :type archive: str
     :param out_dir: output directory the archive should be extracted to
     :type out_dir: str
-    :param ensure_has_file: a relative path to the file that must exist in the archive
-    :type ensure_has_file: str or None
+    :param ensure_has_files: relative paths to the files that must exist in the archive
+    :type ensure_has_files: iterable of strings or None
 
     """
 
@@ -252,30 +252,30 @@ def extract_data(archive, out_dir, ensure_has_file=None):
 
         # generator for the paths of the files found in the archive (dirs end
         # with "/")
-        files = (info.filename for info in zfile.filelist
-                 if not info.filename.endswith("/"))
-        if ensure_has_file and not ensure_has_file in files:
-            msg = "File '%s' not found in the archive '%s'" % (ensure_has_file,
-                                                               archive)
-            raise ExtractionError(msg)
+        files = set(info.filename for info in zfile.filelist
+                    if not info.filename.endswith("/"))
+        for fpath in ensure_has_files or ():
+            if not fpath in files:
+                msg = "File '%s' not found in the archive '%s'" % (fpath, archive)
+                raise ExtractionError(msg)
 
         utils.ensure_dir_exists(out_dir)
         zfile.extractall(path=out_dir)
         zfile.close()
     elif archive.endswith(".tar"):
         # plain tarball
-        _extract_tarball(archive, out_dir, ensure_has_file, None)
+        _extract_tarball(archive, out_dir, ensure_has_files, None)
     elif archive.endswith(".tar.gz"):
         # gzipped tarball
-        _extract_tarball(archive, out_dir, ensure_has_file, "gz")
+        _extract_tarball(archive, out_dir, ensure_has_files, "gz")
     elif archive.endswith(".tar.bz2"):
         # bzipped tarball
-        _extract_tarball(archive, out_dir, ensure_has_file, "bz2")
+        _extract_tarball(archive, out_dir, ensure_has_files, "bz2")
     #elif other types of archives
     else:
         raise ExtractionError("Unsuported archive type")
 
-def _extract_tarball(archive, out_dir, ensure_has_file, alg):
+def _extract_tarball(archive, out_dir, ensure_has_files, alg):
     """
     Extract the given TAR archive to the given output directory and make sure
     the given file exists in the archive.
@@ -296,14 +296,42 @@ def _extract_tarball(archive, out_dir, ensure_has_file, alg):
     tfile = tarfile.TarFile.open(archive, mode)
 
     # generator for the paths of the files found in the archive
-    files = (member.path for member in tfile.getmembers()
-             if member.isfile())
+    files = set(member.path for member in tfile.getmembers()
+                if member.isfile())
 
-    if ensure_has_file and not ensure_has_file in files:
-        msg = "File '%s' not found in the archive '%s'" % (ensure_has_file,
-                                                           archive)
-        raise ExtractionError(msg)
+    for fpath in ensure_has_files or ():
+        if not fpath in files:
+            msg = "File '%s' not found in the archive '%s'" % (fpath, archive)
+            raise ExtractionError(msg)
 
     utils.ensure_dir_exists(out_dir)
     tfile.extractall(path=out_dir)
     tfile.close()
+
+def _extract_rpm(rpm_path, ensure_has_files=None, root="/"):
+    """
+    Extract the given RPM into the directory tree given by the root argument and
+    make sure the given file exists in the archive.
+
+    :param rpm_path: path to the RPM file that should be extracted
+    :type rpm_path: str
+    :param ensure_has_files: relative paths to the files that must exist in the RPM
+    :type ensure_has_files: iterable of strings or None
+    :param root: root of the directory tree the RPM should be extracted into
+    :type root: str
+
+    """
+
+    # run rpm2cpio and pipe the output to the cpioarchive module
+    proc = subprocess.Popen(["rpm2cpio", rpm_path], stdout=subprocess.PIPE)
+    archive = cpioarchive.CpioArchive(fileObj=proc.stdout)
+
+    # get entries from the archive (supports only iteration over entries)
+    entries = set(entry for entry in archive)
+
+    for fpath in ensure_has_files or ():
+        msg = "File '%s' not found in the archive '%s'" % (fpath, rpm_path)
+        raise ExtractionError(msg)
+
+    # TODO: actually extract the RPM by reading and writing out the contents of
+    # entries, making missing directories along the way
