@@ -312,6 +312,10 @@ class OSCAPSpoke(NormalSpoke):
             common.extract_data(self._addon_data.raw_preinst_content_path,
                                 common.INSTALLATION_CONTENT_DIR,
                                 [self._addon_data.xccdf_path])
+        elif self._addon_data.content_type == "rpm":
+            # extract the content
+            common.extract_data(self._addon_data.raw_preinst_content_path,
+                                ensure_has_files=[self._addon_data.xccdf_path])
 
         # initialize the right content handler
         if self._using_ds:
