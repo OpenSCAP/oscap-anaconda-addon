@@ -34,7 +34,7 @@ from org_fedora_oscap.common import SUPPORTED_ARCHIVES
 # @see: pyanaconda.kickstart.AnacondaKSHandler.__init__
 __all__ = ["OSCAPdata"]
 
-SUPPORTED_CONTENT_TYPES = ("datastream", "RPM", "archive",
+SUPPORTED_CONTENT_TYPES = ("datastream", "rpm", "archive",
                            )
 
 SUPPORTED_URL_PREFIXES = ("http://", "https://",
@@ -112,8 +112,9 @@ class OSCAPdata(AddonData):
         return ret
 
     def _parse_content_type(self, value):
-        if value in SUPPORTED_CONTENT_TYPES:
-            self.content_type = value
+        value_low = value.lower()
+        if value_low in SUPPORTED_CONTENT_TYPES:
+            self.content_type = value_low
         else:
             msg = "Unsupported content type '%s' in the %s addon" % (value,
                                                                      self.name)
@@ -200,12 +201,12 @@ class OSCAPdata(AddonData):
         if not self.profile_id:
             raise KickstartValueError(tmpl % ("profile", self.name))
 
-        if self.content_type in ("RPM", "archive") and not self.xccdf_path:
+        if self.content_type in ("rpm", "archive") and not self.xccdf_path:
             msg = "Path to the XCCDF file has to be given if content in RPM "\
                   "or archive is used"
             raise KickstartValueError(msg)
 
-        if self.content_type == "RPM" and not self.content_url.endswith(".rpm"):
+        if self.content_type == "rpm" and not self.content_url.endswith(".rpm"):
             msg = "Content type set to RPM, but the content URL doesn't end "\
                   "with '.rpm'"
             raise KickstartValueError(msg)
