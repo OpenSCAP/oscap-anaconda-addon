@@ -29,6 +29,7 @@ import os.path
 import subprocess
 import zipfile
 import tarfile
+import cpioarchive
 
 from collections import namedtuple
 
@@ -52,6 +53,9 @@ PRE_INSTALL_FIX_SYSTEM_ATTR = "urn:redhat:anaconda:pre"
 THREAD_FETCH_DATA = "AnaOSCAPdataFetchThread"
 
 SUPPORTED_ARCHIVES = (".zip", ".tar", ".tar.gz", ".tar.bz2", )
+
+# buffer size for reading and writing out data (in bytes)
+IO_BUF_SIZE = 2 * 1024 * 1024
 
 class OSCAPaddonError(Exception):
     """Exception class for OSCAP addon related errors."""
@@ -241,7 +245,8 @@ def extract_data(archive, out_dir, ensure_has_files=None):
     :type archive: str
     :param out_dir: output directory the archive should be extracted to
     :type out_dir: str
-    :param ensure_has_files: relative paths to the files that must exist in the archive
+    :param ensure_has_files: relative paths to the files that must exist in the
+                             archive
     :type ensure_has_files: iterable of strings or None
 
     """
@@ -256,7 +261,8 @@ def extract_data(archive, out_dir, ensure_has_files=None):
                     if not info.filename.endswith("/"))
         for fpath in ensure_has_files or ():
             if not fpath in files:
-                msg = "File '%s' not found in the archive '%s'" % (fpath, archive)
+                msg = "File '%s' not found in the archive '%s'" % (fpath,
+                                                                   archive)
                 raise ExtractionError(msg)
 
         utils.ensure_dir_exists(out_dir)
@@ -271,6 +277,9 @@ def extract_data(archive, out_dir, ensure_has_files=None):
     elif archive.endswith(".tar.bz2"):
         # bzipped tarball
         _extract_tarball(archive, out_dir, ensure_has_files, "bz2")
+    elif archive.endswith(".rpm"):
+        # RPM
+        _extract_rpm(archive, out_dir, ensure_has_files)
     #elif other types of archives
     else:
         raise ExtractionError("Unsuported archive type")
@@ -308,17 +317,19 @@ def _extract_tarball(archive, out_dir, ensure_has_files, alg):
     tfile.extractall(path=out_dir)
     tfile.close()
 
-def _extract_rpm(rpm_path, ensure_has_files=None, root="/"):
+def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
     """
     Extract the given RPM into the directory tree given by the root argument and
     make sure the given file exists in the archive.
 
     :param rpm_path: path to the RPM file that should be extracted
     :type rpm_path: str
-    :param ensure_has_files: relative paths to the files that must exist in the RPM
-    :type ensure_has_files: iterable of strings or None
     :param root: root of the directory tree the RPM should be extracted into
     :type root: str
+    :param ensure_has_files: relative paths to the files that must exist in the
+                             RPM
+    :type ensure_has_files: iterable of strings or None
+
 
     """
 
@@ -329,13 +340,22 @@ def _extract_rpm(rpm_path, ensure_has_files=None, root="/"):
     # get entries from the archive (supports only iteration over entries)
     entries = set(entry for entry in archive)
 
-    # XXX: needs some tweaks?
-    entry_names = [entry.name for entry in entries]
+    # cpio entry names (paths) start with the dot
+    entry_names = [entry.name.lstrip(".") for entry in entries]
 
     for fpath in ensure_has_files or ():
         if not fpath in entry_names:
             msg = "File '%s' not found in the archive '%s'" % (fpath, rpm_path)
             raise ExtractionError(msg)
 
-    # TODO: actually extract the RPM by reading and writing out the contents of
-    # entries, making missing directories along the way
+    for entry in entries:
+        dirname = os.path.dirname(entry.name.lstrip("."))
+        out_dir = os.path.normpath(root + dirname)
+        utils.ensure_dir_exists(out_dir)
+
+        out_fpath = os.path.normpath(root + entry.name.lstrip("."))
+        with open(out_fpath, "wb") as out_file:
+            buf = entry.read(IO_BUF_SIZE)
+            while buf:
+                out_file.write(buf)
+                buf = entry.read(IO_BUF_SIZE)
