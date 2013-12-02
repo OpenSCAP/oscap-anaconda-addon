@@ -271,9 +271,9 @@ class OSCAPSpoke(NormalSpoke):
                for net_prefix in data_fetch.NET_URL_PREFIXES):
             # need to fetch data over network
             thread_name = common.wait_and_fetch_net_data(
-                                          self._addon_data.content_url,
-                                          self._addon_data.raw_content_path,
-                                          self._addon_data.certificates)
+                                     self._addon_data.content_url,
+                                     self._addon_data.raw_preinst_content_path,
+                                     self._addon_data.certificates)
 
         # pylint: disable-msg=E1101
         hubQ.send_message(self.__class__.__name__,
@@ -309,7 +309,7 @@ class OSCAPSpoke(NormalSpoke):
 
         if self._addon_data.content_type == "archive":
             # extract the content
-            common.extract_data(self._addon_data.raw_content_path,
+            common.extract_data(self._addon_data.raw_preinst_content_path,
                                 common.INSTALLATION_CONTENT_DIR,
                                 [self._addon_data.xccdf_path])
 

@@ -230,10 +230,17 @@ class OSCAPdata(AddonData):
         return parts[1]
 
     @property
-    def raw_content_path(self):
-        """Path to the raw (unextracted, ...) content file"""
+    def raw_preinst_content_path(self):
+        """Path to the raw (unextracted, ...) pre-installation content file"""
 
         return os.path.join(common.INSTALLATION_CONTENT_DIR,
+                            self.content_name)
+
+    @property
+    def raw_postinst_content_path(self):
+        """Path to the raw (unextracted, ...) post-installation content file"""
+
+        return os.path.join(common.TARGET_CONTENT_DIR,
                             self.content_name)
 
     @property

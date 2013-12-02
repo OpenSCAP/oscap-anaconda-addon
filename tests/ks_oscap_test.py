@@ -38,7 +38,7 @@ class ParsingTest(unittest.TestCase):
                          common.TARGET_CONTENT_DIR + "/" +
                          self.oscap_data.content_name)
 
-        self.assertEqual(self.oscap_data.raw_content_path,
+        self.assertEqual(self.oscap_data.raw_preinst_content_path,
                          common.INSTALLATION_CONTENT_DIR + "/" +
                          self.oscap_data.content_name)
 
@@ -213,7 +213,7 @@ class ArchiveHandlingTest(unittest.TestCase):
         self.assertTrue(self.oscap_data.preinst_content_path.endswith(
                                                          "scap_content.xml"))
 
-    def archive_raw_content_path_test(self):
+    def archive_raw_content_paths_test(self):
         for line in ["content-url = http://example.com/oscap_content.tar",
                      "content-type = archive",
                      "profile = Web Server",
@@ -226,11 +226,13 @@ class ArchiveHandlingTest(unittest.TestCase):
         # content_name should be the archive's name
         self.assertEqual(self.oscap_data.content_name, "oscap_content.tar")
 
-        # content path should end with the xccdf path
-        self.assertTrue(self.oscap_data.raw_content_path.endswith(
+        # content path should end with the archive's name
+        self.assertTrue(self.oscap_data.raw_preinst_content_path.endswith(
+                                                         "oscap_content.tar"))
+        self.assertTrue(self.oscap_data.raw_postinst_content_path.endswith(
                                                          "oscap_content.tar"))
 
-    def ds_raw_content_path_test(self):
+    def ds_raw_content_paths_test(self):
         for line in ["content-url = http://example.com/scap_content.xml",
                      "content-type = datastream",
                      "profile = Web Server",
@@ -239,7 +241,10 @@ class ArchiveHandlingTest(unittest.TestCase):
 
         self.oscap_data.finalize()
 
-        # both content_name and content path should point to the data stream XML
+        # content_name and content paths should all point to the data stream XML
         self.assertEqual(self.oscap_data.content_name, "scap_content.xml")
-        self.assertTrue(self.oscap_data.raw_content_path.endswith(
+        self.assertTrue(self.oscap_data.raw_preinst_content_path.endswith(
                                                          "scap_content.xml"))
+        self.assertTrue(self.oscap_data.raw_postinst_content_path.endswith(
+                                                         "scap_content.xml"))
+
