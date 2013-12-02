@@ -333,8 +333,7 @@ class OSCAPSpoke(NormalSpoke):
         else:
             # hide the labels and comboboxes for datastream-id and xccdf-id
             # selection
-            self._ids_box.hide()
-            self._ids_box.set_no_show_all(True)
+            really_hide(self._ids_box)
 
         # refresh UI elements
         self.refresh()
