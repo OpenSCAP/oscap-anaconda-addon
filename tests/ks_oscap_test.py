@@ -232,6 +232,25 @@ class ArchiveHandlingTest(unittest.TestCase):
         self.assertTrue(self.oscap_data.raw_postinst_content_path.endswith(
                                                          "oscap_content.tar"))
 
+    def rpm_raw_content_paths_test(self):
+        for line in ["content-url = http://example.com/oscap_content.rpm",
+                     "content-type = rpm",
+                     "profile = Web Server",
+                     "xccdf-path = /usr/share/oscap/xccdf.xml"
+                     ]:
+            self.oscap_data.handle_line(line)
+
+        self.oscap_data.finalize()
+
+        # content_name should be the rpm's name
+        self.assertEqual(self.oscap_data.content_name, "oscap_content.rpm")
+
+        # content path should end with the rpm's name
+        self.assertTrue(self.oscap_data.raw_preinst_content_path.endswith(
+                                                         "oscap_content.rpm"))
+        self.assertTrue(self.oscap_data.raw_postinst_content_path.endswith(
+                                                         "oscap_content.rpm"))
+
     def ds_raw_content_paths_test(self):
         for line in ["content-url = http://example.com/scap_content.xml",
                      "content-type = datastream",

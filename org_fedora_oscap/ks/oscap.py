@@ -25,6 +25,7 @@ import os.path
 
 from pyanaconda.addons import AddonData
 from pyanaconda.constants import ROOT_PATH
+from pyanaconda import iutil
 from pykickstart.errors import KickstartParseError, KickstartValueError
 from org_fedora_oscap import utils, common, rule_handling
 from org_fedora_oscap.common import SUPPORTED_ARCHIVES
@@ -250,6 +251,9 @@ class OSCAPdata(AddonData):
         if self.content_type == "datastream":
             return os.path.join(common.INSTALLATION_CONTENT_DIR,
                                 self.content_name)
+        elif self.content_type == "rpm":
+            # no path magic in case of RPM
+            return self.xccdf_path
         else:
             return os.path.join(common.INSTALLATION_CONTENT_DIR,
                                 self.xccdf_path)
@@ -261,6 +265,9 @@ class OSCAPdata(AddonData):
         if self.content_type == "datastream":
             return os.path.join(common.TARGET_CONTENT_DIR,
                                 self.content_name)
+        elif self.content_type == "rpm":
+            # no path magic in case of RPM
+            return self.xccdf_path
         else:
             return os.path.join(common.TARGET_CONTENT_DIR,
                                 self.xccdf_path)
@@ -312,6 +319,17 @@ class OSCAPdata(AddonData):
 
         if self.content_type == "datastream":
             shutil.copy2(self.preinst_content_path, target_content_dir)
+        elif self.content_type == "rpm":
+            # copy the RPM to the target system
+            shutil.copy2(self.raw_preinst_content_path, target_content_dir)
+
+            # and install it with yum
+            ret = iutil.execWithRedirect("yum", ["-y", "install",
+                                                 self.raw_postinst_content_path],
+                                         root=ROOT_PATH)
+            if ret != 0:
+                raise common.ExtractionError("Failed to install content "
+                                             "RPM to the target system")
         else:
             utils.universal_copy(os.path.join(common.INSTALLATION_CONTENT_DIR,
                                               "*"),
