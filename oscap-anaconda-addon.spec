@@ -18,9 +18,11 @@ BuildArch:      noarch
 BuildRequires:	python2-devel
 BuildRequires:  python-mock
 BuildRequires:  python-nose
+BuildRequires:  python-cpio
 BuildRequires:  anaconda >= 19
 Requires:       anaconda >= 19
 Requires:       openscap openscap-utils openscap-python
+Requires:       python-cpio
 
 %description
 This is an addon that integrates OpenSCAP utilities with the Anaconda installer
