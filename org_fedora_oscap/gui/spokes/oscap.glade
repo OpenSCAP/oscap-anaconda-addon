@@ -1,7 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.16.0 on Tue Dec  3 10:25:33 2013 -->
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
   <!-- interface-requires AnacondaWidgets 1.0 -->
+  <object class="GtkListStore" id="changesStore">
+    <columns>
+      <!-- column-name messageType -->
+      <column type="gint"/>
+      <!-- column-name message -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
+  <object class="GtkListStore" id="dsStore">
+    <columns>
+      <!-- column-name Data -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
+  <object class="GtkListStore" id="profilesStore">
+    <columns>
+      <!-- column-name profileID -->
+      <column type="gchararray"/>
+      <!-- column-name profileName -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
+  <object class="GtkListStore" id="xccdfStore">
+    <columns>
+      <!-- column-name Checklist -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
   <object class="AnacondaSpokeWindow" id="OSCAPspokeWindow">
     <property name="startup_id">filler</property>
     <property name="can_focus">False</property>
@@ -345,10 +374,10 @@
                             <child>
                               <object class="GtkButton" id="fetchButton">
                                 <property name="label" translatable="yes">_Fetch</property>
-                                <property name="use_underline">True</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="receives_default">True</property>
+                                <property name="use_underline">True</property>
                                 <signal name="clicked" handler="on_fetch_button_clicked" swapped="no"/>
                               </object>
                               <packing>
@@ -436,33 +465,5 @@
         </child>
       </object>
     </child>
-  </object>
-  <object class="GtkListStore" id="changesStore">
-    <columns>
-      <!-- column-name messageType -->
-      <column type="gint"/>
-      <!-- column-name message -->
-      <column type="gchararray"/>
-    </columns>
-  </object>
-  <object class="GtkListStore" id="dsStore">
-    <columns>
-      <!-- column-name Data -->
-      <column type="gchararray"/>
-    </columns>
-  </object>
-  <object class="GtkListStore" id="profilesStore">
-    <columns>
-      <!-- column-name profileID -->
-      <column type="gchararray"/>
-      <!-- column-name profileName -->
-      <column type="gchararray"/>
-    </columns>
-  </object>
-  <object class="GtkListStore" id="xccdfStore">
-    <columns>
-      <!-- column-name Checklist -->
-      <column type="gchararray"/>
-    </columns>
   </object>
 </interface>
