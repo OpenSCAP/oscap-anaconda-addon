@@ -35,6 +35,8 @@ from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
 from pyanaconda.ui.gui.utils import gtk_action_wait, really_hide, really_show
 
+from gi.repository import Gdk
+
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
 
@@ -475,6 +477,9 @@ class OSCAPSpoke(NormalSpoke):
         """Switches to a current selected profile."""
 
         profile = self._current_profile_id
+        if not profile:
+            return
+
         if self._using_ds:
             ds = self._current_ds_id
             xccdf = self._current_xccdf_id
@@ -680,6 +685,16 @@ class OSCAPSpoke(NormalSpoke):
             else:
                 # current active profile selected
                 self._choose_button.set_sensitive(False)
+
+    def on_profile_clicked(self, widget, event, *args):
+        """Handler for the profile being clicked on."""
+
+        # if a profile is double-clicked, we should switch to it
+        if event.type == Gdk.EventType._2BUTTON_PRESS:
+            self._switch_profile()
+
+        # let the other actions hooked to the click happen as well
+        return False
 
     def on_profile_chosen(self, *args):
         """

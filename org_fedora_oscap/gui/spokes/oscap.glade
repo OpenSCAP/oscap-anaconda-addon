@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.16.0 on Tue Dec  3 10:27:10 2013 -->
+<!-- Generated with glade 3.16.0 on Tue Dec  3 10:38:51 2013 -->
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
   <!-- interface-requires AnacondaWidgets 1.0 -->
@@ -211,12 +211,14 @@
                           <object class="GtkTreeView" id="profilesView">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
+                            <property name="events">GDK_BUTTON_PRESS_MASK | GDK_STRUCTURE_MASK</property>
                             <property name="hexpand">True</property>
                             <property name="vexpand">True</property>
                             <property name="model">profilesStore</property>
                             <property name="headers_visible">False</property>
                             <property name="headers_clickable">False</property>
                             <property name="search_column">0</property>
+                            <signal name="button-press-event" handler="on_profile_clicked" swapped="no"/>
                             <child internal-child="selection">
                               <object class="GtkTreeSelection" id="profilesSelection">
                                 <signal name="changed" handler="on_profiles_selection_changed" swapped="no"/>
