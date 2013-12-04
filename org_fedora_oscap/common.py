@@ -43,8 +43,8 @@ from org_fedora_oscap.data_fetch import fetch_data
 # everything else should be private
 __all__ = ["run_oscap_remediate", "get_fix_rules_pre", "OSCAPaddonError"]
 
-INSTALLATION_CONTENT_DIR = "/tmp/openscap_data"
-TARGET_CONTENT_DIR = "/root/openscap_data"
+INSTALLATION_CONTENT_DIR = "/tmp/openscap_data/"
+TARGET_CONTENT_DIR = "/root/openscap_data/"
 
 RESULTS_PATH = os.path.join(TARGET_CONTENT_DIR, "eval_remediate_results.xml")
 
@@ -372,3 +372,25 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
                 buf = entry.read(IO_BUF_SIZE)
 
     return [os.path.normpath(root + name) for name in entry_names]
+
+def strip_content_dir(fpaths, phase="preinst"):
+    """
+    Strip content directory prefix from the file paths for either
+    pre-installation or post-installation phase.
+
+    :param fpaths: iterable of file paths to strip content directory prefix from
+    :type fpaths: iterable of strings
+    :param phase: specifies pre-installation or post-installation phase
+    :type phase: "preinst" or "postinst"
+    :return: the same iterable of file paths as given with the content directory
+             prefix stripped
+    :rtype: same type as fpaths
+
+    """
+
+    if phase == "preinst":
+        remove_prefix = lambda x: x[len(INSTALLATION_CONTENT_DIR):]
+    else:
+        remove_prefix = lambda x: x[len(TARGET_CONTENT_DIR):]
+
+    return utils.keep_type_map(remove_prefix, fpaths)

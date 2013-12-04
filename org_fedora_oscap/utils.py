@@ -72,3 +72,35 @@ def universal_copy(src, dst):
                 shutil.copytree(item, dst)
         else:
             shutil.copy2(item, dst)
+
+def keep_type_map(func, iterable):
+    """
+    Function that maps the given function to items in the given iterable keeping
+    the type of the iterable.
+
+    :param func: function to be mapped on the items in the iterable
+    :type func: in_item -> out_item
+    :param iterable: iterable providing the items the function should be mapped
+                     on
+    :type iterable: iterable
+    :return: iterable providin items produced by the function mapped on the
+             input items
+    :rtype: the same type as input iterable or generator if the iterable is not
+            of any basic Python types
+
+    """
+
+    if isinstance(iterable, dict):
+        return dict((func(key), iterable[key]) for key in iterable)
+
+    items_gen = (func(item) for item in iterable)
+    if isinstance(iterable, list):
+        return list(items_gen)
+    elif isinstance(iterable, tuple):
+        return tuple(items_gen)
+    elif isinstance(iterable, set):
+        return set(items_gen)
+    elif isinstance(iterable, str):
+        return "".join(items_gen)
+    else:
+        return items_gen
