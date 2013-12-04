@@ -23,6 +23,7 @@ all:
 DISTNAME = $(NAME)-$(VERSION)
 ADDONDIR = /usr/share/anaconda/addons/
 DISTBALL = $(DISTNAME).tar.gz
+NUM_PROCS = $$(getconf _NPROCESSORS_ONLN)
 
 install:
 	mkdir -p $(DESTDIR)$(ADDONDIR)
@@ -56,4 +57,5 @@ dist:
 	rm -rf $(DISTNAME)
 
 test:
+	-@find . -name '*.py' -print|xargs -n1 --max-procs=$(NUM_PROCS) pylint -E 2> /dev/null
 	PYTHONPATH=. nosetests --processes=-1 -vw tests/

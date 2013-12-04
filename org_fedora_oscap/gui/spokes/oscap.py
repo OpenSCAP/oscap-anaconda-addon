@@ -35,6 +35,7 @@ from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
 from pyanaconda.ui.gui.utils import gtk_action_wait, really_hide, really_show
 
+# pylint: disable-msg=E0611
 from gi.repository import Gdk
 
 # export only the spoke, no helper functions, classes or constants
