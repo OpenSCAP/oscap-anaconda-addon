@@ -123,6 +123,9 @@ class DataStreamHandler(object):
 
         # create an XCCDF session for the file
         self._session = OSCAP.xccdf_session_new(dsc_file_path)
+        if not self._session:
+            msg = "'%s' is not a valid SCAP content file" % dsc_file_path
+            raise DataStreamHandlingError(msg)
 
         if not OSCAP.xccdf_session_is_sds(self._session):
             msg = "'%s' is not a data stream collection" % dsc_file_path
