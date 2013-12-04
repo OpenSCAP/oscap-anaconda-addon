@@ -248,6 +248,8 @@ def extract_data(archive, out_dir, ensure_has_files=None):
     :param ensure_has_files: relative paths to the files that must exist in the
                              archive
     :type ensure_has_files: iterable of strings or None
+    :return: a list of files and directories extracted from the archive
+    :rtype: [str]
 
     """
 
@@ -271,18 +273,19 @@ def extract_data(archive, out_dir, ensure_has_files=None):
         utils.ensure_dir_exists(out_dir)
         zfile.extractall(path=out_dir)
         zfile.close()
+        return [os.path.join(out_dir, info.filename) for info in zfile.filelist]
     elif archive.endswith(".tar"):
         # plain tarball
-        _extract_tarball(archive, out_dir, ensure_has_files, None)
+        return _extract_tarball(archive, out_dir, ensure_has_files, None)
     elif archive.endswith(".tar.gz"):
         # gzipped tarball
-        _extract_tarball(archive, out_dir, ensure_has_files, "gz")
+        return _extract_tarball(archive, out_dir, ensure_has_files, "gz")
     elif archive.endswith(".tar.bz2"):
         # bzipped tarball
-        _extract_tarball(archive, out_dir, ensure_has_files, "bz2")
+        return _extract_tarball(archive, out_dir, ensure_has_files, "bz2")
     elif archive.endswith(".rpm"):
         # RPM
-        _extract_rpm(archive, out_dir, ensure_has_files)
+        return _extract_rpm(archive, out_dir, ensure_has_files)
     #elif other types of archives
     else:
         raise ExtractionError("Unsuported archive type")
@@ -295,6 +298,8 @@ def _extract_tarball(archive, out_dir, ensure_has_files, alg):
     :see: extract_data
     :param alg: compression algorithm used for the tarball
     :type alg: str (one of "gz", "bz2") or None
+    :return: a list of files and directories extracted from the archive
+    :rtype: [str]
 
     """
 
@@ -320,6 +325,8 @@ def _extract_tarball(archive, out_dir, ensure_has_files, alg):
     tfile.extractall(path=out_dir)
     tfile.close()
 
+    return [os.path.join(out_dir, member.path) for member in tfile.getmembers()]
+
 def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
     """
     Extract the given RPM into the directory tree given by the root argument and
@@ -332,7 +339,8 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
     :param ensure_has_files: relative paths to the files that must exist in the
                              RPM
     :type ensure_has_files: iterable of strings or None
-
+    :return: a list of files and directories extracted from the archive
+    :rtype: [str]
 
     """
 
@@ -362,3 +370,5 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
             while buf:
                 out_file.write(buf)
                 buf = entry.read(IO_BUF_SIZE)
+
+    return [os.path.normpath(root + name) for name in entry_names]
