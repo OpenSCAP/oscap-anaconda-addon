@@ -251,6 +251,9 @@ def extract_data(archive, out_dir, ensure_has_files=None):
 
     """
 
+    # get rid of empty file paths
+    ensure_has_files = [fpath for fpath in ensure_has_files if fpath]
+
     if archive.endswith(".zip"):
         # ZIP file
         zfile = zipfile.ZipFile(archive, "r")
