@@ -721,6 +721,11 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_label.set_text(_("Fetching content..."))
         self._progress_spinner.start()
         self._addon_data.content_url = url
-        self._addon_data.content_type = "datastream"
+        if url.endswith(".rpm"):
+            self._addon_data.content_type = "rpm"
+        elif any(url.endswith(arch_type) for arch_type in common.SUPPORTED_ARCHIVES):
+            self._addon_data.content_type = "archive"
+        else:
+            self._addon_data.content_type = "datastream"
 
         self._fetch_data_and_initialize(self._entered_data_fetch_callback)
