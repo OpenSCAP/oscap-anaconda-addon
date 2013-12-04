@@ -311,14 +311,21 @@ class OSCAPSpoke(NormalSpoke):
             return
 
         if self._addon_data.content_type == "archive":
-            # extract the content
-            common.extract_data(self._addon_data.raw_preinst_content_path,
-                                common.INSTALLATION_CONTENT_DIR,
-                                [self._addon_data.xccdf_path])
+            # extract the content and populate missing fields
+            fpaths = common.extract_data(self._addon_data.raw_preinst_content_path,
+                                         common.INSTALLATION_CONTENT_DIR,
+                                         [self._addon_data.xccdf_path])
+            xccdf_path, cpe_path = content_handling.find_content_files(fpaths)
+            self._addon_data.xccdf_path = self._addon_data.xccdf_path or xccdf_path
+            self._addon_data.cpe_path = self._addon_data.cpe_path or cpe_path
+
         elif self._addon_data.content_type == "rpm":
-            # extract the content
-            common.extract_data(self._addon_data.raw_preinst_content_path,
-                                ensure_has_files=[self._addon_data.xccdf_path])
+            # extract the content and populate missing fields
+            fpaths = common.extract_data(self._addon_data.raw_preinst_content_path, "/",
+                                         ensure_has_files=[self._addon_data.xccdf_path])
+            xccdf_path, cpe_path = content_handling.find_content_files(fpaths)
+            self._addon_data.xccdf_path = self._addon_data.xccdf_path or xccdf_path
+            self._addon_data.cpe_path = self._addon_data.cpe_path or cpe_path
 
         # initialize the right content handler
         if self._using_ds:

@@ -28,6 +28,7 @@ import os.path
 
 from collections import namedtuple, OrderedDict
 from openscap_api import OSCAP
+from pyanaconda.iutil import execReadlines
 
 class ContentHandlingError(Exception):
     """Exception class for errors related to SCAP content handling."""
@@ -65,6 +66,36 @@ def oscap_text_itr_get_text(itr):
         ret += OSCAP.oscap_text_get_text(text_item)
 
     return ret
+
+def find_content_files(fpaths):
+    """
+    Function for finding content files in a list of file paths. DOES NO
+    HEURISTIC, JUST PICKS THE FIRST USABLE CONTENT FILE OF A PARTICULAR TYPE.
+
+    :param fpaths: a list of file paths to search for content files in
+    :type fpaths: [str]
+    :return: a tuple containing the file name of the XCCDF file or "" and CPE
+             dictionary or ""
+    :rtype: (str, str)
+
+    """
+
+    def get_doc_type(file_path):
+        for line in execReadlines("oscap", ["info", file_path]):
+            if line.startswith("Document type:"):
+                _prefix, _sep, type_info = line.partition(":")
+                return type_info.strip()
+
+    xccdf_file = ""
+    cpe_file = ""
+    for fpath in fpaths:
+        doc_type = get_doc_type(fpath)
+        if doc_type == "XCCDF Checklist" and not xccdf_file:
+            xccdf_file = fpath
+        elif doc_type == "CPE Dictionary" and not cpe_file:
+            cpe_file = fpath
+
+    return (xccdf_file, cpe_file)
 
 class DataStreamHandler(object):
     """
