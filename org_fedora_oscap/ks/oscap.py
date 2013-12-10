@@ -251,9 +251,6 @@ class OSCAPdata(AddonData):
         if self.content_type == "datastream":
             return os.path.join(common.INSTALLATION_CONTENT_DIR,
                                 self.content_name)
-        elif self.content_type == "rpm":
-            # no path magic in case of RPM
-            return self.xccdf_path
         else:
             return os.path.join(common.INSTALLATION_CONTENT_DIR,
                                 self.xccdf_path)
