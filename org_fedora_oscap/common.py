@@ -25,7 +25,7 @@ specific to any installation mode (tui, gui, ks).
 """
 
 import os
-import os.path
+import tempfile
 import subprocess
 import zipfile
 import tarfile
@@ -345,9 +345,12 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
 
     """
 
-    # run rpm2cpio and pipe the output to the cpioarchive module
-    proc = subprocess.Popen(["rpm2cpio", rpm_path], stdout=subprocess.PIPE)
-    archive = cpioarchive.CpioArchive(fileObj=proc.stdout)
+    # run rpm2cpio and process the output with the cpioarchive module
+    temp_fd, temp_path = tempfile.mkstemp(prefix="oscap_rpm")
+    proc = subprocess.Popen(["rpm2cpio", rpm_path], stdout=temp_fd)
+    proc.wait()
+    os.close(temp_fd)
+    archive = cpioarchive.CpioArchive(temp_path)
 
     # get entries from the archive (supports only iteration over entries)
     entries = set(entry for entry in archive)
@@ -371,6 +374,10 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
             while buf:
                 out_file.write(buf)
                 buf = entry.read(IO_BUF_SIZE)
+
+    # cleanup
+    archive.close()
+    os.unlink(temp_path)
 
     return [os.path.normpath(root + name) for name in entry_names]
 
