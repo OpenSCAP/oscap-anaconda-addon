@@ -1,4 +1,5 @@
 *.zip
 *.tar*
+*.rpm
 *.pyc
 *~
