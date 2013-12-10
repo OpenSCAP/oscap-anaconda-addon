@@ -31,15 +31,15 @@ class ParsingTest(unittest.TestCase):
 
     def properties_test(self):
         self.assertEqual(self.oscap_data.preinst_content_path,
-                         common.INSTALLATION_CONTENT_DIR + "/" +
+                         common.INSTALLATION_CONTENT_DIR +
                          self.oscap_data.content_name)
 
         self.assertEqual(self.oscap_data.postinst_content_path,
-                         common.TARGET_CONTENT_DIR + "/" +
+                         common.TARGET_CONTENT_DIR +
                          self.oscap_data.content_name)
 
         self.assertEqual(self.oscap_data.raw_preinst_content_path,
-                         common.INSTALLATION_CONTENT_DIR + "/" +
+                         common.INSTALLATION_CONTENT_DIR +
                          self.oscap_data.content_name)
 
     def str_test(self):
