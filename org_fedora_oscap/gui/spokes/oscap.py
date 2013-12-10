@@ -259,6 +259,9 @@ class OSCAPSpoke(NormalSpoke):
             # no more being unitialized
             self._unitialized_status = None
 
+            # user is going to enter the content URL
+            self._content_url_entry.grab_focus()
+
             # pylint: disable-msg=E1101
             hubQ.send_ready(self.__class__.__name__, True)
         else:
