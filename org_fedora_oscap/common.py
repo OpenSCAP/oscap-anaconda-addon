@@ -47,7 +47,7 @@ __all__ = ["run_oscap_remediate", "get_fix_rules_pre", "wait_and_fetch_net_data"
 INSTALLATION_CONTENT_DIR = "/tmp/openscap_data/"
 TARGET_CONTENT_DIR = "/root/openscap_data/"
 
-RESULTS_PATH = os.path.join(TARGET_CONTENT_DIR, "eval_remediate_results.xml")
+RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR, "eval_remediate_results.xml")
 
 PRE_INSTALL_FIX_SYSTEM_ATTR = "urn:redhat:anaconda:pre"
 
@@ -274,7 +274,7 @@ def extract_data(archive, out_dir, ensure_has_files=None):
         utils.ensure_dir_exists(out_dir)
         zfile.extractall(path=out_dir)
         zfile.close()
-        return [os.path.join(out_dir, info.filename) for info in zfile.filelist]
+        return [utils.join_paths(out_dir, info.filename) for info in zfile.filelist]
     elif archive.endswith(".tar"):
         # plain tarball
         return _extract_tarball(archive, out_dir, ensure_has_files, None)
@@ -326,7 +326,7 @@ def _extract_tarball(archive, out_dir, ensure_has_files, alg):
     tfile.extractall(path=out_dir)
     tfile.close()
 
-    return [os.path.join(out_dir, member.path) for member in tfile.getmembers()]
+    return [utils.join_paths(out_dir, member.path) for member in tfile.getmembers()]
 
 def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
     """

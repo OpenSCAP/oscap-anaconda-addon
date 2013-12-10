@@ -67,7 +67,7 @@ def universal_copy(src, dst):
             if os.path.isdir(dst):
                 item = item.rstrip("/")
                 dirname = item.rsplit("/", 1)[-1]
-                shutil.copytree(item, os.path.join(dst, dirname))
+                shutil.copytree(item, join_paths(dst, dirname))
             else:
                 shutil.copytree(item, dst)
         else:
@@ -104,3 +104,23 @@ def keep_type_map(func, iterable):
         return "".join(items_gen)
     else:
         return items_gen
+
+def join_paths(path1, path2):
+    """
+    Joins two paths as one would expect -- i.e. just like the os.path.join
+    function except for doing crazy things when the second argument is an
+    absolute path.
+
+    :param path1: first path
+    :type path1: str
+    :param path2: second path
+    :type path2: str
+    :return: path1 and path2 joined with the file separator
+    :rtype: str
+
+    """
+
+    # os.path.normpath doesn't squash two starting slashes
+    path1.replace("//", "/")
+
+    return os.path.normpath(path1 + os.path.sep + path2)

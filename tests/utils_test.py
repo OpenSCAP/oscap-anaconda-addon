@@ -57,3 +57,22 @@ class EnsureDirExistTest(unittest.TestCase):
     def no_dir_test(self):
         # shouldn't raise an exception
         self.ensure_dir_exists("")
+
+    def tearDown(self):
+        # restore the original os module for the utils module
+        utils.ensure_dir_exists.func_globals["os"] = os
+
+class JoinPathsTest(unittest.TestCase):
+    """Tests for the join_paths function."""
+
+    def relative_relative_test(self):
+        self.assertEqual(utils.join_paths("foo", "blah"), "foo/blah")
+
+    def relative_absolute_test(self):
+        self.assertEqual(utils.join_paths("foo", "/blah"), "foo/blah")
+
+    def absolute_relative_test(self):
+        self.assertEqual(utils.join_paths("/foo", "blah"), "/foo/blah")
+
+    def absolute_absolute_test(self):
+        self.assertEqual(utils.join_paths("/foo", "/blah"), "/foo/blah")

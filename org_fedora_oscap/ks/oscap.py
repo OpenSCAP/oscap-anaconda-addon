@@ -234,40 +234,40 @@ class OSCAPdata(AddonData):
     def raw_preinst_content_path(self):
         """Path to the raw (unextracted, ...) pre-installation content file"""
 
-        return os.path.join(common.INSTALLATION_CONTENT_DIR,
-                            self.content_name)
+        return utils.join_paths(common.INSTALLATION_CONTENT_DIR,
+                                self.content_name)
 
     @property
     def raw_postinst_content_path(self):
         """Path to the raw (unextracted, ...) post-installation content file"""
 
-        return os.path.join(common.TARGET_CONTENT_DIR,
-                            self.content_name)
+        return utils.join_paths(common.TARGET_CONTENT_DIR,
+                                self.content_name)
 
     @property
     def preinst_content_path(self):
         """Path to the pre-installation content file"""
 
         if self.content_type == "datastream":
-            return os.path.join(common.INSTALLATION_CONTENT_DIR,
-                                self.content_name)
+            return utils.join_paths(common.INSTALLATION_CONTENT_DIR,
+                                    self.content_name)
         else:
-            return os.path.join(common.INSTALLATION_CONTENT_DIR,
-                                self.xccdf_path)
+            return utils.join_paths(common.INSTALLATION_CONTENT_DIR,
+                                    self.xccdf_path)
 
     @property
     def postinst_content_path(self):
         """Path to the post-installation content file"""
 
         if self.content_type == "datastream":
-            return os.path.join(common.TARGET_CONTENT_DIR,
-                                self.content_name)
+            return utils.join_paths(common.TARGET_CONTENT_DIR,
+                                    self.content_name)
         elif self.content_type == "rpm":
             # no path magic in case of RPM
             return self.xccdf_path
         else:
-            return os.path.join(common.TARGET_CONTENT_DIR,
-                                self.xccdf_path)
+            return utils.join_paths(common.TARGET_CONTENT_DIR,
+                                    self.xccdf_path)
 
     def setup(self, storage, ksdata, instclass):
         """
@@ -309,8 +309,7 @@ class OSCAPdata(AddonData):
 
         """
 
-        # os.path.join("/abc", "/bcd") --> "/bcd"
-        target_content_dir = os.path.normpath(ROOT_PATH + "/" +
+        target_content_dir = utils.join_paths(ROOT_PATH,
                                               common.TARGET_CONTENT_DIR)
         utils.ensure_dir_exists(target_content_dir)
 
@@ -328,7 +327,7 @@ class OSCAPdata(AddonData):
                 raise common.ExtractionError("Failed to install content "
                                              "RPM to the target system")
         else:
-            utils.universal_copy(os.path.join(common.INSTALLATION_CONTENT_DIR,
+            utils.universal_copy(utils.join_paths(common.INSTALLATION_CONTENT_DIR,
                                               "*"),
                                  target_content_dir)
 
