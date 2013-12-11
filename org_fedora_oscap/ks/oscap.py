@@ -74,6 +74,7 @@ class OSCAPdata(AddonData):
         self.profile_id = ""
         self.xccdf_path = ""
         self.cpe_path = ""
+        self.tailoring_path = ""
 
         # certificate to verify HTTPS connection or signed data
         self.certificates = ""
@@ -103,6 +104,8 @@ class OSCAPdata(AddonData):
             ret += "\n%s" % key_value_pair("xccdf-path", self.xccdf_path)
         if self.cpe_path:
             ret += "\n%s" % key_value_pair("cpe-path", self.cpe_path)
+        if self.tailoring_path:
+            ret += "\n%s" % key_value_pair("tailoring-path", self.tailoring_path)
 
         ret += "\n%s" % key_value_pair("profile", self.profile_id)
 
@@ -149,6 +152,10 @@ class OSCAPdata(AddonData):
         # need to be checked?
         self.cpe_path = value
 
+    def _parse_tailoring_path(self, value):
+        # need to be checked?
+        self.tailoring_path = value
+
     def _parse_certificates(self, value):
         self.certificates = value
 
@@ -169,6 +176,7 @@ class OSCAPdata(AddonData):
                     "xccdf-id" : self._parse_xccdf_id,
                     "xccdf-path": self._parse_xccdf_path,
                     "cpe-path": self._parse_cpe_path,
+                    "tailoring-path": self._parse_tailoring_path,
                     "certificates": self._parse_certificates,
                     }
 
@@ -269,6 +277,30 @@ class OSCAPdata(AddonData):
             return utils.join_paths(common.TARGET_CONTENT_DIR,
                                     self.xccdf_path)
 
+    @property
+    def preinst_tailoring_path(self):
+        """Path to the pre-installation tailoring file (if any)"""
+
+        if not self.tailoring_path:
+            return None
+
+        return utils.join_paths(common.INSTALLATION_CONTENT_DIR,
+                                self.tailoring_path)
+
+    @property
+    def postinst_tailoring_path(self):
+        """Path to the post-installation tailoring file (if any)"""
+
+        if not self.tailoring_path:
+            return None
+
+        if self.content_type == "rpm":
+            # no path magic in case of RPM
+            return self.tailoring_path
+
+        return utils.join_paths(common.TARGET_CONTENT_DIR,
+                                self.tailoring_path)
+
     def setup(self, storage, ksdata, instclass):
         """
         The setup method that should make changes to the runtime environment
@@ -333,4 +365,4 @@ class OSCAPdata(AddonData):
 
         common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
                                    self.datastream_id, self.xccdf_id,
-                                   chroot=ROOT_PATH)
+                                   self.tailoring_path, chroot=ROOT_PATH)
