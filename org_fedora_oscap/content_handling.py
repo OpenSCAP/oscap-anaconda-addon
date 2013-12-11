@@ -286,6 +286,10 @@ class BenchmarkHandler(object):
         self._profiles = []
 
         session = OSCAP.xccdf_session_new(xccdf_file_path)
+        if not session:
+            msg = "'%s' is not a valid SCAP content file" % xccdf_file_path
+            raise BenchmarkHandlingError(msg)
+
         if OSCAP.xccdf_session_load(session) != 0:
             raise BenchmarkHandlingError(OSCAP.oscap_err_desc())
 
