@@ -1,6 +1,7 @@
 """Module with tests for the ks/oscap.py module."""
 
 import unittest
+import os
 from pykickstart.errors import KickstartValueError
 from org_fedora_oscap.ks.oscap import OSCAPdata
 from org_fedora_oscap import common
@@ -14,6 +15,7 @@ class ParsingTest(unittest.TestCase):
                      "xccdf-id = id_xccdf_new\n",
                      "xccdf-path = /usr/share/oscap/xccdf.xml",
                      "cpe-path = /usr/share/oscap/cpe.xml",
+                     "tailoring-path = /usr/share/oscap/tailoring.xml",
                      "profile = \"Web Server\"\n",
                      ]:
             self.oscap_data.handle_line(line)
@@ -28,6 +30,7 @@ class ParsingTest(unittest.TestCase):
         self.assertEqual(self.oscap_data.cpe_path, "/usr/share/oscap/cpe.xml")
         self.assertEqual(self.oscap_data.profile_id, "Web Server")
         self.assertEqual(self.oscap_data.content_name, "hardening.xml")
+        self.assertEqual(self.oscap_data.tailoring_path, "/usr/share/oscap/tailoring.xml")
 
     def properties_test(self):
         self.assertEqual(self.oscap_data.preinst_content_path,
@@ -42,6 +45,14 @@ class ParsingTest(unittest.TestCase):
                          common.INSTALLATION_CONTENT_DIR +
                          self.oscap_data.content_name)
 
+        self.assertEqual(self.oscap_data.preinst_tailoring_path,
+                         os.path.normpath(common.INSTALLATION_CONTENT_DIR +
+                                          self.oscap_data.tailoring_path))
+
+        self.assertEqual(self.oscap_data.postinst_tailoring_path,
+                         os.path.normpath(common.TARGET_CONTENT_DIR +
+                                          self.oscap_data.tailoring_path))
+
     def str_test(self):
         str_ret = str(self.oscap_data)
         self.assertEqual(str_ret,
@@ -52,6 +63,7 @@ class ParsingTest(unittest.TestCase):
                          "    xccdf-id = id_xccdf_new\n"
                          "    xccdf-path = /usr/share/oscap/xccdf.xml\n"
                          "    cpe-path = /usr/share/oscap/cpe.xml\n"
+                         "    tailoring-path = /usr/share/oscap/tailoring.xml\n"
                          "    profile = Web Server\n"
                          "%end"
                          )
@@ -217,7 +229,8 @@ class ArchiveHandlingTest(unittest.TestCase):
         for line in ["content-url = http://example.com/oscap_content.tar",
                      "content-type = archive",
                      "profile = Web Server",
-                     "xccdf-path = oscap/xccdf.xml"
+                     "xccdf-path = oscap/xccdf.xml",
+                     "tailoring-path = oscap/tailoring.xml",
                      ]:
             self.oscap_data.handle_line(line)
 
@@ -232,11 +245,21 @@ class ArchiveHandlingTest(unittest.TestCase):
         self.assertTrue(self.oscap_data.raw_postinst_content_path.endswith(
                                                          "oscap_content.tar"))
 
+        # tailoring paths should be returned properly
+        self.assertEqual(self.oscap_data.preinst_tailoring_path,
+                         common.INSTALLATION_CONTENT_DIR +
+                         self.oscap_data.tailoring_path)
+
+        self.assertEqual(self.oscap_data.postinst_tailoring_path,
+                         common.TARGET_CONTENT_DIR +
+                         self.oscap_data.tailoring_path)
+
     def rpm_raw_content_paths_test(self):
         for line in ["content-url = http://example.com/oscap_content.rpm",
                      "content-type = rpm",
                      "profile = Web Server",
-                     "xccdf-path = /usr/share/oscap/xccdf.xml"
+                     "xccdf-path = /usr/share/oscap/xccdf.xml",
+                     "tailoring-path = /usr/share/oscap/tailoring.xml",
                      ]:
             self.oscap_data.handle_line(line)
 
@@ -250,6 +273,16 @@ class ArchiveHandlingTest(unittest.TestCase):
                                                          "oscap_content.rpm"))
         self.assertTrue(self.oscap_data.raw_postinst_content_path.endswith(
                                                          "oscap_content.rpm"))
+
+        # content paths should be returned as expected
+        self.assertEqual(self.oscap_data.preinst_content_path,
+                         os.path.normpath(common.INSTALLATION_CONTENT_DIR +
+                                          self.oscap_data.xccdf_path))
+
+        # when using rpm, xccdf_path doesn't change for the post-installation
+        # phase
+        self.assertEqual(self.oscap_data.postinst_content_path,
+                         self.oscap_data.xccdf_path)
 
     def ds_raw_content_paths_test(self):
         for line in ["content-url = http://example.com/scap_content.xml",
@@ -266,4 +299,3 @@ class ArchiveHandlingTest(unittest.TestCase):
                                                          "scap_content.xml"))
         self.assertTrue(self.oscap_data.raw_postinst_content_path.endswith(
                                                          "scap_content.xml"))
-
