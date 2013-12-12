@@ -82,7 +82,7 @@ MESSAGE_TYPE_INFO = 2
 #   text -- the actual message that should be displayed, logged, ...
 RuleMessage = namedtuple("RuleMessage", ["type", "text"])
 
-def get_fix_rules_pre(profile, fpath, ds_id="", xccdf_id=""):
+def get_fix_rules_pre(profile, fpath, ds_id="", xccdf_id="", tailoring=""):
     """
     Get fix rules for the pre-installation environment for a given profile in a
     given datastream and checklist in a given file.
@@ -95,9 +95,11 @@ def get_fix_rules_pre(profile, fpath, ds_id="", xccdf_id=""):
     """
 
     return _run_oscap_gen_fix(profile, fpath, PRE_INSTALL_FIX_SYSTEM_ATTR,
-                              ds_id=ds_id, xccdf_id=xccdf_id)
+                              ds_id=ds_id, xccdf_id=xccdf_id,
+                              tailoring=tailoring)
 
-def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id=""):
+def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id="",
+                       tailoring=""):
     """
     Run oscap tool on a given file to get the contents of fix elements with the
     'system' attribute equal to a given template for a given datastream,
@@ -119,6 +121,8 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id=""):
         args.append("--datastream-id=%s" % ds_id)
     if xccdf_id:
         args.append("--xccdf-id=%s" % xccdf_id)
+    if tailoring:
+        args.append("--tailoring-file=%s" % tailoring)
 
     args.append(fpath)
 
@@ -139,7 +143,8 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id=""):
 
     return stdout
 
-def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
+def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
+                        chroot=""):
     """
     Run the evaluation and remediation with the oscap tool on a given file,
     doing the remediation as defined in a given profile defined in a given
@@ -155,6 +160,8 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
     :type ds_id: str
     :param xccdf_id: ID of the checklist that defines the profile
     :type xccdf_id: str
+    :param tailoring: path to a tailoring file
+    :type tailoring: str
     :param chroot: path to the root the oscap tool should be run in
     :type chroot: str
     :return: oscap tool's stdout (summary of the rules, checks and fixes)
@@ -183,6 +190,8 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", chroot=""):
         args.append("--datastream-id=%s" % ds_id)
     if xccdf_id:
         args.append("--xccdf-id=%s" % xccdf_id)
+    if tailoring:
+        args.append("--tailoring-file=%s" % tailoring)
 
     args.append(fpath)
 

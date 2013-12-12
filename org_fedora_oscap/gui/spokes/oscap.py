@@ -319,18 +319,22 @@ class OSCAPSpoke(NormalSpoke):
             fpaths = common.extract_data(self._addon_data.raw_preinst_content_path,
                                          common.INSTALLATION_CONTENT_DIR,
                                          [self._addon_data.xccdf_path])
-            xccdf_path, cpe_path = common.strip_content_dir(\
+            xccdf_path, cpe_path, tailoring_path = common.strip_content_dir(\
                                      content_handling.find_content_files(fpaths))
             self._addon_data.xccdf_path = self._addon_data.xccdf_path or xccdf_path
             self._addon_data.cpe_path = self._addon_data.cpe_path or cpe_path
+            self._addon_data.tailoring_path = (self._addon_data.tailoring_path or
+                                               tailoring_path)
 
         # initialize the right content handler
         if self._using_ds:
             self._content_handler = content_handling.DataStreamHandler(\
-                                          self._addon_data.preinst_content_path)
+                                          self._addon_data.preinst_content_path,
+                                          self._addon_data.preinst_tailoring_path)
         else:
             self._content_handler = content_handling.BenchmarkHandler(\
-                                          self._addon_data.preinst_content_path)
+                                          self._addon_data.preinst_content_path,
+                                          self._addon_data.preinst_tailoring_path)
 
         if self._using_ds:
             # populate the stores from items from the content
@@ -506,7 +510,8 @@ class OSCAPSpoke(NormalSpoke):
         # get pre-install fix rules from the content
         rules = common.get_fix_rules_pre(profile,
                                          self._addon_data.preinst_content_path,
-                                         ds, xccdf)
+                                         ds, xccdf,
+                                         self._addon_data.tailoring_path)
 
         # parse and store rules with a clean RuleData instance
         self._rule_data = rule_handling.RuleData()

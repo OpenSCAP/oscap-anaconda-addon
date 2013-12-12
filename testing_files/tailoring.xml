@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xccdf:Tailoring xmlns:xccdf="http://checklists.nist.gov/xccdf/1.2" id="xccdf_scap-workbench_tailoring_default">
+  <xccdf:benchmark href="xccdf.xml"/>
+  <xccdf:version time="2013-12-11T22:04:39">1</xccdf:version>
+  <xccdf:Profile id="xccdf_com.example_profile_my_profile2_tailored" extends="xccdf_com.example_profile_my_profile2">
+    <xccdf:title>My testing profile2 tailored</xccdf:title>
+  </xccdf:Profile>
+  <xccdf:Profile id="xccdf_com.example_profile_my_profile_tailored" extends="xccdf_com.example_profile_my_profile">
+    <xccdf:title>My testing profile tailored</xccdf:title>
+    <xccdf:select idref="xccdf_moc.elpmaxe.www_rule_first" selected="false"/>
+    <xccdf:select idref="xccdf_com.example_rule_telnet_not_installed" selected="false"/>
+  </xccdf:Profile>
+</xccdf:Tailoring>

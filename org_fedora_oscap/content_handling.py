@@ -74,9 +74,9 @@ def find_content_files(fpaths):
 
     :param fpaths: a list of file paths to search for content files in
     :type fpaths: [str]
-    :return: a tuple containing the file name of the XCCDF file or "" and CPE
-             dictionary or ""
-    :rtype: (str, str)
+    :return: a tuple containing the file name of the XCCDF file, CPE dictionary
+             and tailoring file or "" in place of those items if not found
+    :rtype: (str, str, str)
 
     """
 
@@ -88,14 +88,17 @@ def find_content_files(fpaths):
 
     xccdf_file = ""
     cpe_file = ""
+    tailoring_file = ""
     for fpath in fpaths:
         doc_type = get_doc_type(fpath)
         if doc_type == "XCCDF Checklist" and not xccdf_file:
             xccdf_file = fpath
         elif doc_type == "CPE Dictionary" and not cpe_file:
             cpe_file = fpath
+        elif doc_type == "XCCDF Tailoring" and not tailoring_file:
+            tailoring_file = fpath
 
-    return (xccdf_file, cpe_file)
+    return (xccdf_file, cpe_file, tailoring_file)
 
 class DataStreamHandler(object):
     """
@@ -105,12 +108,14 @@ class DataStreamHandler(object):
 
     """
 
-    def __init__(self, dsc_file_path):
+    def __init__(self, dsc_file_path, tailoring_file_path=""):
         """
         Constructor for the DataStreamHandler class.
 
         :param dsc_file_path: path to a file with a data stream collection
         :type dsc_file_path: str
+        :param tailoring_file_path: path to a tailoring file
+        :type tailoring_file_path: str
 
         """
 
@@ -126,6 +131,10 @@ class DataStreamHandler(object):
         if not self._session:
             msg = "'%s' is not a valid SCAP content file" % dsc_file_path
             raise DataStreamHandlingError(msg)
+
+        if tailoring_file_path:
+            OSCAP.xccdf_session_set_user_tailoring_file(self._session,
+                                                        tailoring_file_path)
 
         if not OSCAP.xccdf_session_is_sds(self._session):
             msg = "'%s' is not a data stream collection" % dsc_file_path
@@ -269,13 +278,14 @@ class BenchmarkHandler(object):
 
     """
 
-    def __init__(self, xccdf_file_path):
+    def __init__(self, xccdf_file_path, tailoring_file_path=""):
         """
         Constructor for the BenchmarkHandler class.
 
         :param xccdf_file_path: path to a file with an XCCDF benchmark
         :type xccdf_file_path: str
-
+        :param tailoring_file_path: path to a tailoring file
+        :type tailoring_file_path: str
         """
 
         if not os.path.exists(xccdf_file_path):
@@ -290,6 +300,9 @@ class BenchmarkHandler(object):
             msg = "'%s' is not a valid SCAP content file" % xccdf_file_path
             raise BenchmarkHandlingError(msg)
 
+        if tailoring_file_path:
+            OSCAP.xccdf_session_set_user_tailoring_file(session,
+                                                        tailoring_file_path)
         if OSCAP.xccdf_session_load(session) != 0:
             raise BenchmarkHandlingError(OSCAP.oscap_err_desc())
 
@@ -312,6 +325,19 @@ class BenchmarkHandler(object):
             info = ProfileInfo(id_, title, desc)
 
             self._profiles.append(info)
+
+        if tailoring_file_path:
+            tailoring = OSCAP.xccdf_policy_model_get_tailoring(policy_model)
+            profile_itr = OSCAP.xccdf_tailoring_get_profiles(tailoring)
+            while OSCAP.xccdf_profile_iterator_has_more(profile_itr):
+                profile = OSCAP.xccdf_profile_iterator_next(profile_itr)
+
+                id_ = OSCAP.xccdf_profile_get_id(profile)
+                title = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_title(profile))
+                desc = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile))
+                info = ProfileInfo(id_, title, desc)
+
+                self._profiles.append(info)
 
         OSCAP.xccdf_profile_iterator_free(profile_itr)
         OSCAP.xccdf_session_free(session)

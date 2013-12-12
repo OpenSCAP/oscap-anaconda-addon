@@ -365,4 +365,4 @@ class OSCAPdata(AddonData):
 
         common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
                                    self.datastream_id, self.xccdf_id,
-                                   self.tailoring_path, chroot=ROOT_PATH)
+                                   self.postinst_tailoring_path, chroot=ROOT_PATH)
