@@ -191,6 +191,7 @@ class OSCAPSpoke(NormalSpoke):
         self._unitialized_status = _("Not ready")
 
         self._content_handler = None
+        self._content_handling_cls = None
         self._ds_checklists = None
 
         # used for changing profiles, stored as self._addon_data.rule_data when
@@ -319,22 +320,23 @@ class OSCAPSpoke(NormalSpoke):
             fpaths = common.extract_data(self._addon_data.raw_preinst_content_path,
                                          common.INSTALLATION_CONTENT_DIR,
                                          [self._addon_data.xccdf_path])
-            xccdf_path, cpe_path, tailoring_path = common.strip_content_dir(\
-                                     content_handling.find_content_files(fpaths))
-            self._addon_data.xccdf_path = self._addon_data.xccdf_path or xccdf_path
-            self._addon_data.cpe_path = self._addon_data.cpe_path or cpe_path
-            self._addon_data.tailoring_path = (self._addon_data.tailoring_path or
-                                               tailoring_path)
+            self._content_handling_cls, files = \
+                                 content_handling.explore_content_files(fpaths)
+            files = common.strip_content_dir(files)
 
-        # initialize the right content handler
-        if self._using_ds:
-            self._content_handler = content_handling.DataStreamHandler(\
-                                          self._addon_data.preinst_content_path,
-                                          self._addon_data.preinst_tailoring_path)
+            # pylint: disable-msg=E1103
+            self._addon_data.xccdf_path = self._addon_data.xccdf_path or files.xccdf
+            self._addon_data.cpe_path = self._addon_data.cpe_path or files.cpe
+            self._addon_data.tailoring_path = (self._addon_data.tailoring_path or
+                                               files.tailoring)
+        elif self._addon_data.content_type == "datastream":
+            self._content_handling_cls = content_handling.DataStreamHandler
         else:
-            self._content_handler = content_handling.BenchmarkHandler(\
-                                          self._addon_data.preinst_content_path,
-                                          self._addon_data.preinst_tailoring_path)
+            raise common.OSCAPaddonError("Unsupported content type")
+
+        self._content_handler = self._content_handling_cls(\
+                                      self._addon_data.preinst_content_path,
+                                      self._addon_data.preinst_tailoring_path)
 
         if self._using_ds:
             # populate the stores from items from the content
@@ -368,7 +370,7 @@ class OSCAPSpoke(NormalSpoke):
 
     @property
     def _using_ds(self):
-        return self._addon_data.content_type == "datastream"
+        return self._content_handling_cls == content_handling.DataStreamHandler
 
     @property
     def _current_ds_id(self):

@@ -49,6 +49,10 @@ class BenchmarkHandlingError(ContentHandlingError):
 # pylint: disable-msg=C0103
 ProfileInfo = namedtuple("ProfileInfo", ["id", "title", "description"])
 
+# namedtuple class for info about content files found
+# pylint: disable-msg=C0103
+ContentFiles = namedtuple("ContentFiles", ["xccdf", "cpe", "tailoring"])
+
 def oscap_text_itr_get_text(itr):
     """
     Helper function for getting a text from the oscap_text_iterator.
@@ -67,16 +71,18 @@ def oscap_text_itr_get_text(itr):
 
     return ret
 
-def find_content_files(fpaths):
+def explore_content_files(fpaths):
     """
-    Function for finding content files in a list of file paths. DOES NO
-    HEURISTIC, JUST PICKS THE FIRST USABLE CONTENT FILE OF A PARTICULAR TYPE.
+    Function for finding content files in a list of file paths. SIMPLY PICKS THE
+    FIRST USABLE CONTENT FILE OF A PARTICULAR TYPE AND JUST PREFERS DATA STREAMS
+    OVER STANDALONE BENCHMARKS.
 
     :param fpaths: a list of file paths to search for content files in
     :type fpaths: [str]
-    :return: a tuple containing the file name of the XCCDF file, CPE dictionary
+    :return: a tuple containing the content handling class and an ContentFiles
+             instance containing the file names of the XCCDF file, CPE dictionary
              and tailoring file or "" in place of those items if not found
-    :rtype: (str, str, str)
+    :rtype: (class, ContentFiles)
 
     """
 
@@ -89,16 +95,28 @@ def find_content_files(fpaths):
     xccdf_file = ""
     cpe_file = ""
     tailoring_file = ""
+    found_ds = False
+    content_class = None
+
     for fpath in fpaths:
         doc_type = get_doc_type(fpath)
-        if doc_type == "XCCDF Checklist" and not xccdf_file:
+
+        # prefer DS over standalone XCCDF
+        if doc_type == "Source Data Stream" and (not xccdf_file or not found_ds):
             xccdf_file = fpath
+            content_class = DataStreamHandler
+            found_ds = True
+        elif doc_type == "XCCDF Checklist" and not xccdf_file:
+            xccdf_file = fpath
+            content_class = BenchmarkHandler
         elif doc_type == "CPE Dictionary" and not cpe_file:
             cpe_file = fpath
         elif doc_type == "XCCDF Tailoring" and not tailoring_file:
             tailoring_file = fpath
 
-    return (xccdf_file, cpe_file, tailoring_file)
+    # TODO: raise exception if no xccdf_file is found?
+    files = ContentFiles(xccdf_file, cpe_file, tailoring_file)
+    return (content_class, files)
 
 class DataStreamHandler(object):
     """
