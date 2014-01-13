@@ -83,7 +83,7 @@ def keep_type_map(func, iterable):
     :param iterable: iterable providing the items the function should be mapped
                      on
     :type iterable: iterable
-    :return: iterable providin items produced by the function mapped on the
+    :return: iterable providing items produced by the function mapped on the
              input items
     :rtype: the same type as input iterable or generator if the iterable is not
             of any basic Python types
@@ -97,7 +97,10 @@ def keep_type_map(func, iterable):
     if isinstance(iterable, list):
         return list(items_gen)
     elif isinstance(iterable, tuple):
-        return tuple(items_gen)
+        if iterable.__class__ is tuple:
+            return tuple(items_gen)
+        else:
+            return iterable.__class__(*items_gen)
     elif isinstance(iterable, set):
         return set(items_gen)
     elif isinstance(iterable, str):
