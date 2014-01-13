@@ -239,7 +239,8 @@ def wait_and_fetch_net_data(url, out_file, ca_certs=None):
 
     fetch_data_thread = AnacondaThread(name=THREAD_FETCH_DATA,
                                        target=fetch_data,
-                                       args=(url, out_file, ca_certs))
+                                       args=(url, out_file, ca_certs),
+                                       fatal=False)
 
     # register and run the thread
     threadMgr.add(fetch_data_thread)
