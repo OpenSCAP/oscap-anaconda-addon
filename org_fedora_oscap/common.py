@@ -207,10 +207,10 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     (stdout, stderr) = proc.communicate()
 
     # save stdout?
-    # XXX: is checking return code enough?
     # pylint thinks Popen has no attribute returncode
     # pylint: disable-msg=E1101
-    if proc.returncode != 0 or stderr:
+    if proc.returncode not in (0, 2) or stderr:
+        # 0 -- success; 2 -- no error, but checks/remediation failed
         msg = "Content evaluation and remediation with the oscap tool "\
             "failed: %s" % stderr
         raise OSCAPaddonError(msg)
