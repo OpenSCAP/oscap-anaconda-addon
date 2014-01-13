@@ -337,9 +337,13 @@ class OSCAPSpoke(NormalSpoke):
         else:
             raise common.OSCAPaddonError("Unsupported content type")
 
-        self._content_handler = self._content_handling_cls(\
+        try:
+            self._content_handler = self._content_handling_cls(\
                                       self._addon_data.preinst_content_path,
                                       self._addon_data.preinst_tailoring_path)
+        except content_handling.ContentHandlingError:
+            self._invalid_content_callback()
+            return
 
         if self._using_ds:
             # populate the stores from items from the content
@@ -528,6 +532,16 @@ class OSCAPSpoke(NormalSpoke):
         # make the selection button insensitive and remember the active profile
         self._choose_button.set_sensitive(False)
         self._active_profile = self._current_profile_id
+
+    @gtk_action_wait
+    def _invalid_content_callback(self):
+        """Callback for informing user about provided content invalidity."""
+
+        self._addon_data.content_url = ""
+        self._addon_data.content_type = ""
+        really_hide(self._progress_spinner)
+        self._progress_label.set_text(_("Invalid content provided. Enter "
+                                        "a different URL, please."))
 
     @gtk_action_wait
     def _entered_data_fetch_callback(self, succ):
