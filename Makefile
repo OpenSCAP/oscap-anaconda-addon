@@ -59,3 +59,6 @@ dist:
 test:
 	-@find . -name '*.py' -print|xargs -n1 --max-procs=$(NUM_PROCS) pylint -E 2> /dev/null
 	PYTHONPATH=. nosetests --processes=-1 -vw tests/
+
+unittest:
+	PYTHONPATH=. nosetests --processes=-1 -vw tests/
