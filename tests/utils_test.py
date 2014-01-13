@@ -23,6 +23,7 @@
 import unittest
 import os
 import mock
+from collections import namedtuple
 
 from org_fedora_oscap import utils
 
@@ -76,3 +77,65 @@ class JoinPathsTest(unittest.TestCase):
 
     def absolute_absolute_test(self):
         self.assertEqual(utils.join_paths("/foo", "/blah"), "/foo/blah")
+
+class KeepTypeMapTest(unittest.TestCase):
+    """Tests for the keep_type_map function."""
+
+    def dict_test(self):
+        dct = {"a": 1, "b": 2}
+
+        mapped_dct = utils.keep_type_map(str.upper, dct)
+        self.assertEqual(mapped_dct.keys(), ["A", "B"])
+        self.assertIsInstance(mapped_dct, dict)
+
+    def list_test(self):
+        lst = [1, 2, 4, 5]
+        func = lambda x: x**2
+
+        mapped_lst = utils.keep_type_map(func, lst)
+        self.assertEqual(mapped_lst, [1, 4, 16, 25])
+        self.assertIsInstance(mapped_lst, list)
+
+    def tuple_test(self):
+        tpl = (1, 2, 4, 5)
+        func = lambda x: x**2
+
+        mapped_tpl = utils.keep_type_map(func, tpl)
+        self.assertEqual(mapped_tpl, (1, 4, 16, 25))
+        self.assertIsInstance(mapped_tpl, tuple)
+
+    def namedtuple_test(self):
+        NT = namedtuple("TestingNT", ["a", "b"])
+        ntpl = NT(2, 4)
+        func = lambda x: x**2
+
+        mapped_tpl = utils.keep_type_map(func, ntpl)
+        self.assertEqual(mapped_tpl, NT(4, 16))
+        self.assertIsInstance(mapped_tpl, tuple)
+        self.assertIsInstance(mapped_tpl, NT)
+
+    def set_test(self):
+        st = {1, 2, 4, 5}
+        func = lambda x: x**2
+
+        mapped_st = utils.keep_type_map(func, st)
+        self.assertEqual(mapped_st, {1, 4, 16, 25})
+        self.assertIsInstance(mapped_st, set)
+
+    def str_test(self):
+        stri = "abcd"
+        func = lambda c: chr((ord(c) + 2) % 256)
+
+        mapped_stri = utils.keep_type_map(func, stri)
+        self.assertEqual(mapped_stri, "cdef")
+        self.assertIsInstance(mapped_stri, str)
+
+    def gen_test(self):
+        gen = (it for it in [1, 2, 4, 5])
+        func = lambda x: x**2
+
+        mapped_gen = utils.keep_type_map(func, gen)
+        self.assertEqual(tuple(mapped_gen), tuple([1, 4, 16, 25]))
+
+        # any better test for this?
+        self.assertIn("next", dir(mapped_gen))
