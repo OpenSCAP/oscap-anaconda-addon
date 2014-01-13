@@ -313,6 +313,9 @@ class OSCAPSpoke(NormalSpoke):
             if callback:
                 callback(False)
             return
+        finally:
+            # stop the spinner in any case
+            self._progress_spinner.stop()
 
         # RPM is an archive at this phase
         if self._addon_data.content_type in ("archive", "rpm"):
