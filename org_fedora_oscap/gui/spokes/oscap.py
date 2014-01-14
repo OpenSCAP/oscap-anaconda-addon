@@ -115,6 +115,15 @@ def set_treeview_selection(treeview, item, col=0):
     treeview.scroll_to_cell(path)
     return True
 
+# TODO: should go "upstream" (to the pyanaconda.ui.gui.utils module)
+def fire_gtk_action(func, args=None):
+    @gtk_action_wait
+    def gtk_action():
+        fargs = args or tuple()
+        func(*fargs)
+
+    gtk_action()
+
 def render_message_type(column, renderer, model, itr, user_data=None):
     #get message type from the first column
     value = model[itr][0]
@@ -324,7 +333,7 @@ class OSCAPSpoke(NormalSpoke):
             return
         finally:
             # stop the spinner in any case
-            self._progress_spinner.stop()
+            fire_gtk_action(self._progress_spinner.stop)
 
         # RPM is an archive at this phase
         if self._addon_data.content_type in ("archive", "rpm"):
@@ -362,7 +371,7 @@ class OSCAPSpoke(NormalSpoke):
         else:
             # hide the labels and comboboxes for datastream-id and xccdf-id
             # selection
-            really_hide(self._ids_box)
+            fire_gtk_action(really_hide, (self._ids_box,))
 
         # refresh UI elements
         self.refresh()
@@ -507,6 +516,7 @@ class OSCAPSpoke(NormalSpoke):
         for msg in messages:
             self._add_message(msg)
 
+    @gtk_action_wait
     def _switch_profile(self):
         """Switches to a current selected profile."""
 
