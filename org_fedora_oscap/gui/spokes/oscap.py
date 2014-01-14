@@ -236,6 +236,9 @@ class OSCAPSpoke(NormalSpoke):
         # profiles view and selection
         self._profiles_view = self.builder.get_object("profilesView")
         self._profiles_selection = self.builder.get_object("profilesSelection")
+        selected_column = self.builder.get_object("selectedColumn")
+        selected_renderer = self.builder.get_object("selectedRenderer")
+        selected_column.set_cell_data_func(selected_renderer, self._render_selected)
 
         # button for switching profiles
         self._choose_button = self.builder.get_object("chooseProfileButton")
@@ -269,6 +272,12 @@ class OSCAPSpoke(NormalSpoke):
             self._main_notebook.set_current_page(SET_PARAMS_PAGE)
             # else fetch data
             self._fetch_data_and_initialize()
+
+    def _render_selected(self, column, renderer, model, itr, user_data=None):
+        if model[itr][2]:
+            renderer.set_property("stock-id", "gtk-apply")
+        else:
+            renderer.set_property("stock-id", None)
 
     def _fetch_data_and_initialize(self, callback=None):
         """Fetch data from a specified URL and initialize everything."""
@@ -449,7 +458,8 @@ class OSCAPSpoke(NormalSpoke):
             profile_markup = '<span weight="bold">%s</span>\n%s' \
                                 % (profile.title, profile.description)
             self._profiles_store.append([profile.id,
-                                         profile_markup])
+                                         profile_markup,
+                                         profile.id == self._active_profile])
 
     def _add_message(self, message):
         """
@@ -494,6 +504,13 @@ class OSCAPSpoke(NormalSpoke):
     def _switch_profile(self):
         """Switches to a current selected profile."""
 
+        def toggle_profiles_selected(store, profile_ids):
+            itr = store.get_iter_first()
+            while itr:
+                if store[itr][0] in profile_ids:
+                    store.set_value(itr, 2, not store[itr][2])
+                itr = store.iter_next(itr)
+
         profile = self._current_profile_id
         if not profile:
             return
@@ -511,6 +528,10 @@ class OSCAPSpoke(NormalSpoke):
             if not profile:
                 # profile not set -> do nothing
                 return
+
+        # make the newly chosen profile visually selected
+        toggle_profiles_selected(self._profiles_store,
+                                 [profile, self._active_profile])
 
         # revert changes done by the previous profile
         if self._rule_data:
