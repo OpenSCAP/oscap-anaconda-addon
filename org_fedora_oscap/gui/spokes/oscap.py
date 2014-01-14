@@ -547,7 +547,7 @@ class OSCAPSpoke(NormalSpoke):
         rules = common.get_fix_rules_pre(profile,
                                          self._addon_data.preinst_content_path,
                                          ds, xccdf,
-                                         self._addon_data.tailoring_path)
+                                         self._addon_data.preinst_tailoring_path)
 
         # parse and store rules with a clean RuleData instance
         self._rule_data = rule_handling.RuleData()
