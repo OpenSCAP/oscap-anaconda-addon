@@ -1,5 +1,5 @@
 Name:           oscap-anaconda-addon
-Version:        0.3
+Version:        0.4
 Release:        1%{?dist}
 Summary:        Anaconda addon integrating OpenSCAP to the installation process
 
@@ -48,6 +48,27 @@ make install DESTDIR=%{buildroot}
 %doc COPYING ChangeLog README
 
 %changelog
+* Tue Jan 14 2013 Vratislav Podzimek <vpodzime@redhat.com> - 0.4-1
+- Beware of running Gtk actions from a non-main thread
+- Fix path to the tailoring file when getting rules
+- A git hook for running tests when pushing
+- Inform user if no profile is selected
+- Visually mark the selected profile
+- Better UX with content URL entry and progress label
+- React on invalid content properly (#1032846)
+- Stop spinner when data fetching is finished
+- Make the data fetching thread non-fatal (#1049989)
+- Exit code 2 from the oscap tool is not an error for us (#1050913)
+- Be ready to work with archives/RPMs containing data streams
+- Add unit tests for the keep_type_map function
+- Add support for namedtuples to keep_type_map
+- Add target for running pylint check
+- Add target for running just unittests
+- On the way to tailoring
+- Tests for kickstart XCCDF tailoring handling
+- Kickstart support for XCCDF tailoring
+- Check session validity also when using XCCDF benchmark
+
 * Tue Dec 10 2013 Vratislav Podzimek <vpodzime@redhat.com> - 0.3-1
 - Implement and use our own better function for joining paths
 - The content entry should have focus if there is no content
