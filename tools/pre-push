@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo "***Running tests***"
+if make test; then
+    echo "***Tests passed***"
+    exit 0
+else
+    echo "***TESTS FAILED***"
+    exit 1
+fi
