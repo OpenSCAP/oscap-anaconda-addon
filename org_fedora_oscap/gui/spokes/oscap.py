@@ -540,8 +540,11 @@ class OSCAPSpoke(NormalSpoke):
         self._addon_data.content_url = ""
         self._addon_data.content_type = ""
         really_hide(self._progress_spinner)
-        self._progress_label.set_text(_("Invalid content provided. Enter "
-                                        "a different URL, please."))
+        self._progress_label.set_markup("<b>%s</b>" % _("Invalid content "
+                                        "provided. Enter a different URL, "
+                                        "please."))
+        self._content_url_entry.grab_focus()
+        self._content_url_entry.select_region(0, -1)
 
     @gtk_action_wait
     def _entered_data_fetch_callback(self, succ):
@@ -551,8 +554,11 @@ class OSCAPSpoke(NormalSpoke):
             self._addon_data.content_url = ""
             self._addon_data.content_type = ""
             really_hide(self._progress_spinner)
-            self._progress_label.set_text(_("Failed to fetch content. Enter "
-                                            "a different URL, please."))
+            self._progress_label.set_markup("<b>%s</b>" % _("Failed to fetch "
+                                            "content. Enter a different URL, "
+                                            "please."))
+            self._content_url_entry.grab_focus()
+            self._content_url_entry.select_region(0, -1)
         else:
             self._main_notebook.set_current_page(SET_PARAMS_PAGE)
 
@@ -568,7 +574,13 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         if not self._addon_data.content_url:
-            # nothing to do here
+            if not self._content_url_entry.get_text():
+                # no text -> no info/warning
+                self._progress_label.set_text("")
+
+            self._content_url_entry.grab_focus()
+
+            # nothing more to do here
             return
 
         if self._using_ds:
@@ -744,7 +756,7 @@ class OSCAPSpoke(NormalSpoke):
         if not data_fetch.can_fetch_from(url):
             # cannot start fetching
             really_hide(self._progress_spinner)
-            self._progress_label.set_text(_("Invalid or unsupported URL"))
+            self._progress_label.set_markup("<b>%s</b>" % _("Invalid or unsupported URL"))
             return
 
         self._progress_label.set_text(_("Fetching content..."))
