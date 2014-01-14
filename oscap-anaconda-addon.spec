@@ -48,7 +48,7 @@ make install DESTDIR=%{buildroot}
 %doc COPYING ChangeLog README
 
 %changelog
-* Tue Jan 14 2013 Vratislav Podzimek <vpodzime@redhat.com> - 0.4-1
+* Tue Jan 14 2014 Vratislav Podzimek <vpodzime@redhat.com> - 0.4-1
 - Beware of running Gtk actions from a non-main thread
 - Fix path to the tailoring file when getting rules
 - A git hook for running tests when pushing
