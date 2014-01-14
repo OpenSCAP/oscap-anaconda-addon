@@ -491,7 +491,13 @@ class OSCAPSpoke(NormalSpoke):
                                               report_only)
         if not messages:
             # no messages from the rules, add a message informing about that
-            message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
+            if not self._active_profile:
+                # because of no profile
+                message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
+                                           _("No profile selected"))
+            else:
+                # because of no pre-inst rules
+                message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
                               _("No rules for the pre-installation phase"))
             self._add_message(message)
 
