@@ -29,6 +29,7 @@ from org_fedora_oscap import common
 from org_fedora_oscap import data_fetch
 from org_fedora_oscap import rule_handling
 from org_fedora_oscap import content_handling
+from org_fedora_oscap import utils
 
 from pyanaconda.threads import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
@@ -334,6 +335,14 @@ class OSCAPSpoke(NormalSpoke):
         finally:
             # stop the spinner in any case
             fire_gtk_action(self._progress_spinner.stop)
+
+        if self._addon_data.fingerprint:
+            hash_obj = utils.get_hashing_algorithm(self._addon_data.fingerprint)
+            digest = utils.get_file_fingerprint(self._addon_data.raw_preinst_content,
+                                                hash_obj)
+            if digest != self._addon_data.fingerprint:
+                msg = _("Integrity check failed")
+                raise content_handling.ContentCheckError(msg)
 
         # RPM is an archive at this phase
         if self._addon_data.content_type in ("archive", "rpm"):

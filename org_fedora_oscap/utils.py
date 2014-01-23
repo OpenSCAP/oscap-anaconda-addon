@@ -24,6 +24,7 @@ import os
 import os.path
 import shutil
 import glob
+import hashlib
 
 def ensure_dir_exists(dirpath):
     """
@@ -127,3 +128,53 @@ def join_paths(path1, path2):
     path1.replace("//", "/")
 
     return os.path.normpath(path1 + os.path.sep + path2)
+
+def get_hashing_algorithm(fingerprint):
+    """
+    Get hashing algorithm for the given fingerprint or None if fingerprint of
+    unsupported length is given.
+
+    :param fingerprint: hexa fingerprint to get the hashing algorithm for
+    :type fingerprint: hexadecimal str
+    :return: one of the hashlib.* hash objects
+    :rtype: hashlib.HASH object
+
+    """
+
+    hashes = (hashlib.md5(), hashlib.sha1(), hashlib.sha224(),
+              hashlib.sha256(), hashlib.sha384(), hashlib.sha512())
+
+    if len(fingerprint) % 2 == 1:
+        return None
+
+    num_bytes = len(fingerprint) / 2
+
+    for hash_obj in hashes:
+        # pylint: disable-msg=E1103
+        if hash_obj.digest_size == num_bytes:
+            return hash_obj
+
+    return None
+
+def get_file_fingerprint(fpath, hash_obj):
+    """
+    Get fingerprint of the given file with the given hashing algorithm.
+
+    :param fpath: path to the file to get fingerprint for
+    :type fpath: str
+    :param hash_obj: hashing algorithm to get fingerprint with
+    :type hash_obj: hashlib.HASH
+    :return: fingerprint of the given file with the given algorithm
+    :rtype: hexadecimal str
+
+    """
+
+    with open(fpath, "r") as fobj:
+        bsize = 4*1024
+        # process file as 4 KB blocks
+        buf = fobj.read(bsize)
+        while buf:
+            hash_obj.update(buf)
+            buf = fobj.read(bsize)
+
+    return hash_obj.hexdigest()

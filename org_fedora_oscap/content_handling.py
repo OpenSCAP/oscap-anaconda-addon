@@ -45,6 +45,11 @@ class BenchmarkHandlingError(ContentHandlingError):
 
     pass
 
+class ContentCheckError(ContentHandlingError):
+    """Exception class for errors related to content (integrity,...) checking."""
+
+    pass
+
 # namedtuple class (not a constant, pylint!) for info about a XCCDF profile
 # pylint: disable-msg=C0103
 ProfileInfo = namedtuple("ProfileInfo", ["id", "title", "description"])

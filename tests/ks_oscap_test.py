@@ -299,3 +299,36 @@ class ArchiveHandlingTest(unittest.TestCase):
                                                          "scap_content.xml"))
         self.assertTrue(self.oscap_data.raw_postinst_content_path.endswith(
                                                          "scap_content.xml"))
+class FingerprintTests(unittest.TestCase):
+    """Tests for fingerprint pre-processing."""
+
+    def setUp(self):
+        self.oscap_data = OSCAPdata("org_fedora_oscap")
+
+    def valid_fingerprints_test(self):
+        self.oscap_data.handle_line("fingerprint = %s" % ("a" * 32))
+        self.oscap_data.handle_line("fingerprint = %s" % ("a" * 40))
+        self.oscap_data.handle_line("fingerprint = %s" % ("a" * 56))
+        self.oscap_data.handle_line("fingerprint = %s" % ("a" * 64))
+        self.oscap_data.handle_line("fingerprint = %s" % ("a" * 96))
+        self.oscap_data.handle_line("fingerprint = %s" % ("a" * 128))
+
+    def invalid_fingerprints_test(self):
+        # invalid character
+        with self.assertRaisesRegexp(KickstartValueError, "Unsupported or invalid fingerprint"):
+             self.oscap_data.handle_line("fingerprint = %s?" % ("a" * 31))
+
+        # invalid lengths (odd and even)
+        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+            self.oscap_data.handle_line("fingerprint = %s" % ("a" * 31))
+        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+            self.oscap_data.handle_line("fingerprint = %s" % ("a" * 41))
+        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+            self.oscap_data.handle_line("fingerprint = %s" % ("a" * 54))
+        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+            self.oscap_data.handle_line("fingerprint = %s" % ("a" * 66))
+        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+            self.oscap_data.handle_line("fingerprint = %s" % ("a" * 98))
+        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+            self.oscap_data.handle_line("fingerprint = %s" % ("a" * 124))
+

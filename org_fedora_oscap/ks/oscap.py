@@ -21,6 +21,7 @@
 """Module with the OSCAPdata class."""
 
 import shutil
+import re
 import os.path
 
 from pyanaconda.addons import AddonData
@@ -29,6 +30,7 @@ from pyanaconda import iutil
 from pykickstart.errors import KickstartParseError, KickstartValueError
 from org_fedora_oscap import utils, common, rule_handling
 from org_fedora_oscap.common import SUPPORTED_ARCHIVES
+from org_fedora_oscap.content_handling import ContentCheckError
 
 # export OSCAPdata class to prevent Anaconda's collect method from taking
 # AddonData class instead of the OSCAPdata class
@@ -43,6 +45,8 @@ SUPPORTED_URL_PREFIXES = ("http://", "https://",
                           )
 
 REQUIRED_PACKAGES = ("openscap", "openscap-utils", )
+
+FINGERPRINT_REGEX = re.compile(r'^[a-z0-9]+$')
 
 class MisconfigurationError(common.OSCAPaddonError):
     """Exception for reporting misconfiguration."""
@@ -66,7 +70,7 @@ class OSCAPdata(AddonData):
 
         AddonData.__init__(self, name)
 
-        # values from the kickstart section
+        ## values specifying the content
         self.content_type = ""
         self.content_url = ""
         self.datastream_id = ""
@@ -76,10 +80,13 @@ class OSCAPdata(AddonData):
         self.cpe_path = ""
         self.tailoring_path = ""
 
+        ## additional values
+        self.fingerprint = ""
+
         # certificate to verify HTTPS connection or signed data
         self.certificates = ""
 
-        # internal values
+        ## internal values
         self.rule_data = rule_handling.RuleData()
 
     def __str__(self):
@@ -108,6 +115,9 @@ class OSCAPdata(AddonData):
             ret += "\n%s" % key_value_pair("tailoring-path", self.tailoring_path)
 
         ret += "\n%s" % key_value_pair("profile", self.profile_id)
+
+        if self.fingerprint:
+            ret += "\n%s" % key_value_pair("fingerprint", self.fingerprint)
 
         if self.certificates:
             ret += "\n%s" % key_value_pair("certificates", self.certificates)
@@ -156,6 +166,17 @@ class OSCAPdata(AddonData):
         # need to be checked?
         self.tailoring_path = value
 
+    def _parse_fingerprint(self, value):
+        if FINGERPRINT_REGEX.match(value) is None:
+            msg = "Unsupported or invalid fingerprint"
+            raise KickstartValueError(msg)
+
+        if utils.get_hashing_algorithm(value) is None:
+            msg = "Unsupported fingerprint"
+            raise KickstartValueError(msg)
+
+        self.fingerprint = value
+
     def _parse_certificates(self, value):
         self.certificates = value
 
@@ -177,6 +198,7 @@ class OSCAPdata(AddonData):
                     "xccdf-path": self._parse_xccdf_path,
                     "cpe-path": self._parse_cpe_path,
                     "tailoring-path": self._parse_tailoring_path,
+                    "fingerprint": self._parse_fingerprint,
                     "certificates": self._parse_certificates,
                     }
 
@@ -316,6 +338,15 @@ class OSCAPdata(AddonData):
         :type instclass: pyanaconda.installclass.BaseInstallClass
 
         """
+
+        # check fingerprint if given
+        if self.fingerprint:
+            hash_obj = utils.get_hashing_algorithm(self.fingerprint)
+            digest = utils.get_file_fingerprint(self.raw_preinst_content_path,
+                                                hash_obj)
+            if digest != self.fingerprint:
+                msg = "Integrity check of the content failed!"
+                raise ContentCheckError(msg)
 
         # evaluate rules, do automatic fixes and stop if something that cannot
         # be fixed automatically is wrong
