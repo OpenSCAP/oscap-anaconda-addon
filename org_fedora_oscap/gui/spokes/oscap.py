@@ -289,7 +289,7 @@ class OSCAPSpoke(NormalSpoke):
         else:
             renderer.set_property("stock-id", None)
 
-    def _fetch_data_and_initialize(self, callback=None):
+    def _fetch_data_and_initialize(self):
         """Fetch data from a specified URL and initialize everything."""
 
         thread_name = None
@@ -307,10 +307,10 @@ class OSCAPSpoke(NormalSpoke):
         # pylint: disable-msg=E1101
         hubQ.send_not_ready(self.__class__.__name__)
         threadMgr.add(AnacondaThread(name="OSCAPguiWaitForDataFetchThread",
-                                     target=self._wait_for_data_fetch,
-                                     args=(thread_name, callback)))
+                                     target=self._init_after_data_fetch,
+                                     args=(thread_name,)))
 
-    def _wait_for_data_fetch(self, thread_name, callback=None):
+    def _init_after_data_fetch(self, thread_name):
         """
         Waits for data fetching to be finished, extracts it (if needed),
         populates the stores and evaluates pre-installation fixes from the
@@ -318,19 +318,13 @@ class OSCAPSpoke(NormalSpoke):
 
         :param thread_name: name of the thread to wait for (if any)
         :type thread_name: str or None
-        :param callback: callback that should be called when the data is fetched
-                         taking a boolean value indicating whether the fetching
-                         was successfull or not
-        :type callback: bool -> None
 
         """
 
         try:
             fetch_thread = threadMgr.wait(thread_name)
         except:
-            # TODO: specify the exception
-            if callback:
-                callback(False)
+            self._data_fetch_failed()
             return
         finally:
             # stop the spinner in any case
@@ -369,7 +363,7 @@ class OSCAPSpoke(NormalSpoke):
                                       self._addon_data.preinst_content_path,
                                       self._addon_data.preinst_tailoring_path)
         except content_handling.ContentHandlingError:
-            self._invalid_content_callback()
+            self._invalid_content()
             return
 
         if self._using_ds:
@@ -393,14 +387,14 @@ class OSCAPSpoke(NormalSpoke):
 
         # no more being unitialized
         self._unitialized_status = None
-
         self._ready = True
+
+        # all initialized, we can now let user set parameters
+        self._main_notebook.set_current_page(SET_PARAMS_PAGE)
+
         # pylint: disable-msg=E1101
         hubQ.send_ready(self.__class__.__name__, True)
         hubQ.send_message(self.__class__.__name__, self.status)
-
-        if callback:
-            callback(True)
 
     @property
     def _using_ds(self):
@@ -580,33 +574,30 @@ class OSCAPSpoke(NormalSpoke):
         self._active_profile = self._current_profile_id
 
     @gtk_action_wait
-    def _invalid_content_callback(self):
+    def _invalid_content(self):
         """Callback for informing user about provided content invalidity."""
 
-        self._addon_data.content_url = ""
-        self._addon_data.content_type = ""
-        really_hide(self._progress_spinner)
         self._progress_label.set_markup("<b>%s</b>" % _("Invalid content "
                                         "provided. Enter a different URL, "
                                         "please."))
-        self._content_url_entry.grab_focus()
-        self._content_url_entry.select_region(0, -1)
+        self._wrong_content()
 
     @gtk_action_wait
-    def _entered_data_fetch_callback(self, succ):
-        """Callback for post-processing fetching data from entered URL."""
+    def _data_fetch_failed(self):
+        """Adapts the UI if fetching data from entered URL failed"""
 
-        if not succ:
-            self._addon_data.content_url = ""
-            self._addon_data.content_type = ""
-            really_hide(self._progress_spinner)
-            self._progress_label.set_markup("<b>%s</b>" % _("Failed to fetch "
-                                            "content. Enter a different URL, "
-                                            "please."))
-            self._content_url_entry.grab_focus()
-            self._content_url_entry.select_region(0, -1)
-        else:
-            self._main_notebook.set_current_page(SET_PARAMS_PAGE)
+        self._progress_label.set_markup("<b>%s</b>" % _("Failed to fetch "
+                                        "content. Enter a different URL, "
+                                        "please."))
+        self._wrong_content()
+
+    @gtk_action_wait
+    def _wrong_content(self):
+        self._addon_data.content_url = ""
+        self._addon_data.content_type = ""
+        really_hide(self._progress_spinner)
+        self._content_url_entry.grab_focus()
+        self._content_url_entry.select_region(0, -1)
 
     @gtk_action_wait
     def refresh(self):
@@ -815,4 +806,4 @@ class OSCAPSpoke(NormalSpoke):
         else:
             self._addon_data.content_type = "datastream"
 
-        self._fetch_data_and_initialize(self._entered_data_fetch_callback)
+        self._fetch_data_and_initialize()
