@@ -269,7 +269,7 @@ class DataStreamHandler(object):
             raise DataStreamHandlingError(OSCAP.oscap_err_desc())
 
         # will hold items for the profiles for the speficied DS and checklist
-        profiles = []
+        profiles = [ProfileInfo("default", "Default", "The default profile")]
 
         # get the benchmark (checklist)
         policy_model = OSCAP.xccdf_session_get_policy_model(self._session)
@@ -316,7 +316,8 @@ class BenchmarkHandler(object):
             raise BenchmarkHandlingError(msg)
 
         # stores a list of profiles in the benchmark
-        self._profiles = []
+        self._profiles = [ProfileInfo("default", "Default",
+                                      "The default profile")]
 
         session = OSCAP.xccdf_session_new(xccdf_file_path)
         if not session:

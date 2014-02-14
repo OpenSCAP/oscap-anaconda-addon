@@ -114,9 +114,11 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id="",
     """
 
     args = ["oscap", "xccdf", "generate", "fix"]
-    args.append("--profile=%s" % profile)
     args.append("--template=%s" % template)
 
+    # oscap uses the default profile by default
+    if profile.lower() != "default":
+        args.append("--profile=%s" % profile)
     if ds_id:
         args.append("--datastream-id=%s" % ds_id)
     if xccdf_id:
@@ -184,8 +186,10 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     args = ["oscap", "xccdf", "eval"]
     args.append("--remediate")
     args.append("--results=%s" % RESULTS_PATH)
-    args.append("--profile=%s" % profile)
 
+    # oscap uses the default profile by default
+    if profile.lower() != "default":
+        args.append("--profile=%s" % profile)
     if ds_id:
         args.append("--datastream-id=%s" % ds_id)
     if xccdf_id:
