@@ -340,10 +340,17 @@ class OSCAPSpoke(NormalSpoke):
 
         # RPM is an archive at this phase
         if self._addon_data.content_type in ("archive", "rpm"):
-            # extract the content and populate missing fields
-            fpaths = common.extract_data(self._addon_data.raw_preinst_content_path,
-                                         common.INSTALLATION_CONTENT_DIR,
-                                         [self._addon_data.xccdf_path])
+            # extract the content
+            try:
+                fpaths = common.extract_data(\
+                                    self._addon_data.raw_preinst_content_path,
+                                    common.INSTALLATION_CONTENT_DIR,
+                                    [self._addon_data.xccdf_path])
+            except common.ExtractionError as err:
+                self._extraction_failed(err.message)
+                return
+
+            # and populate missing fields
             self._content_handling_cls, files = \
                                  content_handling.explore_content_files(fpaths)
             files = common.strip_content_dir(files)
@@ -589,6 +596,15 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_label.set_markup("<b>%s</b>" % _("Failed to fetch "
                                         "content. Enter a different URL, "
                                         "please."))
+        self._wrong_content()
+
+    @gtk_action_wait
+    def _extraction_failed(self, err_msg):
+        """Adapts the UI if extracting data from entered URL failed"""
+
+        msg = _("Failed to extract content (%s). Enter a different URL, "
+                "please.") % err_msg
+        self._progress_label.set_markup("<b>%s</b>" % msg)
         self._wrong_content()
 
     @gtk_action_wait
