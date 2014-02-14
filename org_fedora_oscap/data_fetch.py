@@ -1,6 +1,6 @@
 """
-Module for fetching files via HTTP. Directly or over SSL (HTTPS) with server
-certificate validation.
+Module for fetching files via HTTP and FTP. Directly or over SSL (HTTPS) with
+server certificate validation.
 
 """
 
@@ -15,11 +15,14 @@ from org_fedora_oscap import utils
 __all__ = ["fetch_data", "can_fetch_from"]
 
 # prefixes of the URLs that need network connection
-NET_URL_PREFIXES = ("http", "https")
+NET_URL_PREFIXES = ("http", "https", "ftp")
 
 # TODO: needs improvements
 HTTP_URL_RE_STR = r"(https?)://(.*)"
 HTTP_URL_RE = re.compile(HTTP_URL_RE_STR)
+
+FTP_URL_RE_STR = r"(ftp)://(.*)"
+FTP_URL_RE = re.compile(FTP_URL_RE_STR)
 
 class DataFetchError(Exception):
     """Parent class for the exception classes defined in this module."""
@@ -87,13 +90,14 @@ def fetch_data(url, out_file, ca_certs=None):
     out_dir = os.path.dirname(out_file)
     utils.ensure_dir_exists(out_dir)
 
-    if url.startswith("http://") or url.startswith("https://"):
-        _fetch_http_data(url, out_file, ca_certs)
+    if url.startswith("http://") or url.startswith("https://") \
+       or url.startswith("ftp://"):
+        _fetch_http_ftp_data(url, out_file, ca_certs)
     else:
         msg = "Cannot fetch data from '%s': unknown URL format" % url
         raise UnknownURLformatError(msg)
 
-def _fetch_http_data(url, out_file, ca_certs=None):
+def _fetch_http_ftp_data(url, out_file, ca_certs=None):
     """
     Function that fetches data and writes it out to the given file path. If a
     path to the file with CA certificates is given and the url starts with
@@ -114,10 +118,16 @@ def _fetch_http_data(url, out_file, ca_certs=None):
 
     """
 
-    match = HTTP_URL_RE.match(url)
-    if not match:
-        msg = "Wrong url not matching '%s'" % HTTP_URL_RE_STR
-        raise WrongRequestError(msg)
+    if url.startswith("ftp"):
+        match = FTP_URL_RE.match(url)
+        if not match:
+            msg = "Wrong url not matching '%s'" % FTP_URL_RE_STR
+            raise WrongRequestError(msg)
+    else:
+        match = HTTP_URL_RE.match(url)
+        if not match:
+            msg = "Wrong url not matching '%s'" % HTTP_URL_RE_STR
+            raise WrongRequestError(msg)
 
     # the first group contains the protocol, the second one the rest
     protocol = match.groups()[0]

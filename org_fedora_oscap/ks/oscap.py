@@ -40,7 +40,7 @@ __all__ = ["OSCAPdata"]
 SUPPORTED_CONTENT_TYPES = ("datastream", "rpm", "archive",
                            )
 
-SUPPORTED_URL_PREFIXES = ("http://", "https://",
+SUPPORTED_URL_PREFIXES = ("http://", "https://", "ftp://"
                           # LABEL:?, hdaX:?,
                           )
 
