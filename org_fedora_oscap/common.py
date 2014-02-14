@@ -269,7 +269,10 @@ def extract_data(archive, out_dir, ensure_has_files=None):
 
     if archive.endswith(".zip"):
         # ZIP file
-        zfile = zipfile.ZipFile(archive, "r")
+        try:
+            zfile = zipfile.ZipFile(archive, "r")
+        except zipfile.BadZipfile as err:
+            raise ExtractionError(err.message)
 
         # generator for the paths of the files found in the archive (dirs end
         # with "/")
@@ -321,7 +324,10 @@ def _extract_tarball(archive, out_dir, ensure_has_files, alg):
     if alg:
         mode += ":%s" % alg
 
-    tfile = tarfile.TarFile.open(archive, mode)
+    try:
+        tfile = tarfile.TarFile.open(archive, mode)
+    except tarfile.TarError as err:
+        raise ExtractionError(err.message)
 
     # generator for the paths of the files found in the archive
     files = set(member.path for member in tfile.getmembers()
@@ -359,8 +365,16 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
     temp_fd, temp_path = tempfile.mkstemp(prefix="oscap_rpm")
     proc = subprocess.Popen(["rpm2cpio", rpm_path], stdout=temp_fd)
     proc.wait()
+    if proc.returncode != 0:
+        msg = "Failed to convert RPM '%s' to cpio archive" % rpm_path
+        raise ExtractionError(msg)
+
     os.close(temp_fd)
-    archive = cpioarchive.CpioArchive(temp_path)
+
+    try:
+        archive = cpioarchive.CpioArchive(temp_path)
+    except cpioarchive.CpioError as err:
+        raise ExtractionError(err.message)
 
     # get entries from the archive (supports only iteration over entries)
     entries = set(entry for entry in archive)
