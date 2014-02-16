@@ -22,6 +22,8 @@
 _ = lambda x: x
 N_ = lambda x: x
 
+import threading
+
 # the path to addons is in sys.path so we can import things
 # from org_fedora_oscap
 from org_fedora_oscap.gui.categories.security import SecurityCategory
@@ -210,6 +212,9 @@ class OSCAPSpoke(NormalSpoke):
 
         # used to check if the profile was changed or not
         self._active_profile = None
+
+        # prevent multiple simultaneous data fetches
+        self._fetch_lock = threading.Lock()
 
     def initialize(self):
         """
@@ -402,6 +407,9 @@ class OSCAPSpoke(NormalSpoke):
         # pylint: disable-msg=E1101
         hubQ.send_ready(self.__class__.__name__, True)
         hubQ.send_message(self.__class__.__name__, self.status)
+
+        # fetching done, release the lock
+        self._fetch_lock.release()
 
     @property
     def _using_ds(self):
@@ -612,9 +620,11 @@ class OSCAPSpoke(NormalSpoke):
         self._addon_data.content_url = ""
         self._addon_data.content_type = ""
         really_hide(self._progress_spinner)
+        self._fetch_button.set_sensitive(True)
         self._content_url_entry.set_sensitive(True)
         self._content_url_entry.grab_focus()
         self._content_url_entry.select_region(0, -1)
+        self._fetch_lock.release()
 
     @gtk_action_wait
     def refresh(self):
@@ -803,8 +813,14 @@ class OSCAPSpoke(NormalSpoke):
     def on_fetch_button_clicked(self, *args):
         """Handler for the Fetch button"""
 
+        # try to get the fetching lock
+        if not self._fetch_lock.acquire(False):
+            # some other fetching/pre-processing running, give up
+            return
+
         # prevent user from changing the URL in the meantime
         self._content_url_entry.set_sensitive(False)
+        self._fetch_button.set_sensitive(False)
         url = self._content_url_entry.get_text()
         really_show(self._progress_box)
         really_show(self._progress_spinner)
