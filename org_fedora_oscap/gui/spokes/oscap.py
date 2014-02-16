@@ -612,6 +612,7 @@ class OSCAPSpoke(NormalSpoke):
         self._addon_data.content_url = ""
         self._addon_data.content_type = ""
         really_hide(self._progress_spinner)
+        self._content_url_entry.set_sensitive(True)
         self._content_url_entry.grab_focus()
         self._content_url_entry.select_region(0, -1)
 
@@ -802,14 +803,16 @@ class OSCAPSpoke(NormalSpoke):
     def on_fetch_button_clicked(self, *args):
         """Handler for the Fetch button"""
 
+        # prevent user from changing the URL in the meantime
+        self._content_url_entry.set_sensitive(False)
         url = self._content_url_entry.get_text()
         really_show(self._progress_box)
         really_show(self._progress_spinner)
 
         if not data_fetch.can_fetch_from(url):
             # cannot start fetching
-            really_hide(self._progress_spinner)
             self._progress_label.set_markup("<b>%s</b>" % _("Invalid or unsupported URL"))
+            self._wrong_content()
             return
 
         self._progress_label.set_text(_("Fetching content..."))
