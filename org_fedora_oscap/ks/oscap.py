@@ -230,7 +230,7 @@ class OSCAPdata(AddonData):
             raise KickstartValueError(tmpl % ("content-url", self.name))
 
         if not self.profile_id:
-            raise KickstartValueError(tmpl % ("profile", self.name))
+            self.profile_id = "default"
 
         if self.content_type in ("rpm", "archive") and not self.xccdf_path:
             msg = "Path to the XCCDF file has to be given if content in RPM "\

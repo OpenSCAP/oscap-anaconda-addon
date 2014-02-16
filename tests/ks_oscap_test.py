@@ -107,8 +107,8 @@ class IncompleteDataTest(unittest.TestCase):
                      ]:
             self.oscap_data.handle_line(line)
 
-        with self.assertRaises(KickstartValueError):
-            self.oscap_data.finalize()
+        self.oscap_data.finalize()
+        self.assertEqual(self.oscap_data.profile_id, "default")
 
 class InvalidDataTest(unittest.TestCase):
     def setUp(self):
