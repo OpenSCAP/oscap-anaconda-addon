@@ -18,11 +18,11 @@
 # Red Hat Author(s): Vratislav Podzimek <vpodzime@redhat.com>
 #
 
-# TODO: enable translations
-_ = lambda x: x
-N_ = lambda x: x
-
 import threading
+
+import gettext
+_ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
+N_ = lambda x: x
 
 # the path to addons is in sys.path so we can import things
 # from org_fedora_oscap

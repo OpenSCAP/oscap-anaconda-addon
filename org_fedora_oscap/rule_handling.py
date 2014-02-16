@@ -32,8 +32,8 @@ from org_fedora_oscap.common import OSCAPaddonError, RuleMessage
 # everything else should be private
 __all__ = ["RuleData"]
 
-# TODO: enable translations
-_ = lambda x: x
+import gettext
+_ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
 
 # TODO: use set instead of list for mount options?
 def parse_csv(option, opt_str, value, parser):
