@@ -28,6 +28,7 @@ NUM_PROCS = $$(getconf _NPROCESSORS_ONLN)
 install:
 	mkdir -p $(DESTDIR)$(ADDONDIR)
 	cp -rv $(ADDON) $(DESTDIR)$(ADDONDIR)
+	$(MAKE) install-po-files
 
 uninstall:
 	rm -rfv $(DESTDIR)$(ADDONDIR)
@@ -55,6 +56,15 @@ dist:
 	done
 	tar -czvf $(DISTBALL) $(DISTNAME)
 	rm -rf $(DISTNAME)
+
+potfile:
+	$(MAKE) -C po potfile
+
+po-pull:
+	tx pull -a --disable-overwrite
+
+install-po-files:
+	$(MAKE) -C po install
 
 test:
 	@echo "***Running pylint checks***"
