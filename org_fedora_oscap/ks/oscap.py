@@ -88,6 +88,7 @@ class OSCAPdata(AddonData):
 
         ## internal values
         self.rule_data = rule_handling.RuleData()
+        self.dry_run = False
 
     def __str__(self):
         """
@@ -348,6 +349,10 @@ class OSCAPdata(AddonData):
                 msg = "Integrity check of the content failed!"
                 raise ContentCheckError(msg)
 
+        if self.dry_run:
+            # nothing more to be done in the dry-run mode
+            return
+
         # evaluate rules, do automatic fixes and stop if something that cannot
         # be fixed automatically is wrong
         messages = self.rule_data.eval_rules(ksdata, storage)
@@ -371,6 +376,10 @@ class OSCAPdata(AddonData):
         :type users: pyanaconda.users.Users instance
 
         """
+
+        if self.dry_run:
+            # nothing to be done in the dry-run mode
+            return
 
         target_content_dir = utils.join_paths(ROOT_PATH,
                                               common.TARGET_CONTENT_DIR)
