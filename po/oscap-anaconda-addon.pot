@@ -1,0 +1,102 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-02-16 20:26+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../org_fedora_oscap/rule_handling.py:320
+#, python-format
+msgid "%s must be on a separate partition or logical volume"
+msgstr ""
+
+#. template for the message
+#: ../org_fedora_oscap/rule_handling.py:328
+#, python-format
+msgid ""
+"mount option '%(mount_option)s' added for the mount point %(mount_point)s"
+msgstr ""
+
+#. root password was not set
+#. password length enforcement is not suported in the Anaconda yet
+#: ../org_fedora_oscap/rule_handling.py:422
+#, python-format
+msgid "make sure to create password with minimal length of %d characters"
+msgstr ""
+
+#: ../org_fedora_oscap/rule_handling.py:428
+msgid "cannot check root password length (password is crypted)"
+msgstr ""
+
+#. too short or already removed
+#: ../org_fedora_oscap/rule_handling.py:433
+#, python-format
+msgid ""
+"root password was too short, a longer one with at least %d characters will "
+"be required"
+msgstr ""
+
+#: ../org_fedora_oscap/rule_handling.py:512
+#: ../org_fedora_oscap/rule_handling.py:526
+#, python-format
+msgid "package '%s' has been added to the list of to be installed packages"
+msgstr ""
+
+#: ../org_fedora_oscap/rule_handling.py:534
+#: ../org_fedora_oscap/rule_handling.py:548
+#, python-format
+msgid "package '%s' has been added to the list of excluded packages"
+msgstr ""
+
+#: tmp/oscap.glade.h:1
+msgid "Data stream:"
+msgstr ""
+
+#: tmp/oscap.glade.h:2
+msgid "Checklist:"
+msgstr ""
+
+#: tmp/oscap.glade.h:3
+msgid "Choose profile below:"
+msgstr ""
+
+#: tmp/oscap.glade.h:4
+msgid "Profile"
+msgstr ""
+
+#: tmp/oscap.glade.h:5
+msgid "Selected"
+msgstr ""
+
+#: tmp/oscap.glade.h:6
+msgid "_Select profile"
+msgstr ""
+
+#: tmp/oscap.glade.h:7
+msgid "Changes that were done or need to be done:"
+msgstr ""
+
+#: tmp/oscap.glade.h:8
+msgid ""
+"No content found. Please enter data stream content or archive URL below:"
+msgstr ""
+
+#: tmp/oscap.glade.h:9
+msgid "_Fetch"
+msgstr ""
+
+#: tmp/oscap.glade.h:10
+msgid "Fetching content..."
+msgstr ""
