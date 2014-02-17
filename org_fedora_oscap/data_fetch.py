@@ -123,6 +123,11 @@ def _fetch_http_ftp_data(url, out_file, ca_certs=None):
         if not match:
             msg = "Wrong url not matching '%s'" % FTP_URL_RE_STR
             raise WrongRequestError(msg)
+        else:
+            protocol, path = match.groups()
+            if '@' not in path:
+                # no user:pass given -> use anonymous login to the FTP server
+                url = protocol + "://anonymous:@" + path
     else:
         match = HTTP_URL_RE.match(url)
         if not match:
