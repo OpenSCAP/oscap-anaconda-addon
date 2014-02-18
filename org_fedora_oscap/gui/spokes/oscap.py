@@ -334,7 +334,7 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         try:
-            fetch_thread = threadMgr.wait(thread_name)
+            threadMgr.wait(thread_name)
         except data_fetch.DataFetchError:
             self._data_fetch_failed()
             with self._fetch_flag_lock:
