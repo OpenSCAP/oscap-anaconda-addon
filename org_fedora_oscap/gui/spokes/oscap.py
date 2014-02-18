@@ -214,7 +214,8 @@ class OSCAPSpoke(NormalSpoke):
         self._active_profile = None
 
         # prevent multiple simultaneous data fetches
-        self._fetch_lock = threading.Lock()
+        self._fetching = False
+        self._fetch_flag_lock = threading.Lock()
 
     def initialize(self):
         """
@@ -297,6 +298,12 @@ class OSCAPSpoke(NormalSpoke):
     def _fetch_data_and_initialize(self):
         """Fetch data from a specified URL and initialize everything."""
 
+        with self._fetch_flag_lock:
+            if self._fetching:
+                # prevent multiple fetches running simultaneously
+                return
+            self._fetching = True
+
         thread_name = None
         if any(self._addon_data.content_url.startswith(net_prefix)
                for net_prefix in data_fetch.NET_URL_PREFIXES):
@@ -330,6 +337,8 @@ class OSCAPSpoke(NormalSpoke):
             fetch_thread = threadMgr.wait(thread_name)
         except data_fetch.DataFetchError:
             self._data_fetch_failed()
+            with self._fetch_flag_lock:
+                self._fetching = False
             return
         finally:
             # stop the spinner in any case
@@ -408,8 +417,9 @@ class OSCAPSpoke(NormalSpoke):
         hubQ.send_ready(self.__class__.__name__, True)
         hubQ.send_message(self.__class__.__name__, self.status)
 
-        # fetching done, release the lock
-        self._fetch_lock.release()
+        # fetching done
+        with self._fetch_flag_lock:
+            self._fetching = False
 
     @property
     def _using_ds(self):
@@ -624,7 +634,6 @@ class OSCAPSpoke(NormalSpoke):
         self._content_url_entry.set_sensitive(True)
         self._content_url_entry.grab_focus()
         self._content_url_entry.select_region(0, -1)
-        self._fetch_lock.release()
 
     @gtk_action_wait
     def refresh(self):
@@ -813,10 +822,10 @@ class OSCAPSpoke(NormalSpoke):
     def on_fetch_button_clicked(self, *args):
         """Handler for the Fetch button"""
 
-        # try to get the fetching lock
-        if not self._fetch_lock.acquire(False):
-            # some other fetching/pre-processing running, give up
-            return
+        with self._fetch_flag_lock:
+            if self._fetching:
+                # some other fetching/pre-processing running, give up
+                return
 
         # prevent user from changing the URL in the meantime
         self._content_url_entry.set_sensitive(False)
