@@ -346,8 +346,9 @@ class OSCAPSpoke(NormalSpoke):
 
         if self._addon_data.fingerprint:
             hash_obj = utils.get_hashing_algorithm(self._addon_data.fingerprint)
-            digest = utils.get_file_fingerprint(self._addon_data.raw_preinst_content,
-                                                hash_obj)
+            digest = utils.get_file_fingerprint(\
+                                       self._addon_data.raw_preinst_content_path,
+                                       hash_obj)
             if digest != self._addon_data.fingerprint:
                 msg = _("Integrity check failed")
                 raise content_handling.ContentCheckError(msg)
