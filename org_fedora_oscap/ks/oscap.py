@@ -38,6 +38,7 @@ from org_fedora_oscap.content_handling import ContentCheckError
 __all__ = ["OSCAPdata"]
 
 SUPPORTED_CONTENT_TYPES = ("datastream", "rpm", "archive",
+                           "scap-security-guide",
                            )
 
 SUPPORTED_URL_PREFIXES = ("http://", "https://", "ftp://"
@@ -224,10 +225,11 @@ class OSCAPdata(AddonData):
 
         tmpl = "%s missing for the %s addon"
 
+        ## check provided data
         if not self.content_type:
             raise KickstartValueError(tmpl % ("content-type", self.name))
 
-        if not self.content_url:
+        if self.content_type != "scap-security-guide" and not self.content_url:
             raise KickstartValueError(tmpl % ("content-url", self.name))
 
         if not self.profile_id:
@@ -251,8 +253,23 @@ class OSCAPdata(AddonData):
                       "file '%s'" % self.content_url
                 raise KickstartValueError(msg)
 
+        ## do some initialization magic in case of SSG
+        if self.content_type == "scap-security-guide":
+            if not common.ssg_available():
+                msg = "SCAP Security Guide not found on the system"
+                raise KickstartValueError(msg)
+
+            self.xccdf_path = common.SSG_DIR + common.SSG_XCCDF
+
+    @property
+    def content_defined(self):
+        return self.content_url or self.content_type == "scap-security-guide"
+
     @property
     def content_name(self):
+        if self.content_type == "scap-security-guide":
+            raise ValueError("Using scap-security-guide, no single content file")
+
         parts = self.content_url.rsplit("/", 1)
         if len(parts) != 2:
             msg = "Unsupported url '%s' in the %s addon" % (self.content_url,
@@ -282,6 +299,9 @@ class OSCAPdata(AddonData):
         if self.content_type == "datastream":
             return utils.join_paths(common.INSTALLATION_CONTENT_DIR,
                                     self.content_name)
+        elif self.content_type == "scap-security-guide":
+            # SSG is not copied to the standard place
+            return self.xccdf_path
         else:
             return utils.join_paths(common.INSTALLATION_CONTENT_DIR,
                                     self.xccdf_path)
@@ -293,8 +313,8 @@ class OSCAPdata(AddonData):
         if self.content_type == "datastream":
             return utils.join_paths(common.TARGET_CONTENT_DIR,
                                     self.content_name)
-        elif self.content_type == "rpm":
-            # no path magic in case of RPM
+        elif self.content_type in ("rpm", "scap-security-guide"):
+            # no path magic in case of RPM (SSG is installed as an RPM)
             return self.xccdf_path
         else:
             return utils.join_paths(common.TARGET_CONTENT_DIR,
@@ -362,7 +382,10 @@ class OSCAPdata(AddonData):
 
         # add packages needed on the target system to the list of packages
         # that are requested to be installed
-        for pkg in REQUIRED_PACKAGES:
+        pkgs_to_install = list(REQUIRED_PACKAGES)
+        if self.content_type == "scap-security-guide":
+            pkgs_to_install.append("scap-security-guide")
+        for pkg in pkgs_to_install:
             if pkg not in ksdata.packages.packageList:
                 ksdata.packages.packageList.append(pkg)
 
@@ -398,6 +421,9 @@ class OSCAPdata(AddonData):
             if ret != 0:
                 raise common.ExtractionError("Failed to install content "
                                              "RPM to the target system")
+        elif self.content_type == "scap-security-guide":
+            # nothing needed
+            pass
         else:
             utils.universal_copy(utils.join_paths(common.INSTALLATION_CONTENT_DIR,
                                               "*"),

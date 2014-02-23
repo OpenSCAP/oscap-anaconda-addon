@@ -266,7 +266,7 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_spinner = self.builder.get_object("progressSpinner")
         self._progress_label = self.builder.get_object("progressLabel")
 
-        if not self._addon_data.content_url:
+        if not self._addon_data.content_defined:
             # switch  to the page allowing user to enter content URL and fetch it
             self._main_notebook.set_current_page(GET_CONTENT_PAGE)
 
@@ -322,19 +322,19 @@ class OSCAPSpoke(NormalSpoke):
                                      target=self._init_after_data_fetch,
                                      args=(thread_name,)))
 
-    def _init_after_data_fetch(self, thread_name):
+    def _init_after_data_fetch(self, wait_for):
         """
         Waits for data fetching to be finished, extracts it (if needed),
         populates the stores and evaluates pre-installation fixes from the
         content and marks the spoke as ready in the end.
 
-        :param thread_name: name of the thread to wait for (if any)
-        :type thread_name: str or None
+        :param wait_for: name of the thread to wait for (if any)
+        :type wait_for: str or None
 
         """
 
         try:
-            threadMgr.wait(thread_name)
+            threadMgr.wait(wait_for)
         except data_fetch.DataFetchError:
             self._data_fetch_failed()
             with self._fetch_flag_lock:
@@ -377,6 +377,8 @@ class OSCAPSpoke(NormalSpoke):
                                                files.tailoring)
         elif self._addon_data.content_type == "datastream":
             self._content_handling_cls = content_handling.DataStreamHandler
+        elif self._addon_data.content_type == "scap-security-guide":
+            self._content_handling_cls = content_handling.BenchmarkHandler
         else:
             raise common.OSCAPaddonError("Unsupported content type")
 
@@ -647,7 +649,7 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        if not self._addon_data.content_url:
+        if not self._addon_data.content_defined:
             if not self._content_url_entry.get_text():
                 # no text -> no info/warning
                 self._progress_label.set_text("")
@@ -754,7 +756,7 @@ class OSCAPSpoke(NormalSpoke):
             # not initialized
             return self._unitialized_status
 
-        if not self._addon_data.content_url:
+        if not self._addon_data.content_defined:
             return _("No content found")
 
         # update message store, something may changed from the last update
