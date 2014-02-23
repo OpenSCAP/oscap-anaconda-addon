@@ -266,6 +266,11 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_spinner = self.builder.get_object("progressSpinner")
         self._progress_label = self.builder.get_object("progressLabel")
 
+        # if no content was specified and SSG is available, use it
+        if not self._addon_data.content_type and common.ssg_available():
+            self._addon_data.content_type = "scap-security-guide"
+            self._addon_data.xccdf_path = common.SSG_DIR + common.SSG_XCCDF
+
         if not self._addon_data.content_defined:
             # switch  to the page allowing user to enter content URL and fetch it
             self._main_notebook.set_current_page(GET_CONTENT_PAGE)
@@ -649,7 +654,7 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        if not self._addon_data.content_defined:
+        if not self._addon_data.content_url:
             if not self._content_url_entry.get_text():
                 # no text -> no info/warning
                 self._progress_label.set_text("")
@@ -756,7 +761,7 @@ class OSCAPSpoke(NormalSpoke):
             # not initialized
             return self._unitialized_status
 
-        if not self._addon_data.content_defined:
+        if not self._addon_data.content_url:
             return _("No content found")
 
         # update message store, something may changed from the last update
