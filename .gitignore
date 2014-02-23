@@ -3,5 +3,8 @@
 *.rpm
 *.pyc
 *~
+\#*
+.#*
+*.orig
 updates*
 po/*.po
