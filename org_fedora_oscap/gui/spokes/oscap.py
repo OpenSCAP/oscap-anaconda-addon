@@ -600,11 +600,12 @@ class OSCAPSpoke(NormalSpoke):
         for rule in rules.splitlines():
             self._rule_data.new_rule(rule)
 
-        self._update_message_store()
-
         # make the selection button insensitive and remember the active profile
         self._choose_button.set_sensitive(False)
         self._active_profile = self._current_profile_id
+
+        # update messages according to the newly chosen profile
+        self._update_message_store()
 
     @gtk_action_wait
     def _invalid_content(self):
