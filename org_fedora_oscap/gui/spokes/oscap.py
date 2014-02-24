@@ -655,7 +655,7 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        if not self._addon_data.content_url:
+        if not self._addon_data.content_defined:
             if not self._content_url_entry.get_text():
                 # no text -> no info/warning
                 self._progress_label.set_text("")
@@ -762,7 +762,7 @@ class OSCAPSpoke(NormalSpoke):
             # not initialized
             return self._unitialized_status
 
-        if not self._addon_data.content_url:
+        if not self._addon_data.content_defined:
             return _("No content found")
 
         # update message store, something may changed from the last update
