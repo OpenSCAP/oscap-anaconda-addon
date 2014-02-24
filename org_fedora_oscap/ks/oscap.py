@@ -22,7 +22,6 @@
 
 import shutil
 import re
-import os.path
 
 from pyanaconda.addons import AddonData
 from pyanaconda.constants import ROOT_PATH
