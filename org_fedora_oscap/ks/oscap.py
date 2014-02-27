@@ -61,14 +61,16 @@ class OSCAPdata(AddonData):
 
     """
 
-    def __init__(self, name):
+    def __init__(self, name, just_clear=False):
         """
         :param name: name of the addon
         :type name: str
 
         """
 
-        AddonData.__init__(self, name)
+        if not just_clear:
+            # do not call the parent's __init__ more than once
+            AddonData.__init__(self, name)
 
         ## values specifying the content
         self.content_type = ""
@@ -435,3 +437,8 @@ class OSCAPdata(AddonData):
         common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
                                    self.datastream_id, self.xccdf_id,
                                    self.postinst_tailoring_path, chroot=ROOT_PATH)
+
+    def clear_all(self):
+        """Clear all the stored values."""
+
+        self.__init__(self.name, just_clear=True)

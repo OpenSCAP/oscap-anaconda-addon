@@ -955,6 +955,11 @@ class OSCAPSpoke(NormalSpoke):
         self._addon_data.dry_run = dry_run
         self._switch_dry_run(dry_run)
 
+    def on_change_content_clicked(self, *args):
+        self._unselect_profile(self._active_profile)
+        self._addon_data.clear_all()
+        self.refresh()
+
     def on_use_ssg_clicked(self, *args):
         self._addon_data.content_type = "scap-security-guide"
         self._addon_data.xccdf_path = common.SSG_DIR + common.SSG_XCCDF
