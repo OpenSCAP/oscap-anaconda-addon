@@ -265,11 +265,13 @@ class OSCAPSpoke(NormalSpoke):
         self._dry_run_switch = self.builder.get_object("dryRunSwitch")
 
         # content URL entering, content fetching, ...
+        self._no_content_label = self.builder.get_object("noContentLabel")
         self._content_url_entry = self.builder.get_object("urlEntry")
         self._fetch_button = self.builder.get_object("fetchButton")
         self._progress_box = self.builder.get_object("progressBox")
         self._progress_spinner = self.builder.get_object("progressSpinner")
         self._progress_label = self.builder.get_object("progressLabel")
+        self._ssg_button = self.builder.get_object("ssgButton")
 
         # if no content was specified and SSG is available, use it
         if not self._addon_data.content_type and common.ssg_available():
@@ -692,8 +694,19 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         if not self._addon_data.content_defined:
-            # switch  to the page allowing user to enter content URL and fetch it
-            self._main_notebook.set_current_page(GET_CONTENT_PAGE)
+            # provide SSG if available
+            if common.ssg_available():
+                # show the SSG button and tweak the rest of the line (the label)
+                really_show(self._ssg_button)
+                # TRANSLATORS: the other choice if SCAP Security Guide is also available
+                tip = _(" or enter data stream content or archive URL below:")
+            else:
+                # hide the SSG button
+                really_hide(self._ssg_button)
+                tip = _("No content found. Please enter data stream content or "
+                        "archive URL below:")
+
+            self._no_content_label.set_text(tip)
 
             # hide the progress box, no progress now
             # TODO: needs to check the fetching thread
@@ -702,6 +715,9 @@ class OSCAPSpoke(NormalSpoke):
                 # no text -> no info/warning
                 self._progress_label.set_text("")
             self._content_url_entry.grab_focus()
+
+            # switch  to the page allowing user to enter content URL and fetch it
+            self._main_notebook.set_current_page(GET_CONTENT_PAGE)
 
             # nothing more to do here
             return
@@ -921,3 +937,8 @@ class OSCAPSpoke(NormalSpoke):
         dry_run = not switch.get_active()
         self._addon_data.dry_run = dry_run
         self._switch_dry_run(dry_run)
+
+    def on_use_ssg_clicked(self, *args):
+        self._addon_data.content_type = "scap-security-guide"
+        self._addon_data.xccdf_path = common.SSG_DIR + common.SSG_XCCDF
+        self._fetch_data_and_initialize()
