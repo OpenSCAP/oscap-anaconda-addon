@@ -1,5 +1,5 @@
 Name:           oscap-anaconda-addon
-Version:        0.4
+Version:        0.5
 Release:        1%{?dist}
 Summary:        Anaconda addon integrating OpenSCAP to the installation process
 
@@ -48,6 +48,43 @@ make install DESTDIR=%{buildroot}
 %doc COPYING ChangeLog README
 
 %changelog
+* Fri Feb 28 2014 Vratislav Podzimek <vpodzime@redhat.com> - 0.5-1
+- Allow users to change content
+- Show and hide control buttons properly
+- Fix sensitivity of the URL entry and fetch button
+- Add the button allowing users to use SSG content if available
+- Fix listing python sources when creating potfile and regenerate it
+- Omit the %addon section from kickstart in dry-run mode
+- Implement the dry-run mode in the GUI (trac#2)
+- Add UI elements for content changing and dry-run mode
+- Check content_defined instead of content_url in the GUI code
+- First select the profile, then update the message store
+- Remove unused import
+- Ignore some more temporary/backup files
+- If no content is specified and SSG is available, use it
+- New special content type -- SCAP Security Guide
+- Fix name of the property used when doing fingerprint check
+- Get rid of an unused variable
+- Fix data fetch locking to work properly with kickstart installations
+- Use 'anonymous:' if no username and password is given for FTP
+- Initial version of the translations template file
+- First steps to dry-run mode
+- Fix main notebook tabs
+- Make translations work
+- Manipulation with the i18n related files
+- If no profile is given, default to default
+- Ignore updates.img and its auxiliary directory
+- Catch only fetching errors from the fetching thread
+- Do not allow multiple simultaneous fetches/initializations
+- Prevent user from changing the URL while we try to fetch from it
+- Add support for the Default profile
+- Support FTP as a content source (#1050980)
+- React properly on archive extraction failure
+- Refactor the code pre-processing the fetched content
+- Unify exceptions from archive extraction
+- Make pylint check mandatory to pass
+- Support for hash based content integrity checking
+
 * Tue Jan 14 2014 Vratislav Podzimek <vpodzime@redhat.com> - 0.4-1
 - Beware of running Gtk actions from a non-main thread
 - Fix path to the tailoring file when getting rules
