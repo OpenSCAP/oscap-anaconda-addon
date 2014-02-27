@@ -114,6 +114,7 @@
                         <property name="halign">start</property>
                         <property name="valign">center</property>
                         <property name="active">True</property>
+                        <signal name="notify::active" handler="on_dry_run_toggled" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>

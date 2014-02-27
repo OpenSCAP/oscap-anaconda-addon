@@ -33,6 +33,8 @@ from org_fedora_oscap import rule_handling
 from org_fedora_oscap import content_handling
 from org_fedora_oscap import utils
 
+from org_fedora_oscap.common import dry_run_skip
+
 from pyanaconda.threads import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
@@ -259,6 +261,9 @@ class OSCAPSpoke(NormalSpoke):
         # button for switching profiles
         self._choose_button = self.builder.get_object("chooseProfileButton")
 
+        # toggle switching the dry-run mode
+        self._dry_run_switch = self.builder.get_object("dryRunSwitch")
+
         # content URL entering, content fetching, ...
         self._content_url_entry = self.builder.get_object("urlEntry")
         self._fetch_button = self.builder.get_object("fetchButton")
@@ -272,12 +277,6 @@ class OSCAPSpoke(NormalSpoke):
             self._addon_data.xccdf_path = common.SSG_DIR + common.SSG_XCCDF
 
         if not self._addon_data.content_defined:
-            # switch  to the page allowing user to enter content URL and fetch it
-            self._main_notebook.set_current_page(GET_CONTENT_PAGE)
-
-            # hide the progress box, no progress now
-            really_hide(self._progress_box)
-
             # nothing more to be done now, the spoke is ready
             self._ready = True
 
@@ -290,7 +289,6 @@ class OSCAPSpoke(NormalSpoke):
             # pylint: disable-msg=E1101
             hubQ.send_ready(self.__class__.__name__, True)
         else:
-            self._main_notebook.set_current_page(SET_PARAMS_PAGE)
             # else fetch data
             self._fetch_data_and_initialize()
 
@@ -517,6 +515,7 @@ class OSCAPSpoke(NormalSpoke):
 
         self._message_store.append([message.type, message.text])
 
+    @dry_run_skip
     def _update_message_store(self, report_only=False):
         """
         Updates the message store with messages from rule evaluation.
@@ -553,44 +552,51 @@ class OSCAPSpoke(NormalSpoke):
             self._add_message(msg)
 
     @gtk_action_wait
-    def _switch_profile(self):
-        """Switches to a current selected profile."""
+    def _unselect_profile(self, profile_id):
+        """Unselects the given profile."""
 
-        def toggle_profiles_selected(store, profile_ids):
-            itr = store.get_iter_first()
-            while itr:
-                if store[itr][0] in profile_ids:
-                    store.set_value(itr, 2, not store[itr][2])
-                itr = store.iter_next(itr)
-
-        profile = self._current_profile_id
-        if not profile:
+        if not profile_id:
+            # no profile specified, nothing to do
             return
+
+        itr = self._profiles_store.get_iter_first()
+        while itr:
+            if self._profiles_store[itr][0] == profile_id:
+                self._profiles_store.set_value(itr, 2, False)
+            itr = self._profiles_store.iter_next(itr)
+
+        if self._rule_data:
+            self._rule_data.revert_changes(self.data, self._storage)
+
+        self._active_profile = None
+
+    @gtk_action_wait
+    def _select_profile(self, profile_id):
+        """Selects the given profile."""
+
+        if not profile_id:
+            # no profile specified, nothing to do
+            return
+
+        itr = self._profiles_store.get_iter_first()
+        while itr:
+            if self._profiles_store[itr][0] == profile_id:
+                self._profiles_store.set_value(itr, 2, True)
+            itr = self._profiles_store.iter_next(itr)
 
         if self._using_ds:
             ds = self._current_ds_id
             xccdf = self._current_xccdf_id
 
-            if not all((ds, xccdf, profile)):
+            if not all((ds, xccdf, profile_id)):
                 # something is not set -> do nothing
                 return
         else:
             ds = None
             xccdf = None
-            if not profile:
-                # profile not set -> do nothing
-                return
-
-        # make the newly chosen profile visually selected
-        toggle_profiles_selected(self._profiles_store,
-                                 [profile, self._active_profile])
-
-        # revert changes done by the previous profile
-        if self._rule_data:
-            self._rule_data.revert_changes(self.data, self._storage)
 
         # get pre-install fix rules from the content
-        rules = common.get_fix_rules_pre(profile,
+        rules = common.get_fix_rules_pre(profile_id,
                                          self._addon_data.preinst_content_path,
                                          ds, xccdf,
                                          self._addon_data.preinst_tailoring_path)
@@ -600,9 +606,20 @@ class OSCAPSpoke(NormalSpoke):
         for rule in rules.splitlines():
             self._rule_data.new_rule(rule)
 
-        # make the selection button insensitive and remember the active profile
-        self._choose_button.set_sensitive(False)
-        self._active_profile = self._current_profile_id
+        # remember the active profile
+        self._active_profile = profile_id
+
+    @gtk_action_wait
+    @dry_run_skip
+    def _switch_profile(self):
+        """Switches to a current selected profile."""
+
+        profile = self._current_profile_id
+        if not profile:
+            return
+
+        self._unselect_profile(self._active_profile)
+        self._select_profile(profile)
 
         # update messages according to the newly chosen profile
         self._update_message_store()
@@ -645,6 +662,25 @@ class OSCAPSpoke(NormalSpoke):
         self._content_url_entry.select_region(0, -1)
 
     @gtk_action_wait
+    def _switch_dry_run(self, dry_run):
+        self._choose_button.set_sensitive(not dry_run)
+
+        if dry_run:
+            # no profile can be selected in the dry-run mode
+            self._unselect_profile(self._active_profile)
+
+            # no messages in the dry-run mode
+            self._message_store.clear()
+            message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
+                                         _("Not applying security content"))
+            self._add_message(message)
+
+        else:
+            # mark the active profile as selected
+            self._select_profile(self._active_profile)
+            self._update_message_store()
+
+    @gtk_action_wait
     def refresh(self):
         """
         The refresh method that is called every time the spoke is displayed.
@@ -656,14 +692,24 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         if not self._addon_data.content_defined:
+            # switch  to the page allowing user to enter content URL and fetch it
+            self._main_notebook.set_current_page(GET_CONTENT_PAGE)
+
+            # hide the progress box, no progress now
+            # TODO: needs to check the fetching thread
+            really_hide(self._progress_box)
             if not self._content_url_entry.get_text():
                 # no text -> no info/warning
                 self._progress_label.set_text("")
-
             self._content_url_entry.grab_focus()
 
             # nothing more to do here
             return
+        else:
+            self._main_notebook.set_current_page(SET_PARAMS_PAGE)
+
+        dry_run = self._dry_run_switch.get_active()
+        self._switch_dry_run(dry_run)
 
         if self._using_ds:
             if self._addon_data.datastream_id:
@@ -707,6 +753,8 @@ class OSCAPSpoke(NormalSpoke):
         self._addon_data.profile_id = self._active_profile
 
         self._addon_data.rule_data = self._rule_data
+
+        self._addon_data.dry_run = not self._dry_run_switch.get_active()
 
     def execute(self):
         """
@@ -797,6 +845,7 @@ class OSCAPSpoke(NormalSpoke):
         # may take a while
         self._update_profiles_store()
 
+    @dry_run_skip
     def on_profiles_selection_changed(self, *args):
         """Handler for the profile selection change."""
 
@@ -809,12 +858,16 @@ class OSCAPSpoke(NormalSpoke):
                 # current active profile selected
                 self._choose_button.set_sensitive(False)
 
+    @dry_run_skip
     def on_profile_clicked(self, widget, event, *args):
         """Handler for the profile being clicked on."""
 
         # if a profile is double-clicked, we should switch to it
         if event.type == Gdk.EventType._2BUTTON_PRESS:
             self._switch_profile()
+
+            # active profile selected
+            self._choose_button.set_sensitive(False)
 
         # let the other actions hooked to the click happen as well
         return False
@@ -827,6 +880,9 @@ class OSCAPSpoke(NormalSpoke):
 
         # switch profile
         self._switch_profile()
+
+        # active profile selected
+        self._choose_button.set_sensitive(False)
 
     def on_fetch_button_clicked(self, *args):
         """Handler for the Fetch button"""
@@ -860,3 +916,8 @@ class OSCAPSpoke(NormalSpoke):
             self._addon_data.content_type = "datastream"
 
         self._fetch_data_and_initialize()
+
+    def on_dry_run_toggled(self, switch, *args):
+        dry_run = not switch.get_active()
+        self._addon_data.dry_run = dry_run
+        self._switch_dry_run(dry_run)

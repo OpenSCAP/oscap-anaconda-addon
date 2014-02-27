@@ -32,6 +32,7 @@ import tarfile
 import cpioarchive
 
 from collections import namedtuple
+from functools import wraps
 
 from pyanaconda import constants
 from pyanaconda import nm
@@ -443,3 +444,21 @@ def ssg_available(root="/"):
     """
 
     return os.path.exists(utils.join_paths(root, SSG_DIR + SSG_XCCDF))
+
+def dry_run_skip(func):
+    """
+    Decorator that makes sure the decorated function is noop in the dry-run mode.
+
+    :param func: a decorated function that needs to have the first parameter an
+                 object with the _addon_data attribute referencing the OSCAP
+                 addon's ksdata
+    """
+
+    @wraps(func)
+    def decorated(self, *args, **kwargs):
+        if self._addon_data.dry_run:
+            return
+        else:
+            return func(self, *args, **kwargs)
+
+    return decorated
