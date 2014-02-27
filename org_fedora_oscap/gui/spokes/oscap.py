@@ -709,12 +709,17 @@ class OSCAPSpoke(NormalSpoke):
             self._no_content_label.set_text(tip)
 
             # hide the progress box, no progress now
-            # TODO: needs to check the fetching thread
-            really_hide(self._progress_box)
-            if not self._content_url_entry.get_text():
-                # no text -> no info/warning
-                self._progress_label.set_text("")
-            self._content_url_entry.grab_focus()
+            with self._fetch_flag_lock:
+                if not self._fetching:
+                    really_hide(self._progress_box)
+
+                    self._content_url_entry.set_sensitive(True)
+                    self._fetch_button.set_sensitive(True)
+
+                    if not self._content_url_entry.get_text():
+                        # no text -> no info/warning
+                        self._progress_label.set_text("")
+                    self._content_url_entry.grab_focus()
 
             # switch  to the page allowing user to enter content URL and fetch it
             self._main_notebook.set_current_page(GET_CONTENT_PAGE)
