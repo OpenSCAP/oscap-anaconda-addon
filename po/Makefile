@@ -25,7 +25,7 @@ MSGFMT		= msgfmt --statistics --verbose
 # What do we need to do
 POFILES		= $(wildcard *.po)
 MOFILES		= $(patsubst %.po,%.mo,$(POFILES))
-PYSRC		= $(wildcard ../org_fedora_oscap/*.py ../org_fedora_oscap/*/*.py ../initial_setup/*/*/*.py)
+PYSRC		= $(wildcard ../org_fedora_oscap/*.py ../org_fedora_oscap/*/*.py ../org_fedora_oscap/*/*/*.py)
 GLADEFILES = $(wildcard ../org_fedora_oscap/*/*/*.glade)
 
 all::  update-po $(MOFILES)
