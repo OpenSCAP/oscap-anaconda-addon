@@ -117,6 +117,9 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id="",
 
     """
 
+    if not profile:
+        return ""
+
     args = ["oscap", "xccdf", "generate", "fix"]
     args.append("--template=%s" % template)
 
@@ -174,6 +177,9 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     :rtype: str
 
     """
+
+    if not profile:
+        return ""
 
     def do_chroot():
         """Helper function doing the chroot if requested."""

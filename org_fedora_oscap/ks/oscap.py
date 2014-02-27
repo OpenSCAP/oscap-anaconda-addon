@@ -92,10 +92,14 @@ class OSCAPdata(AddonData):
 
     def __str__(self):
         """
-        What should end up between %addon and %end lines in the resulting
-        kickstart file, i.e. string representation of the stored data.
+        What should end up in the resulting kickstart file, i.e. string
+        representation of the stored data.
 
         """
+
+        if self.dry_run:
+            # the addon was run in the dry run mode, omit it from the kickstart
+            return ""
 
         def key_value_pair(key, value, indent=4):
             return "%s%s = %s" % (indent * " ", key, value)
