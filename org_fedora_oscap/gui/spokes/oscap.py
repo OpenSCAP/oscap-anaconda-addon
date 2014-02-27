@@ -264,6 +264,9 @@ class OSCAPSpoke(NormalSpoke):
         # toggle switching the dry-run mode
         self._dry_run_switch = self.builder.get_object("dryRunSwitch")
 
+        # control buttons
+        self._control_buttons = self.builder.get_object("controlButtons")
+
         # content URL entering, content fetching, ...
         self._no_content_label = self.builder.get_object("noContentLabel")
         self._content_url_entry = self.builder.get_object("urlEntry")
@@ -420,6 +423,9 @@ class OSCAPSpoke(NormalSpoke):
 
         # all initialized, we can now let user set parameters
         self._main_notebook.set_current_page(SET_PARAMS_PAGE)
+
+        # and use control buttons
+        really_show(self._control_buttons)
 
         # pylint: disable-msg=E1101
         hubQ.send_ready(self.__class__.__name__, True)
@@ -694,6 +700,9 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         if not self._addon_data.content_defined:
+            # hide the control buttons
+            really_hide(self._control_buttons)
+
             # provide SSG if available
             if common.ssg_available():
                 # show the SSG button and tweak the rest of the line (the label)
@@ -727,6 +736,9 @@ class OSCAPSpoke(NormalSpoke):
             # nothing more to do here
             return
         else:
+            # show control buttons
+            really_show(self._control_buttons)
+
             self._main_notebook.set_current_page(SET_PARAMS_PAGE)
 
         dry_run = self._dry_run_switch.get_active()
