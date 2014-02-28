@@ -1,5 +1,5 @@
 Name:           oscap-anaconda-addon
-Version:        0.5
+Version:        0.6
 Release:        1%{?dist}
 Summary:        Anaconda addon integrating OpenSCAP to the installation process
 
@@ -50,6 +50,14 @@ make install DESTDIR=%{buildroot}
 %doc COPYING ChangeLog README
 
 %changelog
+* Fri Feb 28 2014 Vratislav Podzimek <vpodzime@redhat.com> - 0.6-1
+- Getting status needs to run in the main thread
+- Grab focus for the URL entry after switching notebook page
+- Clear rule data when unselecting profile
+- Update message as part of the initialization
+- Add BuildRequires: gettext
+- Include translations in the tarball and RPM
+
 * Fri Feb 28 2014 Vratislav Podzimek <vpodzime@redhat.com> - 0.5-1
 - Allow users to change content
 - Show and hide control buttons properly
