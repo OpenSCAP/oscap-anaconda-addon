@@ -417,6 +417,9 @@ class OSCAPSpoke(NormalSpoke):
         # initialize the self._addon_data.rule_data
         self._addon_data.rule_data = self._rule_data
 
+        # update the message store with the messages
+        self._update_message_store()
+
         # no more being unitialized
         self._unitialized_status = None
         self._ready = True
