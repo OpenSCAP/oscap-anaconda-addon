@@ -733,10 +733,10 @@ class OSCAPSpoke(NormalSpoke):
                     if not self._content_url_entry.get_text():
                         # no text -> no info/warning
                         self._progress_label.set_text("")
-                    self._content_url_entry.grab_focus()
 
             # switch  to the page allowing user to enter content URL and fetch it
             self._main_notebook.set_current_page(GET_CONTENT_PAGE)
+            self._content_url_entry.grab_focus()
 
             # nothing more to do here
             return
