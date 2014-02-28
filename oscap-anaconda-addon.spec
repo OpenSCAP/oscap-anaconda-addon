@@ -1,6 +1,6 @@
 Name:           oscap-anaconda-addon
 Version:        0.6
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Anaconda addon integrating OpenSCAP to the installation process
 
 License:        GPLv2+
@@ -19,6 +19,7 @@ BuildRequires:  gettext
 BuildRequires:	python2-devel
 BuildRequires:  python-mock
 BuildRequires:  python-nose
+BuildRequires:  openscap openscap-utils openscap-python
 BuildRequires:  python-cpio
 BuildRequires:  anaconda >= 19
 Requires:       anaconda >= 19
@@ -37,7 +38,7 @@ content.
 %build
 
 %check
-make test
+make unittest
 
 
 %install
@@ -50,6 +51,9 @@ make install DESTDIR=%{buildroot}
 %doc COPYING ChangeLog README
 
 %changelog
+* Fri Feb 28 2014 Vratislav Podzimek <vpodzime@redhat.com> - 0.6-2
+- Rebuild with building issues fixed
+
 * Fri Feb 28 2014 Vratislav Podzimek <vpodzime@redhat.com> - 0.6-1
 - Getting status needs to run in the main thread
 - Grab focus for the URL entry after switching notebook page
