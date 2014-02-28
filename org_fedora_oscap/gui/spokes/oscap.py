@@ -833,6 +833,7 @@ class OSCAPSpoke(NormalSpoke):
                    for row in self._message_store)
 
     @property
+    @gtk_action_wait
     def status(self):
         """
         The status property that is a brief string describing the state of the
