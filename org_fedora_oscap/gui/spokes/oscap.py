@@ -577,7 +577,9 @@ class OSCAPSpoke(NormalSpoke):
             itr = self._profiles_store.iter_next(itr)
 
         if self._rule_data:
+            # revert changes and clear rule_data (no longer valid)
             self._rule_data.revert_changes(self.data, self._storage)
+            self._rule_data = None
 
         self._active_profile = None
 
