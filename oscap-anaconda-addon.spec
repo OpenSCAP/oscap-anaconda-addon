@@ -15,6 +15,7 @@ URL:            https://git.fedorahosted.org/cgit/oscap-anaconda-addon.git
 Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      noarch
+BuildRequires:  gettext
 BuildRequires:	python2-devel
 BuildRequires:  python-mock
 BuildRequires:  python-nose
