@@ -7,6 +7,7 @@ TESTS = tests
 
 FILES = $(ADDON) \
 	$(TESTS) \
+	po \
 	COPYING \
 	Makefile \
 	README
