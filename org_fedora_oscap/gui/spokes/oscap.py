@@ -39,6 +39,7 @@ from pyanaconda.threads import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
 from pyanaconda.ui.gui.utils import gtk_action_wait, really_hide, really_show
+from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action
 
 # pylint: disable-msg=E0611
 from gi.repository import Gdk
@@ -88,46 +89,6 @@ def get_combo_selection(combo):
         return None
 
     return model[itr][0]
-
-def set_treeview_selection(treeview, item, col=0):
-    """
-    Select the given item in the given treeview and scroll to it.
-
-    :param treeview: treeview to select and item in
-    :type treeview: GtkTreeView
-    :param item: item to be selected
-    :type item: str
-    :param col: column to search for the item in
-    :type col: int
-    :return: if successfully selected or not
-    :rtype: bool
-
-    """
-
-    model = treeview.get_model()
-    itr = model.get_iter_first()
-    while itr and not model[itr][col] == item:
-        itr = model.iter_next(itr)
-
-    if not itr:
-        # item not found, cannot be selected
-        return False
-
-    # otherwise select the item and scroll to it
-    selection = treeview.get_selection()
-    selection.select_iter(itr)
-    path = model.get_path(itr)
-    treeview.scroll_to_cell(path)
-    return True
-
-# TODO: should go "upstream" (to the pyanaconda.ui.gui.utils module)
-def fire_gtk_action(func, args=None):
-    @gtk_action_wait
-    def gtk_action():
-        fargs = args or tuple()
-        func(*fargs)
-
-    gtk_action()
 
 def render_message_type(column, renderer, model, itr, user_data=None):
     #get message type from the first column
@@ -406,7 +367,7 @@ class OSCAPSpoke(NormalSpoke):
         else:
             # hide the labels and comboboxes for datastream-id and xccdf-id
             # selection
-            fire_gtk_action(really_hide, (self._ids_box,))
+            fire_gtk_action(really_hide, self._ids_box)
 
         # refresh UI elements
         self.refresh()
