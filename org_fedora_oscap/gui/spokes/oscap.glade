@@ -34,6 +34,7 @@
     </columns>
   </object>
   <object class="AnacondaSpokeWindow" id="OSCAPspokeWindow">
+    <property name="window_name" translatable="yes">SECURITY PROFILE</property>
     <property name="startup_id">filler</property>
     <property name="can_focus">False</property>
     <property name="hexpand">True</property>
