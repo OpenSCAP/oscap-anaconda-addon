@@ -332,6 +332,9 @@ class OSCAPSpoke(NormalSpoke):
                                     [self._addon_data.xccdf_path])
             except common.ExtractionError as err:
                 self._extraction_failed(err.message)
+                # fetching done
+                with self._fetch_flag_lock:
+                    self._fetching = False
                 return
 
             # and populate missing fields
