@@ -649,7 +649,7 @@ class OSCAPSpoke(NormalSpoke):
             # no messages in the dry-run mode
             self._message_store.clear()
             message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
-                                         _("Not applying security content"))
+                                         _("Not applying security policy"))
             self._add_message(message)
 
         else:
