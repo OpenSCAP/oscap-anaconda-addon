@@ -360,6 +360,9 @@ class OSCAPSpoke(NormalSpoke):
                                       self._addon_data.preinst_tailoring_path)
         except content_handling.ContentHandlingError:
             self._invalid_content()
+            # fetching done
+            with self._fetch_flag_lock:
+                self._fetching = False
             return
 
         if self._using_ds:
