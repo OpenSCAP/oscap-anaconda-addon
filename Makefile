@@ -13,6 +13,7 @@ FILES = $(ADDON) \
 	README
 
 EXCLUDES = \
+	*~ \
 	*.pyc
 
 all:
