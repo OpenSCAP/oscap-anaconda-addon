@@ -716,6 +716,8 @@ class OSCAPSpoke(NormalSpoke):
         dry_run = self._dry_run_switch.get_active()
         self._switch_dry_run(dry_run)
 
+        self._active_profile = self._addon_data.profile_id
+
         if self._using_ds:
             if self._addon_data.datastream_id:
                 set_combo_selection(self._ds_combo,
