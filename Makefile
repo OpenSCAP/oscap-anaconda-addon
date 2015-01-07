@@ -63,7 +63,7 @@ potfile:
 	$(MAKE) -C po potfile
 
 po-pull:
-	tx pull -a --disable-overwrite
+	tx pull -a -f
 
 install-po-files:
 	$(MAKE) -C po install
