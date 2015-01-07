@@ -26,7 +26,7 @@ N_ = lambda x: x
 
 # the path to addons is in sys.path so we can import things
 # from org_fedora_oscap
-from org_fedora_oscap.gui.categories.security import SecurityCategory
+from org_fedora_oscap.categories.security import SecurityCategory
 from org_fedora_oscap import common
 from org_fedora_oscap import data_fetch
 from org_fedora_oscap import rule_handling

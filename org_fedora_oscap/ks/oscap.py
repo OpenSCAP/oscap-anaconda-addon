@@ -24,7 +24,7 @@ import shutil
 import re
 
 from pyanaconda.addons import AddonData
-from pyanaconda.constants import ROOT_PATH
+from pyanaconda.iutil import getSysroot
 from pyanaconda import iutil
 from pykickstart.errors import KickstartParseError, KickstartValueError
 from org_fedora_oscap import utils, common, rule_handling
@@ -409,7 +409,7 @@ class OSCAPdata(AddonData):
             # nothing to be done in the dry-run mode
             return
 
-        target_content_dir = utils.join_paths(ROOT_PATH,
+        target_content_dir = utils.join_paths(getSysroot(),
                                               common.TARGET_CONTENT_DIR)
         utils.ensure_dir_exists(target_content_dir)
 
@@ -420,9 +420,8 @@ class OSCAPdata(AddonData):
             shutil.copy2(self.raw_preinst_content_path, target_content_dir)
 
             # and install it with yum
-            ret = iutil.execWithRedirect("yum", ["-y", "install",
-                                                 self.raw_postinst_content_path],
-                                         root=ROOT_PATH)
+            ret = iutil.execInSysroot("yum", ["-y", "install",
+                                              self.raw_postinst_content_path])
             if ret != 0:
                 raise common.ExtractionError("Failed to install content "
                                              "RPM to the target system")
@@ -436,7 +435,7 @@ class OSCAPdata(AddonData):
 
         common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
                                    self.datastream_id, self.xccdf_id,
-                                   self.postinst_tailoring_path, chroot=ROOT_PATH)
+                                   self.postinst_tailoring_path, chroot=getSysroot())
 
     def clear_all(self):
         """Clear all the stored values."""

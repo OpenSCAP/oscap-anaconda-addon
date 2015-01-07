@@ -20,8 +20,7 @@
 
 N_ = lambda x: x
 
-from pyanaconda.ui.gui.categories import SpokeCategory
-from pyanaconda.ui.gui.hubs.summary import SummaryHub
+from pyanaconda.ui.categories import SpokeCategory
 
 __all__ = ["SecurityCategory"]
 
@@ -35,5 +34,6 @@ class SecurityCategory(SpokeCategory):
 
     """
 
-    displayOnHub = SummaryHub
+    displayOnHubGUI = "SummaryHub"
+    displayOnHubTUI = "SummaryHub"
     title = N_("SECURITY")
