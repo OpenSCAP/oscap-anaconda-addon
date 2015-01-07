@@ -1,6 +1,6 @@
 Name:           oscap-anaconda-addon
-Version:        0.6
-Release:        2%{?dist}
+Version:        0.7
+Release:        1%{?dist}
 Summary:        Anaconda addon integrating OpenSCAP to the installation process
 
 License:        GPLv2+
@@ -51,6 +51,18 @@ make install DESTDIR=%{buildroot}
 %doc COPYING ChangeLog README
 
 %changelog
+* Wed Jan 07 2015 Vratislav Podzimek <vpodzime@redhat.com> - 0.7-1
+- Adapt to changes in Anaconda
+- Add *~ to EXCLUDES (#1081735)
+- Set active profile when doing refresh
+- Set fetching flag to False when content processing fails
+- Fix the message when policy is not applied
+- Change spoke's name to SECURITY POLICY
+- Define name of the spoke window
+- Set fetching flag to False when extraction error happens
+- Remove code that was pushed to the anaconda's sources
+- Update spec file from downstream
+
 * Fri Feb 28 2014 Vratislav Podzimek <vpodzime@redhat.com> - 0.6-2
 - Rebuild with building issues fixed
 

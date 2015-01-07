@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-02-28 12:04+0100\n"
+"POT-Creation-Date: 2015-01-07 14:55+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -60,128 +60,132 @@ msgstr ""
 msgid "package '%s' has been added to the list of excluded packages"
 msgstr ""
 
+#: ../org_fedora_oscap/categories/security.py:39
+msgid "SECURITY"
+msgstr ""
+
 #. title of the spoke (will be displayed on the hub)
-#: ../org_fedora_oscap/gui/spokes/oscap.py:180
+#: ../org_fedora_oscap/gui/spokes/oscap.py:141
 msgid "_SECURITY PROFILE"
 msgstr ""
 
 #. the first status provided
-#: ../org_fedora_oscap/gui/spokes/oscap.py:205
+#: ../org_fedora_oscap/gui/spokes/oscap.py:166
 msgid "Not ready"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:326
+#: ../org_fedora_oscap/gui/spokes/oscap.py:287
 msgid "Fetching content data"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:361
+#: ../org_fedora_oscap/gui/spokes/oscap.py:322
 msgid "Integrity check failed"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:552
+#: ../org_fedora_oscap/gui/spokes/oscap.py:516
 msgid "No profile selected"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:556
+#: ../org_fedora_oscap/gui/spokes/oscap.py:520
 msgid "No rules for the pre-installation phase"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:644
+#: ../org_fedora_oscap/gui/spokes/oscap.py:608
 msgid "Invalid content provided. Enter a different URL, please."
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:653
+#: ../org_fedora_oscap/gui/spokes/oscap.py:617
 msgid "Failed to fetch content. Enter a different URL, please."
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:662
+#: ../org_fedora_oscap/gui/spokes/oscap.py:626
 #, python-format
 msgid "Failed to extract content (%s). Enter a different URL, please."
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:688
+#: ../org_fedora_oscap/gui/spokes/oscap.py:652
 msgid "Not applying security content"
 msgstr ""
 
 #. TRANSLATORS: the other choice if SCAP Security Guide is also available
-#: ../org_fedora_oscap/gui/spokes/oscap.py:716
+#: ../org_fedora_oscap/gui/spokes/oscap.py:680
 msgid " or enter data stream content or archive URL below:"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:720
+#: ../org_fedora_oscap/gui/spokes/oscap.py:684
 msgid ""
 "No content found. Please enter data stream content or archive URL below:"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:853
+#: ../org_fedora_oscap/gui/spokes/oscap.py:817
 msgid "No content found"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:861
+#: ../org_fedora_oscap/gui/spokes/oscap.py:825
 msgid "Misconfiguration detected"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:867
+#: ../org_fedora_oscap/gui/spokes/oscap.py:831
 msgid "Warnings appeared"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:869
+#: ../org_fedora_oscap/gui/spokes/oscap.py:833
 msgid "Everything okay"
 msgstr ""
 
 #. cannot start fetching
-#: ../org_fedora_oscap/gui/spokes/oscap.py:943
+#: ../org_fedora_oscap/gui/spokes/oscap.py:907
 msgid "Invalid or unsupported URL"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:947 tmp/oscap.glade.h:12
+#: ../org_fedora_oscap/gui/spokes/oscap.py:911 tmp/oscap.glade.h:13
 msgid "Fetching content..."
 msgstr ""
 
-#: ../org_fedora_oscap/gui/categories/security.py:39
-msgid "SECURITY"
-msgstr ""
-
 #: tmp/oscap.glade.h:1
-msgid "_Change content"
+msgid "SECURITY PROFILE"
 msgstr ""
 
 #: tmp/oscap.glade.h:2
-msgid "Apply security policy:"
+msgid "_Change content"
 msgstr ""
 
 #: tmp/oscap.glade.h:3
-msgid "Data stream:"
+msgid "Apply security policy:"
 msgstr ""
 
 #: tmp/oscap.glade.h:4
-msgid "Checklist:"
+msgid "Data stream:"
 msgstr ""
 
 #: tmp/oscap.glade.h:5
-msgid "Choose profile below:"
+msgid "Checklist:"
 msgstr ""
 
 #: tmp/oscap.glade.h:6
-msgid "Profile"
+msgid "Choose profile below:"
 msgstr ""
 
 #: tmp/oscap.glade.h:7
-msgid "Selected"
+msgid "Profile"
 msgstr ""
 
 #: tmp/oscap.glade.h:8
-msgid "_Select profile"
+msgid "Selected"
 msgstr ""
 
 #: tmp/oscap.glade.h:9
-msgid "Changes that were done or need to be done:"
+msgid "_Select profile"
 msgstr ""
 
 #: tmp/oscap.glade.h:10
-msgid "_Use SCAP Security Guide"
+msgid "Changes that were done or need to be done:"
 msgstr ""
 
 #: tmp/oscap.glade.h:11
+msgid "_Use SCAP Security Guide"
+msgstr ""
+
+#: tmp/oscap.glade.h:12
 msgid "_Fetch"
 msgstr ""
