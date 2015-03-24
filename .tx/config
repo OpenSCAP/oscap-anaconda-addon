@@ -1,7 +1,0 @@
-[main]
-host = https://www.transifex.com
-
-[oscap-anaconda-addon.master]
-file_filter = po/<lang>.po
-source_file = po/oscap-anaconda-addon.pot
-source_lang = en
