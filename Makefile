@@ -16,6 +16,9 @@ EXCLUDES = \
 	*~ \
 	*.pyc
 
+ZANATA_PULL_ARGS = --transdir po/
+ZANATA_PUSH_ARGS = --srcdir po/ --push-type source --force
+
 all:
 	@echo "usage: make dist"
 	@echo "       make test"
@@ -63,7 +66,11 @@ potfile:
 	$(MAKE) -C po potfile
 
 po-pull:
-	tx pull -a --disable-overwrite
+	rpm -q zanata-python-client &>/dev/null || ( echo "need to run: yum install zanata-python-client"; exit 1 )
+	zanata pull $(ZANATA_PULL_ARGS)
+
+push-pot: potfile
+	zanata push $(ZANATA_PUSH_ARGS)
 
 install-po-files:
 	$(MAKE) -C po install
