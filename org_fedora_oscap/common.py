@@ -48,8 +48,8 @@ __all__ = ["run_oscap_remediate", "get_fix_rules_pre", "wait_and_fetch_net_data"
 INSTALLATION_CONTENT_DIR = "/tmp/openscap_data/"
 TARGET_CONTENT_DIR = "/root/openscap_data/"
 
-SSG_DIR = "/usr/share/xml/scap/ssg/fedora/"
-SSG_XCCDF = "ssg-fedora-xccdf.xml"
+SSG_DIR = "/usr/share/xml/scap/ssg/content/"
+SSG_XCCDF = "ssg-rhel7-xccdf.xml"
 
 RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR, "eval_remediate_results.xml")
 
