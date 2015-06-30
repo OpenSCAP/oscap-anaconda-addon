@@ -285,7 +285,12 @@
                                 <property name="title" translatable="yes">Profile</property>
                                 <property name="expand">True</property>
                                 <child>
-                                  <object class="GtkCellRendererText" id="cellrenderertext1"/>
+                                  <object class="GtkCellRendererText" id="cellrenderertext1">
+                                    <property name="width_chars">110</property>
+                                    <property name="wrap_mode">word</property>
+                                    <property name="wrap_width">110</property>
+                                    <property name="max_width_chars">110</property>
+                                  </object>
                                   <attributes>
                                     <attribute name="markup">1</attribute>
                                   </attributes>
