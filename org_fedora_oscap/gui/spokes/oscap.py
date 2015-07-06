@@ -821,6 +821,9 @@ class OSCAPSpoke(NormalSpoke):
         if not self._addon_data.content_defined:
             return _("No content found")
 
+        if not self._active_profile:
+            return _("No profile selected")
+
         # update message store, something may changed from the last update
         self._update_message_store(report_only=True)
 

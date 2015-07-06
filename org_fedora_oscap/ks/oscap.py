@@ -365,6 +365,11 @@ class OSCAPdata(AddonData):
 
         """
 
+        if self.dry_run or not self.profile_id:
+            # nothing more to be done in the dry-run mode or if no profile is
+            # selected
+            return
+
         # check fingerprint if given
         if self.fingerprint:
             hash_obj = utils.get_hashing_algorithm(self.fingerprint)
@@ -373,10 +378,6 @@ class OSCAPdata(AddonData):
             if digest != self.fingerprint:
                 msg = "Integrity check of the content failed!"
                 raise ContentCheckError(msg)
-
-        if self.dry_run:
-            # nothing more to be done in the dry-run mode
-            return
 
         # evaluate rules, do automatic fixes and stop if something that cannot
         # be fixed automatically is wrong
