@@ -108,13 +108,14 @@ class OSCAPdata(AddonData):
 
         ret = "%%addon %s" % self.name
         ret += "\n%s" % key_value_pair("content-type", self.content_type)
-        ret += "\n%s" % key_value_pair("content-url", self.content_url)
 
+        if self.content_url:
+            ret += "\n%s" % key_value_pair("content-url", self.content_url)
         if self.datastream_id:
             ret += "\n%s" % key_value_pair("datastream-id", self.datastream_id)
         if self.xccdf_id:
             ret += "\n%s" % key_value_pair("xccdf-id", self.xccdf_id)
-        if self.xccdf_path:
+        if self.xccdf_path and self.content_type != "scap-security-guide":
             ret += "\n%s" % key_value_pair("xccdf-path", self.xccdf_path)
         if self.cpe_path:
             ret += "\n%s" % key_value_pair("cpe-path", self.cpe_path)
