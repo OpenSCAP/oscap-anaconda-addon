@@ -277,10 +277,16 @@ class OSCAPSpoke(NormalSpoke):
         if any(self._addon_data.content_url.startswith(net_prefix)
                for net_prefix in data_fetch.NET_URL_PREFIXES):
             # need to fetch data over network
-            thread_name = common.wait_and_fetch_net_data(
+            try:
+                thread_name = common.wait_and_fetch_net_data(
                                      self._addon_data.content_url,
                                      self._addon_data.raw_preinst_content_path,
                                      self._addon_data.certificates)
+            except common.OSCAPaddonNetworkError:
+                self._network_problem()
+                with self._fetch_flag_lock:
+                    self._fetching = False
+                return
 
         # pylint: disable-msg=E1101
         hubQ.send_message(self.__class__.__name__,
@@ -620,6 +626,14 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_label.set_markup("<b>%s</b>" % _("Failed to fetch "
                                         "content. Enter a different URL, "
                                         "please."))
+        self._wrong_content()
+
+    @gtk_action_wait
+    def _network_problem(self):
+        """Adapts the UI if network error was encountered during data fetch"""
+
+        self._progress_label.set_markup("<b>%s</b>" % _("Network error encountered when fetching data."
+                                                        " Please check that network is setup and working."))
         self._wrong_content()
 
     @gtk_action_wait
