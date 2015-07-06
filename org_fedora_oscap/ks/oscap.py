@@ -275,7 +275,13 @@ class OSCAPdata(AddonData):
         if self.content_type == "scap-security-guide":
             raise ValueError("Using scap-security-guide, no single content file")
 
-        parts = self.content_url.rsplit("/", 1)
+        rest = "/anonymous_content"
+        for prefix in SUPPORTED_URL_PREFIXES:
+            if self.content_url.startswith(prefix):
+                rest = self.content_url[len(prefix):]
+                break
+
+        parts = rest.rsplit("/", 1)
         if len(parts) != 2:
             msg = "Unsupported url '%s' in the %s addon" % (self.content_url,
                                                             self.name)

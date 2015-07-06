@@ -41,6 +41,8 @@ from pyanaconda.ui.communication import hubQ
 from pyanaconda.ui.gui.utils import gtk_action_wait, really_hide, really_show
 from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action
 
+from pykickstart.errors import KickstartValueError
+
 # pylint: disable-msg=E0611
 from gi.repository import Gdk
 
@@ -284,6 +286,11 @@ class OSCAPSpoke(NormalSpoke):
                                      self._addon_data.certificates)
             except common.OSCAPaddonNetworkError:
                 self._network_problem()
+                with self._fetch_flag_lock:
+                    self._fetching = False
+                return
+            except KickstartValueError:
+                self._invalid_url()
                 with self._fetch_flag_lock:
                     self._fetching = False
                 return
@@ -617,6 +624,14 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_label.set_markup("<b>%s</b>" % _("Invalid content "
                                         "provided. Enter a different URL, "
                                         "please."))
+        self._wrong_content()
+
+    @gtk_action_wait
+    def _invalid_url(self):
+        """Callback for informing user about provided URL invalidity."""
+
+        self._progress_label.set_markup("<b>%s</b>" % _("Invalid or unsupported content "
+                                                        "URL, please enter a different one."))
         self._wrong_content()
 
     @gtk_action_wait
