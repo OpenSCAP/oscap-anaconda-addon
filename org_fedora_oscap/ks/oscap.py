@@ -44,7 +44,7 @@ SUPPORTED_URL_PREFIXES = ("http://", "https://", "ftp://"
                           # LABEL:?, hdaX:?,
                           )
 
-REQUIRED_PACKAGES = ("openscap", "openscap-utils", )
+REQUIRED_PACKAGES = ("openscap", "openscap-scanner", )
 
 FINGERPRINT_REGEX = re.compile(r'^[a-z0-9]+$')
 
