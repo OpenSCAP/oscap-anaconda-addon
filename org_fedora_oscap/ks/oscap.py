@@ -129,7 +129,7 @@ class OSCAPdata(AddonData):
         if self.certificates:
             ret += "\n%s" % key_value_pair("certificates", self.certificates)
 
-        ret += "\n%end"
+        ret += "\n%end\n\n"
         return ret
 
     def _parse_content_type(self, value):
