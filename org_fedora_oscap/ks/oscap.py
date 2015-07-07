@@ -22,14 +22,18 @@
 
 import shutil
 import re
+import os
 
 from pyanaconda.addons import AddonData
 from pyanaconda.iutil import getSysroot
 from pyanaconda import iutil
 from pykickstart.errors import KickstartParseError, KickstartValueError
-from org_fedora_oscap import utils, common, rule_handling
+from org_fedora_oscap import utils, common, rule_handling, data_fetch
 from org_fedora_oscap.common import SUPPORTED_ARCHIVES
 from org_fedora_oscap.content_handling import ContentCheckError
+
+import logging
+log = logging.getLogger("anaconda")
 
 # export OSCAPdata class to prevent Anaconda's collect method from taking
 # AddonData class instead of the OSCAPdata class
@@ -356,6 +360,27 @@ class OSCAPdata(AddonData):
         return utils.join_paths(common.TARGET_CONTENT_DIR,
                                 self.tailoring_path)
 
+    def _fetch_content_and_initialize(self):
+        """Fetch content and initialize from it"""
+
+        data_fetch.fetch_data(self.content_url, self.raw_preinst_content_path, self.certificates)
+        # RPM is an archive at this phase
+        if self.content_type in ("archive", "rpm"):
+            # extract the content
+            common.extract_data(self.raw_preinst_content_path,
+                                common.INSTALLATION_CONTENT_DIR,
+                                [self.xccdf_path])
+
+        rules = common.get_fix_rules_pre(self.profile_id,
+                                         self.preinst_content_path,
+                                         self.datastream_id, self.xccdf_id,
+                                         self.preinst_tailoring_path)
+
+        # parse and store rules with a clean RuleData instance
+        self.rule_data = rule_handling.RuleData()
+        for rule in rules.splitlines():
+            self.rule_data.new_rule(rule)
+
     def setup(self, storage, ksdata, instclass):
         """
         The setup method that should make changes to the runtime environment
@@ -376,6 +401,14 @@ class OSCAPdata(AddonData):
             # nothing more to be done in the dry-run mode or if no profile is
             # selected
             return
+
+        if not os.path.exists(self.raw_preinst_content_path):
+            # content not available/fetched yet
+            try:
+                self._fetch_content_and_initialize()
+            except common.OSCAPaddonError:
+                log.error("Failed to fetch and initialize SCAP content!")
+                return
 
         # check fingerprint if given
         if self.fingerprint:
