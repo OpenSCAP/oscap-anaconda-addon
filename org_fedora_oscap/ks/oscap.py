@@ -23,10 +23,14 @@
 import shutil
 import re
 import os
+import time
 
 from pyanaconda.addons import AddonData
 from pyanaconda.iutil import getSysroot
+from pyanaconda.progress import progressQ
+from pyanaconda import errors
 from pyanaconda import iutil
+from pyanaconda import flags
 from pykickstart.errors import KickstartParseError, KickstartValueError
 from org_fedora_oscap import utils, common, rule_handling, data_fetch
 from org_fedora_oscap.common import SUPPORTED_ARCHIVES
@@ -34,6 +38,9 @@ from org_fedora_oscap.content_handling import ContentCheckError
 
 import logging
 log = logging.getLogger("anaconda")
+
+import gettext
+_ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
 
 # export OSCAPdata class to prevent Anaconda's collect method from taking
 # AddonData class instead of the OSCAPdata class
@@ -406,9 +413,29 @@ class OSCAPdata(AddonData):
             # content not available/fetched yet
             try:
                 self._fetch_content_and_initialize()
-            except common.OSCAPaddonError:
+            except common.OSCAPaddonError as e:
                 log.error("Failed to fetch and initialize SCAP content!")
-                return
+                msg = _("There was an error fetching and loading the security content:\n" +
+                        "%s\n" +
+                        "The installation should be aborted. Do you wish to continue anyway?") % e
+
+                if flags.flags.automatedInstall and not flags.flags.ksprompt:
+                    # cannot have ask in a non-interactive kickstart installation
+                    raise errors.CmdlineError(msg)
+
+                answ = errors.errorHandler.ui.showYesNoQuestion(msg)
+                if answ == errors.ERROR_CONTINUE:
+                    # prevent any futher actions here by switching to the dry
+                    # run mode and let things go on
+                    self.dry_run = True
+                    return
+                else:
+                    # Let's sleep forever to prevent any further actions and wait for
+                    # the main thread to quit the process.
+                    progressQ.send_quit(1)
+                    while True:
+                        time.sleep(100000)
+
 
         # check fingerprint if given
         if self.fingerprint:
