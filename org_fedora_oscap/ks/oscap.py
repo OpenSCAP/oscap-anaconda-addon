@@ -443,8 +443,26 @@ class OSCAPdata(AddonData):
             digest = utils.get_file_fingerprint(self.raw_preinst_content_path,
                                                 hash_obj)
             if digest != self.fingerprint:
-                msg = "Integrity check of the content failed!"
-                raise ContentCheckError(msg)
+                log.error("Failed to fetch and initialize SCAP content!")
+                msg = _("The integrity check of the security content failed.\n" +
+                        "The installation should be aborted. Do you wish to continue anyway?")
+
+                if flags.flags.automatedInstall and not flags.flags.ksprompt:
+                    # cannot have ask in a non-interactive kickstart installation
+                    raise errors.CmdlineError(msg)
+
+                answ = errors.errorHandler.ui.showYesNoQuestion(msg)
+                if answ == errors.ERROR_CONTINUE:
+                    # prevent any futher actions here by switching to the dry
+                    # run mode and let things go on
+                    self.dry_run = True
+                    return
+                else:
+                    # Let's sleep forever to prevent any further actions and wait for
+                    # the main thread to quit the process.
+                    progressQ.send_quit(1)
+                    while True:
+                        time.sleep(100000)
 
         # evaluate rules, do automatic fixes and stop if something that cannot
         # be fixed automatically is wrong

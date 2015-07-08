@@ -332,8 +332,11 @@ class OSCAPSpoke(NormalSpoke):
                                        self._addon_data.raw_preinst_content_path,
                                        hash_obj)
             if digest != self._addon_data.fingerprint:
-                msg = _("Integrity check failed")
-                raise content_handling.ContentCheckError(msg)
+                self._integrity_check_failed()
+                # fetching done
+                with self._fetch_flag_lock:
+                    self._fetching = False
+                return
 
         # RPM is an archive at this phase
         if self._addon_data.content_type in ("archive", "rpm"):
@@ -649,6 +652,14 @@ class OSCAPSpoke(NormalSpoke):
 
         self._progress_label.set_markup("<b>%s</b>" % _("Network error encountered when fetching data."
                                                         " Please check that network is setup and working."))
+        self._wrong_content()
+
+    @gtk_action_wait
+    def _integrity_check_failed(self):
+        """Adapts the UI if integrity check fails"""
+
+        msg = _("The integrity check of the content failed. Cannot use the content.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
         self._wrong_content()
 
     @gtk_action_wait
