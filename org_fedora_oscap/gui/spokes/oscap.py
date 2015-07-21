@@ -408,10 +408,10 @@ class OSCAPSpoke(NormalSpoke):
         self._ready = True
 
         # all initialized, we can now let user set parameters
-        self._main_notebook.set_current_page(SET_PARAMS_PAGE)
+        fire_gtk_action(self._main_notebook.set_current_page, SET_PARAMS_PAGE)
 
         # and use control buttons
-        really_show(self._control_buttons)
+        fire_gtk_action(really_show, self._control_buttons)
 
         # pylint: disable-msg=E1101
         hubQ.send_ready(self.__class__.__name__, True)
