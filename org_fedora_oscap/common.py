@@ -397,7 +397,8 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
     entry_names = [entry.name.lstrip(".") for entry in entries]
 
     for fpath in ensure_has_files or ():
-        if not fpath in entry_names:
+        # RPM->cpio entries have absolute paths
+        if fpath not in entry_names and os.path.join("/", fpath) not in entry_names:
             msg = "File '%s' not found in the archive '%s'" % (fpath, rpm_path)
             raise ExtractionError(msg)
 
