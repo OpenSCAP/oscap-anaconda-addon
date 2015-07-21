@@ -110,7 +110,7 @@ class OSCAPdata(AddonData):
 
         """
 
-        if self.dry_run:
+        if self.dry_run or not self.profile_id:
             # the addon was run in the dry run mode, omit it from the kickstart
             return ""
 
