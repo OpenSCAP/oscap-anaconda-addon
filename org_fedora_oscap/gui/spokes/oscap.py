@@ -19,6 +19,7 @@
 #
 
 import threading
+from functools import wraps
 
 import gettext
 _ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
@@ -45,6 +46,9 @@ from pykickstart.errors import KickstartValueError
 
 # pylint: disable-msg=E0611
 from gi.repository import Gdk
+
+import logging
+log = logging.getLogger("anaconda")
 
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
@@ -104,6 +108,21 @@ def render_message_type(column, renderer, model, itr, user_data=None):
         renderer.set_property("stock-id", "gtk-info")
     else:
         renderer.set_property("stock-id", "gtk-dialog-question")
+
+def set_ready(func):
+    @wraps(func)
+    def decorated(self, *args, **kwargs):
+        ret = func(self, *args, **kwargs)
+
+        self._unitialized_status = None
+        self._ready = True
+        # pylint: disable-msg=E1101
+        hubQ.send_ready(self.__class__.__name__, True)
+        hubQ.send_message(self.__class__.__name__, self.status)
+
+        return ret
+
+    return decorated
 
 class OSCAPSpoke(NormalSpoke):
     """
@@ -181,6 +200,8 @@ class OSCAPSpoke(NormalSpoke):
         # prevent multiple simultaneous data fetches
         self._fetching = False
         self._fetch_flag_lock = threading.Lock()
+
+        self._error = None
 
     def initialize(self):
         """
@@ -304,6 +325,7 @@ class OSCAPSpoke(NormalSpoke):
                                      target=self._init_after_data_fetch,
                                      args=(thread_name,)))
 
+    @set_ready
     def _init_after_data_fetch(self, wait_for):
         """
         Waits for data fetching to be finished, extracts it (if needed),
@@ -379,6 +401,7 @@ class OSCAPSpoke(NormalSpoke):
             # fetching done
             with self._fetch_flag_lock:
                 self._fetching = False
+
             return
 
         if self._using_ds:
@@ -403,23 +426,18 @@ class OSCAPSpoke(NormalSpoke):
         # update the message store with the messages
         self._update_message_store()
 
-        # no more being unitialized
-        self._unitialized_status = None
-        self._ready = True
-
         # all initialized, we can now let user set parameters
         fire_gtk_action(self._main_notebook.set_current_page, SET_PARAMS_PAGE)
 
         # and use control buttons
         fire_gtk_action(really_show, self._control_buttons)
 
-        # pylint: disable-msg=E1101
-        hubQ.send_ready(self.__class__.__name__, True)
-        hubQ.send_message(self.__class__.__name__, self.status)
-
         # fetching done
         with self._fetch_flag_lock:
             self._fetching = False
+
+        # no error
+        self._error = None
 
     @property
     def _using_ds(self):
@@ -620,39 +638,43 @@ class OSCAPSpoke(NormalSpoke):
         # update messages according to the newly chosen profile
         self._update_message_store()
 
+    @set_ready
+    def _set_error(self, msg):
+        self._error = msg
+        self.set_error(msg)
+
     @gtk_action_wait
     def _invalid_content(self):
         """Callback for informing user about provided content invalidity."""
 
-        self._progress_label.set_markup("<b>%s</b>" % _("Invalid content "
-                                        "provided. Enter a different URL, "
-                                        "please."))
-        self._wrong_content()
+        msg = _("Invalid content provided. Enter a different URL, please.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
+        self._wrong_content(msg)
 
     @gtk_action_wait
     def _invalid_url(self):
         """Callback for informing user about provided URL invalidity."""
 
-        self._progress_label.set_markup("<b>%s</b>" % _("Invalid or unsupported content "
-                                                        "URL, please enter a different one."))
-        self._wrong_content()
+        msg = _("Invalid or unsupported content URL, please enter a different one.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
+        self._wrong_content(msg)
 
     @gtk_action_wait
     def _data_fetch_failed(self):
         """Adapts the UI if fetching data from entered URL failed"""
 
-        self._progress_label.set_markup("<b>%s</b>" % _("Failed to fetch "
-                                        "content. Enter a different URL, "
-                                        "please."))
-        self._wrong_content()
+        msg = _("Failed to fetch content. Enter a different URL, please.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
+        self._wrong_content(msg)
 
     @gtk_action_wait
     def _network_problem(self):
         """Adapts the UI if network error was encountered during data fetch"""
 
-        self._progress_label.set_markup("<b>%s</b>" % _("Network error encountered when fetching data."
-                                                        " Please check that network is setup and working."))
-        self._wrong_content()
+        msg = _("Network error encountered when fetching data."
+                " Please check that network is setup and working.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
+        self._wrong_content(msg)
 
     @gtk_action_wait
     def _integrity_check_failed(self):
@@ -660,7 +682,7 @@ class OSCAPSpoke(NormalSpoke):
 
         msg = _("The integrity check of the content failed. Cannot use the content.")
         self._progress_label.set_markup("<b>%s</b>" % msg)
-        self._wrong_content()
+        self._wrong_content(msg)
 
     @gtk_action_wait
     def _extraction_failed(self, err_msg):
@@ -669,17 +691,18 @@ class OSCAPSpoke(NormalSpoke):
         msg = _("Failed to extract content (%s). Enter a different URL, "
                 "please.") % err_msg
         self._progress_label.set_markup("<b>%s</b>" % msg)
-        self._wrong_content()
+        self._wrong_content(msg)
 
     @gtk_action_wait
-    def _wrong_content(self):
-        self._addon_data.content_url = ""
-        self._addon_data.content_type = ""
+    def _wrong_content(self, msg):
+        self._addon_data.clear_all()
         really_hide(self._progress_spinner)
         self._fetch_button.set_sensitive(True)
         self._content_url_entry.set_sensitive(True)
         self._content_url_entry.grab_focus()
         self._content_url_entry.select_region(0, -1)
+        self._content_handling_cls == None
+        self._set_error(msg)
 
     @gtk_action_wait
     def _switch_dry_run(self, dry_run):
@@ -792,6 +815,10 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
+        if not self._addon_data.content_defined or not self._active_profile:
+            # no errors for no content or no profile
+            self._error = None
+
         # store currently selected values to the addon data attributes
         if self._using_ds:
             self._addon_data.datastream_id = self._current_ds_id
@@ -838,8 +865,8 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         # no error message in the store
-        return all(row[0] != common.MESSAGE_TYPE_FATAL
-                   for row in self._message_store)
+        return not self._error and all(row[0] != common.MESSAGE_TYPE_FATAL
+                                       for row in self._message_store)
 
     @property
     @gtk_action_wait
@@ -853,6 +880,9 @@ class OSCAPSpoke(NormalSpoke):
         :rtype: str
 
         """
+
+        if self._error:
+            return _("Error fetching and loading content")
 
         if self._unitialized_status:
             # not initialized
@@ -951,9 +981,10 @@ class OSCAPSpoke(NormalSpoke):
         really_show(self._progress_spinner)
 
         if not data_fetch.can_fetch_from(url):
+            msg = _("Invalid or unsupported URL")
             # cannot start fetching
-            self._progress_label.set_markup("<b>%s</b>" % _("Invalid or unsupported URL"))
-            self._wrong_content()
+            self._progress_label.set_markup("<b>%s</b>" % msg)
+            self._wrong_content(msg)
             return
 
         self._progress_label.set_text(_("Fetching content..."))
