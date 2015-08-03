@@ -40,7 +40,7 @@ from pyanaconda.threads import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
 from pyanaconda.ui.gui.utils import gtk_action_wait, really_hide, really_show
-from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action
+from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action, GtkActionList
 
 from pykickstart.errors import KickstartValueError
 
@@ -407,8 +407,10 @@ class OSCAPSpoke(NormalSpoke):
         if self._using_ds:
             # populate the stores from items from the content
             self._ds_checklists = self._content_handler.get_data_streams_checklists()
+            add_ds_ids = GtkActionList()
             for dstream in self._ds_checklists.iterkeys():
-                self._add_ds_id(dstream)
+                add_ds_ids.add_action(self._add_ds_id, dstream)
+            add_ds_ids.fire()
         else:
             # hide the labels and comboboxes for datastream-id and xccdf-id
             # selection
@@ -470,6 +472,7 @@ class OSCAPSpoke(NormalSpoke):
 
         self._ds_store.append([ds_id])
 
+    @gtk_action_wait
     def _update_xccdfs_store(self):
         """
         Clears and repopulates the store with XCCDF IDs from the currently
@@ -485,6 +488,7 @@ class OSCAPSpoke(NormalSpoke):
         for xccdf_id in self._ds_checklists[self._current_ds_id]:
             self._xccdf_store.append([xccdf_id])
 
+    @gtk_action_wait
     def _update_profiles_store(self):
         """
         Clears and repopulates the store with profiles from the currently
@@ -528,6 +532,7 @@ class OSCAPSpoke(NormalSpoke):
         self._message_store.append([message.type, message.text])
 
     @dry_run_skip
+    @gtk_action_wait
     def _update_message_store(self, report_only=False):
         """
         Updates the message store with messages from rule evaluation.
