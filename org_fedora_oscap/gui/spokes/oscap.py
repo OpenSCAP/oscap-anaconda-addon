@@ -420,7 +420,13 @@ class OSCAPSpoke(NormalSpoke):
         self.refresh()
 
         # try to switch to the chosen profile (if any)
-        self._switch_profile()
+        selected = self._switch_profile()
+
+        if self._addon_data.profile_id and not selected:
+            # profile ID given, but it was impossible to select it -> invalid
+            # profile ID given
+            self._invalid_profile_id()
+            return
 
         # initialize the self._addon_data.rule_data
         self._addon_data.rule_data = self._rule_data
@@ -439,7 +445,7 @@ class OSCAPSpoke(NormalSpoke):
             self._fetching = False
 
         # no error
-        self._error = None
+        self._set_error(None)
 
     @property
     def _using_ds(self):
@@ -595,7 +601,7 @@ class OSCAPSpoke(NormalSpoke):
 
         if not profile_id:
             # no profile specified, nothing to do
-            return
+            return False
 
         itr = self._profiles_store.get_iter_first()
         while itr:
@@ -609,7 +615,7 @@ class OSCAPSpoke(NormalSpoke):
 
             if not all((ds, xccdf, profile_id)):
                 # something is not set -> do nothing
-                return
+                return False
         else:
             ds = None
             xccdf = None
@@ -628,25 +634,39 @@ class OSCAPSpoke(NormalSpoke):
         # remember the active profile
         self._active_profile = profile_id
 
+        return True
+
     @gtk_action_wait
     @dry_run_skip
     def _switch_profile(self):
-        """Switches to a current selected profile."""
+        """Switches to a current selected profile.
 
+        :returns: whether some profile was selected or not
+
+        """
+
+        self._set_error(None)
         profile = self._current_profile_id
         if not profile:
-            return
+            return False
 
         self._unselect_profile(self._active_profile)
-        self._select_profile(profile)
+        ret = self._select_profile(profile)
 
         # update messages according to the newly chosen profile
         self._update_message_store()
 
+        return ret
+
     @set_ready
     def _set_error(self, msg):
-        self._error = msg
-        self.set_error(msg)
+        """Set or clear error message"""
+        if msg:
+            self._error = msg
+            self.set_error(msg)
+        else:
+            self._error = None
+            self.clear_info()
 
     @gtk_action_wait
     def _invalid_content(self):
@@ -708,6 +728,12 @@ class OSCAPSpoke(NormalSpoke):
         self._content_url_entry.select_region(0, -1)
         self._content_handling_cls == None
         self._set_error(msg)
+
+    @gtk_action_wait
+    def _invalid_profile_id(self):
+        msg = _("Profile with ID '%s' not defined in the content. Select a different profile, please") % self._addon_data.profile_id
+        self._set_error(msg)
+        self._addon_data.profile_id = None
 
     @gtk_action_wait
     def _switch_dry_run(self, dry_run):
@@ -822,7 +848,7 @@ class OSCAPSpoke(NormalSpoke):
 
         if not self._addon_data.content_defined or not self._active_profile:
             # no errors for no content or no profile
-            self._error = None
+            self._set_error(None)
 
         # store currently selected values to the addon data attributes
         if self._using_ds:
