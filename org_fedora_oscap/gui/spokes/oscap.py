@@ -749,6 +749,7 @@ class OSCAPSpoke(NormalSpoke):
                                          _("Not applying security policy"))
             self._add_message(message)
 
+            self._set_error(None)
         else:
             # mark the active profile as selected
             self._select_profile(self._active_profile)
@@ -806,9 +807,6 @@ class OSCAPSpoke(NormalSpoke):
             really_show(self._control_buttons)
 
             self._main_notebook.set_current_page(SET_PARAMS_PAGE)
-
-        dry_run = self._dry_run_switch.get_active()
-        self._switch_dry_run(dry_run)
 
         self._active_profile = self._addon_data.profile_id
 
