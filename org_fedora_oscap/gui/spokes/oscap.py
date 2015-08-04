@@ -411,6 +411,7 @@ class OSCAPSpoke(NormalSpoke):
             for dstream in self._ds_checklists.iterkeys():
                 add_ds_ids.add_action(self._add_ds_id, dstream)
             add_ds_ids.fire()
+            fire_gtk_action(really_show, self._ids_box)
         else:
             # hide the labels and comboboxes for datastream-id and xccdf-id
             # selection
@@ -514,7 +515,7 @@ class OSCAPSpoke(NormalSpoke):
 
         if self._using_ds:
             profiles = self._content_handler.get_profiles(self._current_ds_id,
-                                                     self._current_xccdf_id)
+                                                          self._current_xccdf_id)
         else:
             # pylint: disable-msg=E1103
             profiles = self._content_handler.profiles
@@ -811,6 +812,7 @@ class OSCAPSpoke(NormalSpoke):
         self._active_profile = self._addon_data.profile_id
 
         if self._using_ds:
+            fire_gtk_action(really_show, self._ids_box)
             if self._addon_data.datastream_id:
                 set_combo_selection(self._ds_combo,
                                     self._addon_data.datastream_id)
@@ -826,6 +828,7 @@ class OSCAPSpoke(NormalSpoke):
                     set_combo_selection(self._xccdf_combo,
                                         self._addon_data.xccdf_id)
         else:
+            fire_gtk_action(really_hide, self._ids_box)
             # no combobox changes --> need to update profiles store manually
             self._update_profiles_store()
 
