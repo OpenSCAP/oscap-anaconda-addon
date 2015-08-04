@@ -58,7 +58,7 @@ SET_PARAMS_PAGE = 0
 GET_CONTENT_PAGE = 1
 
 # helper functions
-def set_combo_selection(combo, item):
+def set_combo_selection(combo, item, unset_first=False):
     """
     Set selected item of the combobox.
 
@@ -66,6 +66,9 @@ def set_combo_selection(combo, item):
     :rtype: bool
 
     """
+
+    if unset_first:
+        combo.set_active_iter(None)
 
     model = combo.get_model()
     if not model:
@@ -408,6 +411,7 @@ class OSCAPSpoke(NormalSpoke):
             # populate the stores from items from the content
             self._ds_checklists = self._content_handler.get_data_streams_checklists()
             add_ds_ids = GtkActionList()
+            add_ds_ids.add_action(self._ds_store.clear)
             for dstream in self._ds_checklists.iterkeys():
                 add_ds_ids.add_action(self._add_ds_id, dstream)
             add_ds_ids.fire()
@@ -815,18 +819,20 @@ class OSCAPSpoke(NormalSpoke):
             fire_gtk_action(really_show, self._ids_box)
             if self._addon_data.datastream_id:
                 set_combo_selection(self._ds_combo,
-                                    self._addon_data.datastream_id)
+                                    self._addon_data.datastream_id,
+                                    unset_first=True)
             else:
                 try:
                     default_ds = self._ds_checklists.iterkeys().next()
-                    set_combo_selection(self._ds_combo, default_ds)
+                    set_combo_selection(self._ds_combo, default_ds, unset_first=True)
                 except StopIteration:
                     # no data stream available
                     pass
 
                 if self._addon_data.datastream_id and self._addon_data.xccdf_id:
                     set_combo_selection(self._xccdf_combo,
-                                        self._addon_data.xccdf_id)
+                                        self._addon_data.xccdf_id,
+                                        unset_first=True)
         else:
             fire_gtk_action(really_hide, self._ids_box)
             # no combobox changes --> need to update profiles store manually
@@ -945,9 +951,11 @@ class OSCAPSpoke(NormalSpoke):
     def on_ds_combo_changed(self, *args):
         """Handler for the datastream ID change."""
 
-        self._update_xccdfs_store()
-
         ds_id = self._current_ds_id
+        if not ds_id:
+            return
+
+        self._update_xccdfs_store()
         first_checklist = self._ds_checklists[ds_id][0]
 
         set_combo_selection(self._xccdf_combo, first_checklist)
