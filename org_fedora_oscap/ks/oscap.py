@@ -409,7 +409,7 @@ class OSCAPdata(AddonData):
             # selected
             return
 
-        if not os.path.exists(self.raw_preinst_content_path):
+        if not os.path.exists(self.preinst_content_path) and not os.path.exists(self.raw_preinst_content_path):
             # content not available/fetched yet
             try:
                 self._fetch_content_and_initialize()

@@ -1039,6 +1039,7 @@ class OSCAPSpoke(NormalSpoke):
         self.refresh()
 
     def on_use_ssg_clicked(self, *args):
+        self._addon_data.clear_all()
         self._addon_data.content_type = "scap-security-guide"
         self._addon_data.xccdf_path = common.SSG_DIR + common.SSG_XCCDF
         self._fetch_data_and_initialize()
