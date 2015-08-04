@@ -149,11 +149,15 @@ class DataStreamHandler(object):
             msg = "Invalid file path: '%s'" % dsc_file_path
             raise DataStreamHandlingError(msg)
 
+        self._dsc_file_path = dsc_file_path
+
         # create an XCCDF session for the file
         self._session = OSCAP.xccdf_session_new(dsc_file_path)
         if not self._session:
             msg = "'%s' is not a valid SCAP content file" % dsc_file_path
             raise DataStreamHandlingError(msg)
+        if OSCAP.xccdf_session_load(self._session) != 0:
+            raise DataStreamHandlingError(OSCAP.oscap_err_desc())
 
         if tailoring_file_path:
             OSCAP.xccdf_session_set_user_tailoring_file(self._session,
@@ -263,6 +267,13 @@ class DataStreamHandler(object):
         # not found in the cache, needs to be gathered
 
         # set the data stream and component (checklist) for the session
+        OSCAP.xccdf_session_free(self._session)
+
+        self._session = OSCAP.xccdf_session_new(self._dsc_file_path)
+        if not self._session:
+            msg = "'%s' is not a valid SCAP content file" % self._dsc_file_path
+            raise DataStreamHandlingError(msg)
+
         OSCAP.xccdf_session_set_datastream_id(self._session, data_stream_id)
         OSCAP.xccdf_session_set_component_id(self._session, checklist_id)
         if OSCAP.xccdf_session_load(self._session) != 0:
