@@ -154,6 +154,9 @@ class OSCAPSpoke(NormalSpoke):
     # name of the .glade file in the same directory as this source
     uiFile = "oscap.glade"
 
+    # name of the file providing help content for this spoke
+    helpFile = "SecurityPolicySpoke.xml"
+
     # category this spoke belongs to
     category = SecurityCategory
 
