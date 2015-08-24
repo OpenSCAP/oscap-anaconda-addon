@@ -92,10 +92,14 @@ def explore_content_files(fpaths):
     """
 
     def get_doc_type(file_path):
-        for line in execReadlines("oscap", ["info", file_path]):
-            if line.startswith("Document type:"):
-                _prefix, _sep, type_info = line.partition(":")
-                return type_info.strip()
+        try:
+            for line in execReadlines("oscap", ["info", file_path]):
+                if line.startswith("Document type:"):
+                    _prefix, _sep, type_info = line.partition(":")
+                    return type_info.strip()
+        except OSError:
+            # 'oscap info' exitted with a non-zero exit code -> unknown doc type
+            return None
 
     xccdf_file = ""
     cpe_file = ""
@@ -105,6 +109,8 @@ def explore_content_files(fpaths):
 
     for fpath in fpaths:
         doc_type = get_doc_type(fpath)
+        if not doc_type:
+            continue
 
         # prefer DS over standalone XCCDF
         if doc_type == "Source Data Stream" and (not xccdf_file or not found_ds):
