@@ -418,11 +418,8 @@ class OSCAPSpoke(NormalSpoke):
             for dstream in self._ds_checklists.iterkeys():
                 add_ds_ids.add_action(self._add_ds_id, dstream)
             add_ds_ids.fire()
-            fire_gtk_action(really_show, self._ids_box)
-        else:
-            # hide the labels and comboboxes for datastream-id and xccdf-id
-            # selection
-            fire_gtk_action(really_hide, self._ids_box)
+
+        self._update_ids_visibility()
 
         # refresh UI elements
         self.refresh()
@@ -485,6 +482,25 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         self._ds_store.append([ds_id])
+
+    @gtk_action_wait
+    def _update_ids_visibility(self):
+        """
+        Updates visibility of the combo boxes that are used to select the DS and
+        XCCDF IDs.
+
+        """
+
+        if self._using_ds:
+            # only show the combo boxes if there are multiple data streams or
+            # multiple xccdfs (IOW if there's something to choose from)
+            ds_ids = self._ds_checklists.keys()
+            if len(ds_ids) > 1 or len(self._ds_checklists[ds_ids[0]]) > 1:
+                really_show(self._ids_box)
+                return
+
+        # not showing, hide instead
+        really_hide(self._ids_box)
 
     @gtk_action_wait
     def _update_xccdfs_store(self):
@@ -818,8 +834,9 @@ class OSCAPSpoke(NormalSpoke):
 
         self._active_profile = self._addon_data.profile_id
 
+        self._update_ids_visibility()
+
         if self._using_ds:
-            fire_gtk_action(really_show, self._ids_box)
             if self._addon_data.datastream_id:
                 set_combo_selection(self._ds_combo,
                                     self._addon_data.datastream_id,
@@ -837,7 +854,6 @@ class OSCAPSpoke(NormalSpoke):
                                         self._addon_data.xccdf_id,
                                         unset_first=True)
         else:
-            fire_gtk_action(really_hide, self._ids_box)
             # no combobox changes --> need to update profiles store manually
             self._update_profiles_store()
 
