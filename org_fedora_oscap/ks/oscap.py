@@ -491,8 +491,9 @@ class OSCAPdata(AddonData):
 
         """
 
-        if self.dry_run:
-            # nothing to be done in the dry-run mode
+        if self.dry_run or not self.profile_id:
+            # nothing more to be done in the dry-run mode or if no profile is
+            # selected
             return
 
         target_content_dir = utils.join_paths(getSysroot(),
