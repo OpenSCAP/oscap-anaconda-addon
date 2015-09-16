@@ -392,7 +392,6 @@ class PasswdRules(RuleHandler):
         """Constructor initializing attributes."""
 
         self._minlen = 0
-        self._removed_password = None
 
     def __str__(self):
         """Standard method useful for debugging and testing."""
@@ -415,7 +414,7 @@ class PasswdRules(RuleHandler):
             # no password restrictions, nothing to be done here
             return []
 
-        if not ksdata.rootpw.password and self._removed_password is None:
+        if not ksdata.rootpw.password:
             # root password was not set
 
             # password length enforcement is not suported in the Anaconda yet
@@ -427,29 +426,13 @@ class PasswdRules(RuleHandler):
             if ksdata.rootpw.isCrypted:
                 msg = _("cannot check root password length (password is crypted)")
                 return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
-            elif len(ksdata.rootpw.password) < self._minlen or \
-                    self._removed_password is not None:
-                # too short or already removed
-                msg = _("root password was too short, a longer one with at "
-                        "least %d characters will be required" % self._minlen)
-                if not report_only and self._removed_password is None:
-                    # remove the password and reset the seen flag no to confuse Anaconda
-                    self._removed_password = ksdata.rootpw.password
-                    ksdata.rootpw.password = ""
-                    ksdata.rootpw.seen = False
-                return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
+            elif len(ksdata.rootpw.password) < self._minlen:
+                # too short
+                msg = _("root password is too short, a longer one with at "
+                        "least %d characters is required" % self._minlen)
+                return [RuleMessage(common.MESSAGE_TYPE_FATAL, msg)]
             else:
                 return []
-
-    def revert_changes(self, ksdata, storage):
-        """:see: RuleHandler.revert_changes"""
-
-        # set the old password back
-        if self._removed_password is not None:
-            ksdata.rootpw.password = self._removed_password
-            ksdata.rootpw.seen = True
-
-            self._removed_password = None
 
 class PackageRules(RuleHandler):
     """Simple class holding data from the rules affecting installed packages."""
