@@ -17,12 +17,18 @@ __all__ = ["fetch_data", "can_fetch_from"]
 # prefixes of the URLs that need network connection
 NET_URL_PREFIXES = ("http", "https", "ftp")
 
+# prefixes of the URLs that may not need network connection
+LOCAL_URL_PREFIXES = ("file",)
+
 # TODO: needs improvements
 HTTP_URL_RE_STR = r"(https?)://(.*)"
 HTTP_URL_RE = re.compile(HTTP_URL_RE_STR)
 
 FTP_URL_RE_STR = r"(ftp)://(.*)"
 FTP_URL_RE = re.compile(FTP_URL_RE_STR)
+
+FILE_URL_RE_STR = r"(file)://(.*)"
+FILE_URL_RE = re.compile(FILE_URL_RE_STR)
 
 class DataFetchError(Exception):
     """Parent class for the exception classes defined in this module."""
@@ -63,8 +69,8 @@ def can_fetch_from(url):
     :rtype: str
 
     """
-
-    return any(url.startswith(prefix) for prefix in NET_URL_PREFIXES)
+    resources = NET_URL_PREFIXES + LOCAL_URL_PREFIXES
+    return any(url.startswith(prefix) for prefix in resources)
 
 def fetch_data(url, out_file, ca_certs=None):
     """
@@ -90,14 +96,13 @@ def fetch_data(url, out_file, ca_certs=None):
     out_dir = os.path.dirname(out_file)
     utils.ensure_dir_exists(out_dir)
 
-    if url.startswith("http://") or url.startswith("https://") \
-       or url.startswith("ftp://"):
-        _fetch_http_ftp_data(url, out_file, ca_certs)
+    if can_fetch_from(url):
+        _curl_fetch(url, out_file, ca_certs)
     else:
         msg = "Cannot fetch data from '%s': unknown URL format" % url
         raise UnknownURLformatError(msg)
 
-def _fetch_http_ftp_data(url, out_file, ca_certs=None):
+def _curl_fetch(url, out_file, ca_certs=None):
     """
     Function that fetches data and writes it out to the given file path. If a
     path to the file with CA certificates is given and the url starts with
@@ -128,6 +133,11 @@ def _fetch_http_ftp_data(url, out_file, ca_certs=None):
             if '@' not in path:
                 # no user:pass given -> use anonymous login to the FTP server
                 url = protocol + "://anonymous:@" + path
+    elif url.startswith("file"):
+        match = FILE_URL_RE.match(url)
+        if not match:
+            msg = "Wrong url not matching '%s'" % FILE_URL_RE_STR
+            raise WrongRequestError(msg)
     else:
         match = HTTP_URL_RE.match(url)
         if not match:
