@@ -36,6 +36,7 @@ from functools import wraps
 
 from pyanaconda import constants
 from pyanaconda import nm
+from pyanaconda.constants import product
 from pyanaconda.threads import threadMgr, AnacondaThread
 
 from org_fedora_oscap import utils
@@ -50,6 +51,9 @@ TARGET_CONTENT_DIR = "/root/openscap_data/"
 
 SSG_DIR = "/usr/share/xml/scap/ssg/fedora/"
 SSG_XCCDF = "ssg-fedora-xccdf.xml"
+if product.productName.lower() != 'anaconda':
+    if product.productName.lower() != 'fedora':
+        SSG_XCCDF = "ssg-%s%s-xccdf.xml" %(product.productName.lower(), product.productVersion)
 
 RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR, "eval_remediate_results.xml")
 
