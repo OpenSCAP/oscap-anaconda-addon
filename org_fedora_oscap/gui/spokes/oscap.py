@@ -27,7 +27,6 @@ N_ = lambda x: x
 
 # the path to addons is in sys.path so we can import things
 # from org_fedora_oscap
-from org_fedora_oscap.categories.security import SecurityCategory
 from org_fedora_oscap import common
 from org_fedora_oscap import data_fetch
 from org_fedora_oscap import rule_handling
@@ -41,6 +40,7 @@ from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
 from pyanaconda.ui.gui.utils import gtk_action_wait, really_hide, really_show
 from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action, GtkActionList
+from pyanaconda.ui.categories.system import SystemCategory
 
 from pykickstart.errors import KickstartValueError
 
@@ -158,7 +158,7 @@ class OSCAPSpoke(NormalSpoke):
     helpFile = "SecurityPolicySpoke.xml"
 
     # category this spoke belongs to
-    category = SecurityCategory
+    category = SystemCategory
 
     # spoke icon (will be displayed on the hub)
     # preferred are the -symbolic icons as these are used in Anaconda's spokes
