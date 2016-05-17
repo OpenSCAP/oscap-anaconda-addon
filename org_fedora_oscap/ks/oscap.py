@@ -413,7 +413,7 @@ class OSCAPdata(AddonData):
             # content not available/fetched yet
             try:
                 self._fetch_content_and_initialize()
-            except common.OSCAPaddonError as e:
+            except (common.OSCAPaddonError, data_fetch.DataFetchError) as e:
                 log.error("Failed to fetch and initialize SCAP content!")
                 msg = _("There was an error fetching and loading the security content:\n" +
                         "%s\n" +
