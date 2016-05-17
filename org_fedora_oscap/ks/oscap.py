@@ -466,10 +466,28 @@ class OSCAPdata(AddonData):
 
         # evaluate rules, do automatic fixes and stop if something that cannot
         # be fixed automatically is wrong
-        messages = self.rule_data.eval_rules(ksdata, storage)
-        if any(message.type == common.MESSAGE_TYPE_FATAL
-               for message in messages):
-            raise MisconfigurationError("Wrong configuration detected!")
+        fatal_messages = [message for message in self.rule_data.eval_rules(ksdata, storage)
+                          if message.type == common.MESSAGE_TYPE_FATAL]
+        if any(fatal_messages):
+            msg = "Wrong configuration detected!\n"
+            msg += "\n".join(message.text for message in fatal_messages)
+            msg += "\nThe installation should be aborted. Do you wish to continue anyway?"
+            if flags.flags.automatedInstall and not flags.flags.ksprompt:
+                # cannot have ask in a non-interactive kickstart installation
+                raise errors.CmdlineError(msg)
+
+            answ = errors.errorHandler.ui.showYesNoQuestion(msg)
+            if answ == errors.ERROR_CONTINUE:
+                # prevent any futher actions here by switching to the dry
+                # run mode and let things go on
+                self.dry_run = True
+                return
+            else:
+                # Let's sleep forever to prevent any further actions and wait for
+                # the main thread to quit the process.
+                progressQ.send_quit(1)
+                while True:
+                    time.sleep(100000)
 
         # add packages needed on the target system to the list of packages
         # that are requested to be installed
