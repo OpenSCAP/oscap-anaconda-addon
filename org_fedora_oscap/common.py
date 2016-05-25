@@ -403,17 +403,20 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
             msg = "File '%s' not found in the archive '%s'" % (fpath, rpm_path)
             raise ExtractionError(msg)
 
-    for entry in entries:
-        dirname = os.path.dirname(entry.name.lstrip("."))
-        out_dir = os.path.normpath(root + dirname)
-        utils.ensure_dir_exists(out_dir)
+    try:
+        for entry in entries:
+            dirname = os.path.dirname(entry.name.lstrip("."))
+            out_dir = os.path.normpath(root + dirname)
+            utils.ensure_dir_exists(out_dir)
 
-        out_fpath = os.path.normpath(root + entry.name.lstrip("."))
-        with open(out_fpath, "wb") as out_file:
-            buf = entry.read(IO_BUF_SIZE)
-            while buf:
-                out_file.write(buf)
+            out_fpath = os.path.normpath(root + entry.name.lstrip("."))
+            with open(out_fpath, "wb") as out_file:
                 buf = entry.read(IO_BUF_SIZE)
+                while buf:
+                    out_file.write(buf)
+                    buf = entry.read(IO_BUF_SIZE)
+    except (IOError, cpioarchive.CpioError) as e:
+        raise ExtractionError(e)
 
     # cleanup
     archive.close()
