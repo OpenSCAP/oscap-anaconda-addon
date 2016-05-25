@@ -525,7 +525,7 @@ class OSCAPdata(AddonData):
             shutil.copy2(self.raw_preinst_content_path, target_content_dir)
 
             # and install it with yum
-            ret = iutil.execInSysroot("yum", ["-y", "install",
+            ret = iutil.execInSysroot("yum", ["-y", "--nogpg", "install",
                                               self.raw_postinst_content_path])
             if ret != 0:
                 raise common.ExtractionError("Failed to install content "
