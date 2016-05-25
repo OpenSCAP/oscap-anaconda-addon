@@ -410,6 +410,8 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
             utils.ensure_dir_exists(out_dir)
 
             out_fpath = os.path.normpath(root + entry.name.lstrip("."))
+            if os.path.exists(out_fpath):
+                continue
             with open(out_fpath, "wb") as out_file:
                 buf = entry.read(IO_BUF_SIZE)
                 while buf:
