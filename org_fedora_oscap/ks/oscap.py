@@ -388,7 +388,7 @@ class OSCAPdata(AddonData):
         for rule in rules.splitlines():
             self.rule_data.new_rule(rule)
 
-    def setup(self, storage, ksdata, instclass):
+    def setup(self, storage, ksdata, instclass, payload):
         """
         The setup method that should make changes to the runtime environment
         according to the data stored in this object.
@@ -498,7 +498,7 @@ class OSCAPdata(AddonData):
             if pkg not in ksdata.packages.packageList:
                 ksdata.packages.packageList.append(pkg)
 
-    def execute(self, storage, ksdata, instclass, users):
+    def execute(self, storage, ksdata, instclass, users, payload):
         """
         The execute method that should make changes to the installed system. It
         is called only once in the post-install setup phase.
