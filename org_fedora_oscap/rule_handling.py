@@ -223,6 +223,11 @@ class RuleData(RuleHandler):
         if opts.passwd:
             self._bootloader_rules.require_password()
 
+    @property
+    def passwd_rules(self):
+        # needed for fixups in GUI
+        return self._passwd_rules
+
 class PartRules(RuleHandler):
     """Simple class holding data from the rules affecting partitioning."""
 
@@ -324,7 +329,7 @@ class PartRule(RuleHandler):
         if self._mount_point not in storage.mountpoints:
             msg = _("%s must be on a separate partition or logical "
                     "volume" % self._mount_point)
-            messages.append(RuleMessage(common.MESSAGE_TYPE_FATAL, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_FATAL, msg))
 
             # mount point doesn't exist, nothing more can be found here
             return messages
@@ -337,7 +342,7 @@ class PartRule(RuleHandler):
         for opt in self._added_mount_options:
             msg = msg_tmpl % { "mount_option": opt,
                                "mount_point": self._mount_point }
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
         # mount point to be created during installation
         target_mount_point = storage.mountpoints[self._mount_point]
@@ -352,7 +357,7 @@ class PartRule(RuleHandler):
                                "mount_point": self._mount_point }
 
             # add message for the mount option in any case
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
             # add new options to the target mount point if not reporting only
             if not report_only:
@@ -428,18 +433,18 @@ class PasswdRules(RuleHandler):
 
             msg = _("make sure to create password with minimal length of %d "
                     "characters") % self._minlen
-            ret = [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
+            ret = [RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING, msg)]
         else:
             # root password set
             if ksdata.rootpw.isCrypted:
                 msg = _("cannot check root password length (password is crypted)")
                 log.warning("cannot check root password length (password is crypted)")
-                return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
+                return [RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING, msg)]
             elif len(ksdata.rootpw.password) < self._minlen:
                 # too short
                 msg = _("root password is too short, a longer one with at "
                         "least %d characters is required") % self._minlen
-                ret = [RuleMessage(common.MESSAGE_TYPE_FATAL, msg)]
+                ret = [RuleMessage(self.__class__, common.MESSAGE_TYPE_FATAL, msg)]
             else:
                 ret = []
 
@@ -532,7 +537,7 @@ class PackageRules(RuleHandler):
         for pkg in self._added_pkgs:
             msg = _("package '%s' has been added to the list of to be installed "
                     "packages" % pkg)
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
         # packages, that should be added
         packages_to_add = (pkg for pkg in self._add_pkgs
@@ -546,7 +551,7 @@ class PackageRules(RuleHandler):
 
             msg = _("package '%s' has been added to the list of to be installed "
                     "packages" % pkg)
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
         ### now do the same for the packages that should be excluded
 
@@ -554,7 +559,7 @@ class PackageRules(RuleHandler):
         for pkg in self._removed_pkgs:
             msg = _("package '%s' has been added to the list of excluded "
                     "packages" % pkg)
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
         # packages, that should be added
         packages_to_remove = (pkg for pkg in self._remove_pkgs
@@ -568,7 +573,7 @@ class PackageRules(RuleHandler):
 
             msg = _("package '%s' has been added to the list of excluded "
                     "packages" % pkg)
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
         return messages
 
@@ -618,8 +623,8 @@ class BootloaderRules(RuleHandler):
             # Anaconda doesn't provide a way to set bootloader password, so
             # users cannot do much about that --> we shouldn't stop the
             # installation, should we?
-            return [RuleMessage(common.MESSAGE_TYPE_WARNING,
-                               "boot loader password not set up")]
+            return [RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING,
+                                "boot loader password not set up")]
         else:
             return []
 

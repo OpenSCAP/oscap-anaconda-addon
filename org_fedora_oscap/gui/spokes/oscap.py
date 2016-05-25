@@ -200,6 +200,11 @@ class OSCAPSpoke(NormalSpoke):
         # leaving the spoke
         self._rule_data = None
 
+        # used for storing previously set root password if we need to remove it
+        # due to the chosen policy (so that we can put it back in case of
+        # revert)
+        self.__old_root_pw = None
+
         # used to check if the profile was changed or not
         self._active_profile = None
 
@@ -584,19 +589,42 @@ class OSCAPSpoke(NormalSpoke):
             # no messages from the rules, add a message informing about that
             if not self._active_profile:
                 # because of no profile
-                message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
-                                           _("No profile selected"))
+                message = common.RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO,
+                                             _("No profile selected"))
             else:
                 # because of no pre-inst rules
-                message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
-                              _("No rules for the pre-installation phase"))
+                message = common.RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO,
+                                             _("No rules for the pre-installation phase"))
             self._add_message(message)
 
             # nothing more to be done
             return
 
+        self._resolve_rootpw_issues(messages, report_only)
         for msg in messages:
             self._add_message(msg)
+
+    def _resolve_rootpw_issues(self, messages, report_only):
+        """Mitigate root password issues (which are not fatal in GUI)"""
+        fatal_rootpw_msgs = [msg for msg in messages
+                             if msg.origin == rule_handling.PasswdRules and msg.type == common.MESSAGE_TYPE_FATAL]
+        if fatal_rootpw_msgs:
+            for msg in fatal_rootpw_msgs:
+                # cannot just change the message type because it is a namedtuple
+                messages.remove(msg)
+                messages.append(common.RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING, msg.text))
+            if not report_only:
+                self.__old_root_pw = self.data.rootpw.password
+                self.data.rootpw.password = None
+                self.__old_root_pw_seen = self.data.rootpw.password.seen
+                self.data.rootpw.password.seen = False
+
+    def _revert_rootpw_changes(self):
+        if self.__old_root_pw is not None:
+            self.data.rootpw.password = self.__old_root_pw
+            self.data.rootpw.password.seen = self.__old_root_pw_seen
+            self.__old_root_pw = None
+            self.__old_root_pw_seen = None
 
     @gtk_action_wait
     def _unselect_profile(self, profile_id):
@@ -615,6 +643,7 @@ class OSCAPSpoke(NormalSpoke):
         if self._rule_data:
             # revert changes and clear rule_data (no longer valid)
             self._rule_data.revert_changes(self.data, self._storage)
+            self._revert_rootpw_changes()
             self._rule_data = None
 
         self._active_profile = None
@@ -769,7 +798,7 @@ class OSCAPSpoke(NormalSpoke):
 
             # no messages in the dry-run mode
             self._message_store.clear()
-            message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
+            message = common.RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO,
                                          _("Not applying security policy"))
             self._add_message(message)
 

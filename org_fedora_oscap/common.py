@@ -82,9 +82,10 @@ MESSAGE_TYPE_WARNING = 1
 MESSAGE_TYPE_INFO = 2
 
 # namedtuple for messages returned from the rules evaluation
+#   origin -- class (inherited from RuleHandler) that generated the message
 #   type -- one of the MESSAGE_TYPE_* constants defined above
 #   text -- the actual message that should be displayed, logged, ...
-RuleMessage = namedtuple("RuleMessage", ["type", "text"])
+RuleMessage = namedtuple("RuleMessage", ["origin", "type", "text"])
 
 def get_fix_rules_pre(profile, fpath, ds_id="", xccdf_id="", tailoring=""):
     """
