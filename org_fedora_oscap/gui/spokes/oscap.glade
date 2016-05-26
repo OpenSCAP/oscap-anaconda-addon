@@ -351,32 +351,38 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkTreeView" id="changesView">
+                          <object class="GtkScrolledWindow" id="changesWindow">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
-                            <property name="hexpand">True</property>
-                            <property name="vexpand">True</property>
-                            <property name="model">changesStore</property>
-                            <property name="headers_visible">False</property>
-                            <property name="headers_clickable">False</property>
-                            <property name="search_column">0</property>
-                            <child internal-child="selection">
-                              <object class="GtkTreeSelection" id="treeview-selection3"/>
-                            </child>
+                            <property name="shadow_type">in</property>
                             <child>
-                              <object class="GtkTreeViewColumn" id="messageTypeColumn">
-                                <child>
-                                  <object class="GtkCellRendererPixbuf" id="messageTypeRenderer"/>
+                              <object class="GtkTreeView" id="changesView">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="hexpand">True</property>
+                                <property name="model">changesStore</property>
+                                <property name="headers_visible">False</property>
+                                <property name="headers_clickable">False</property>
+                                <property name="search_column">0</property>
+                                <child internal-child="selection">
+                                  <object class="GtkTreeSelection" id="treeview-selection"/>
                                 </child>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkTreeViewColumn" id="messageColumn">
                                 <child>
-                                  <object class="GtkCellRendererText" id="cellrenderertext2"/>
-                                  <attributes>
-                                    <attribute name="text">1</attribute>
-                                  </attributes>
+                                  <object class="GtkTreeViewColumn" id="messageTypeColumn">
+                                    <child>
+                                      <object class="GtkCellRendererPixbuf" id="messageTypeRenderer"/>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="messageColumn">
+                                    <child>
+                                      <object class="GtkCellRendererText" id="cellrenderertext2"/>
+                                      <attributes>
+                                        <attribute name="text">1</attribute>
+                                      </attributes>
+                                    </child>
+                                  </object>
                                 </child>
                               </object>
                             </child>
