@@ -429,6 +429,10 @@ class OSCAPSpoke(NormalSpoke):
         # refresh UI elements
         self.refresh()
 
+        # let all initialization and configuration happen before we evaluate the
+        # setup
+        threadMgr.wait_all()
+
         # try to switch to the chosen profile (if any)
         selected = self._switch_profile()
 
