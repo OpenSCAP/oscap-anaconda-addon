@@ -720,6 +720,7 @@ class OSCAPSpoke(NormalSpoke):
         """Set or clear error message"""
         if msg:
             self._error = msg
+            self.clear_info()
             self.set_error(msg)
         else:
             self._error = None
