@@ -147,7 +147,7 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id="",
 
     # pylint thinks Popen has no attribute returncode
     # pylint: disable-msg=E1101
-    if proc.returncode != 0 or stderr:
+    if proc.returncode != 0:
         msg = "Failed to generate fix rules with the oscap tool: %s" % stderr
         raise OSCAPaddonError(msg)
 
@@ -224,7 +224,7 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     # save stdout?
     # pylint thinks Popen has no attribute returncode
     # pylint: disable-msg=E1101
-    if proc.returncode not in (0, 2) or stderr:
+    if proc.returncode not in (0, 2):
         # 0 -- success; 2 -- no error, but checks/remediation failed
         msg = "Content evaluation and remediation with the oscap tool "\
             "failed: %s" % stderr
