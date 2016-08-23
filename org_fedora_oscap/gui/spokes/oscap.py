@@ -620,13 +620,13 @@ class OSCAPSpoke(NormalSpoke):
             if not report_only:
                 self.__old_root_pw = self.data.rootpw.password
                 self.data.rootpw.password = None
-                self.__old_root_pw_seen = self.data.rootpw.password.seen
-                self.data.rootpw.password.seen = False
+                self.__old_root_pw_seen = self.data.rootpw.seen
+                self.data.rootpw.seen = False
 
     def _revert_rootpw_changes(self):
         if self.__old_root_pw is not None:
             self.data.rootpw.password = self.__old_root_pw
-            self.data.rootpw.password.seen = self.__old_root_pw_seen
+            self.data.rootpw.seen = self.__old_root_pw_seen
             self.__old_root_pw = None
             self.__old_root_pw_seen = None
 
