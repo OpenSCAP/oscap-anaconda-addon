@@ -581,11 +581,11 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
+        self._message_store.clear()
+
         if not self._rule_data:
             # RuleData instance not initialized, cannot do anything
             return
-
-        self._message_store.clear()
 
         messages = self._rule_data.eval_rules(self.data, self._storage,
                                               report_only)
@@ -660,12 +660,6 @@ class OSCAPSpoke(NormalSpoke):
             # no profile specified, nothing to do
             return False
 
-        itr = self._profiles_store.get_iter_first()
-        while itr:
-            if self._profiles_store[itr][0] == profile_id:
-                self._profiles_store.set_value(itr, 2, True)
-            itr = self._profiles_store.iter_next(itr)
-
         if self._using_ds:
             ds = self._current_ds_id
             xccdf = self._current_xccdf_id
@@ -678,10 +672,20 @@ class OSCAPSpoke(NormalSpoke):
             xccdf = None
 
         # get pre-install fix rules from the content
-        rules = common.get_fix_rules_pre(profile_id,
-                                         self._addon_data.preinst_content_path,
-                                         ds, xccdf,
-                                         self._addon_data.preinst_tailoring_path)
+        try:
+            rules = common.get_fix_rules_pre(profile_id,
+                                             self._addon_data.preinst_content_path,
+                                             ds, xccdf,
+                                             self._addon_data.preinst_tailoring_path)
+        except common.OSCAPaddonError:
+            self._set_error("Failed to get rules for the profile '%s'" % profile_id)
+            return False
+
+        itr = self._profiles_store.get_iter_first()
+        while itr:
+            if self._profiles_store[itr][0] == profile_id:
+                self._profiles_store.set_value(itr, 2, True)
+            itr = self._profiles_store.iter_next(itr)
 
         # parse and store rules with a clean RuleData instance
         self._rule_data = rule_handling.RuleData()
