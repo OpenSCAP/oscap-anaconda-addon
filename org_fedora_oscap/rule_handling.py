@@ -452,7 +452,9 @@ class PasswdRules(RuleHandler):
         pw_policy = ksdata.anaconda.pwpolicy.get_policy("root")
         if pw_policy is None:
             pw_policy = F22_PwPolicyData()
+            log.info("OSCAP addon: setting password policy %s" % pw_policy)
             ksdata.anaconda.pwpolicy.policyList.append(pw_policy)
+            log.info("OSCAP addon: password policy list: %s" % ksdata.anaconda.pwpolicy.policyList)
             self._created_policy = True
 
         self._orig_minlen = pw_policy.minlen
@@ -467,7 +469,9 @@ class PasswdRules(RuleHandler):
 
         pw_policy = ksdata.anaconda.pwpolicy.get_policy("root")
         if self._created_policy:
+            log.info("OSCAP addon: removing password policy: %s" % pw_policy)
             ksdata.anaconda.pwpolicy.policyList.remove(pw_policy)
+            log.info("OSCAP addon: password policy list: %s" % ksdata.anaconda.pwpolicy.policyList)
             self._created_policy = False
         else:
             if self._orig_minlen is not None:
