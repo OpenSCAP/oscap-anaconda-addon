@@ -30,6 +30,10 @@ import subprocess
 import zipfile
 import tarfile
 import cpioarchive
+import re
+
+import logging
+log = logging.getLogger("anaconda")
 
 from collections import namedtuple
 from functools import wraps
@@ -145,6 +149,11 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id="",
 
     (stdout, stderr) = proc.communicate()
 
+    messages = re.findall(r'OpenSCAP Error:.*', stderr)
+    if messages:
+        for message in messages:
+            log.warning(message)
+
     # pylint thinks Popen has no attribute returncode
     # pylint: disable-msg=E1101
     if proc.returncode != 0:
@@ -220,6 +229,11 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
         raise OSCAPaddonError(msg)
 
     (stdout, stderr) = proc.communicate()
+
+    messages = re.findall(r'OpenSCAP Error:.*', stderr)
+    if messages:
+        for message in messages:
+            log.warning(message)
 
     # save stdout?
     # pylint thinks Popen has no attribute returncode
