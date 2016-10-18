@@ -152,7 +152,7 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id="",
     messages = re.findall(r'OpenSCAP Error:.*', stderr)
     if messages:
         for message in messages:
-            log.warning(message)
+            log.warning("OSCAP addon: " + message)
 
     # pylint thinks Popen has no attribute returncode
     # pylint: disable-msg=E1101
@@ -233,7 +233,7 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     messages = re.findall(r'OpenSCAP Error:.*', stderr)
     if messages:
         for message in messages:
-            log.warning(message)
+            log.warning("OSCAP addon: " + message)
 
     # save stdout?
     # pylint thinks Popen has no attribute returncode
