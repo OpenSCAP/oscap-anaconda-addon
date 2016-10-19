@@ -285,12 +285,19 @@ class DataStreamHandler(object):
         if OSCAP.xccdf_session_load(self._session) != 0:
             raise DataStreamHandlingError(OSCAP.oscap_err_desc())
 
-        # will hold items for the profiles for the speficied DS and checklist
-        profiles = [ProfileInfo("default", "Default",
-                                "The implicit XCCDF profile. Usually, the default contains no rules.")]
-
         # get the benchmark (checklist)
         policy_model = OSCAP.xccdf_session_get_policy_model(self._session)
+
+        default_policy = OSCAP.xccdf_policy_new(policy_model, None)
+        default_rules_count = OSCAP.xccdf_policy_get_selected_rules_count(default_policy)
+
+        # will hold items for the profiles for the speficied DS and checklist
+        profiles = []
+
+        if default_rules_count > 0:
+            profiles.append(ProfileInfo("default", "Default",
+                                "The implicit XCCDF profile. Usually, the default contains no rules."))
+
         benchmark = OSCAP.xccdf_policy_model_get_benchmark(policy_model)
 
         # iterate over the profiles in the benchmark and store them
@@ -333,10 +340,6 @@ class BenchmarkHandler(object):
             msg = "Invalid file path: '%s'" % xccdf_file_path
             raise BenchmarkHandlingError(msg)
 
-        # stores a list of profiles in the benchmark
-        self._profiles = [ProfileInfo("default", "Default",
-                                      "The implicit XCCDF profile. Usually, the default contains no rules.")]
-
         session = OSCAP.xccdf_session_new(xccdf_file_path)
         if not session:
             msg = "'%s' is not a valid SCAP content file" % xccdf_file_path
@@ -351,6 +354,16 @@ class BenchmarkHandler(object):
         # get the benchmark object
         policy_model = OSCAP.xccdf_session_get_policy_model(session)
         benchmark = OSCAP.xccdf_policy_model_get_benchmark(policy_model)
+
+        default_policy = OSCAP.xccdf_policy_new(policy_model, None)
+        default_rules_count = OSCAP.xccdf_policy_get_selected_rules_count(default_policy)
+
+        # stores a list of profiles in the benchmark
+        self._profiles = []
+
+        if default_rules_count > 0:
+            self._profiles.append(ProfileInfo("default", "Default",
+                                      "The implicit XCCDF profile. Usually, the default contains no rules."))
 
         if not benchmark:
             msg = "Not a valid benchmark file: '%s'" % xccdf_file_path
