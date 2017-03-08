@@ -214,6 +214,14 @@ class OSCAPSpoke(NormalSpoke):
 
         self._error = None
 
+        # wait for all Anaconda spokes to initialiuze
+        self._anaconda_spokes_initialized = threading.Event()
+        self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
+
+    def _all_anaconda_spokes_initialized(self):
+        log.debug("OSCAP addon: Anaconda init_done signal triggered")
+        self._anaconda_spokes_initialized.set()
+
     def initialize(self):
         """
         The initialize method that is called after the instance is created.
@@ -431,7 +439,11 @@ class OSCAPSpoke(NormalSpoke):
 
         # let all initialization and configuration happen before we evaluate the
         # setup
-        threadMgr.wait_all()
+        if not self._anaconda_spokes_initialized.is_set():
+            # only wait (and log the messages) if the event is not set yet
+            log.debug("OSCAP addon: waiting for all Anaconda spokes to be initialized")
+            self._anaconda_spokes_initialized.wait()
+            log.debug("OSCAP addon: all Anaconda spokes have been initialized - continuing")
 
         # try to switch to the chosen profile (if any)
         selected = self._switch_profile()

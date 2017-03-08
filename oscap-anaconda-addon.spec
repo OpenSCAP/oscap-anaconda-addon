@@ -21,8 +21,8 @@ BuildRequires:  python-mock
 BuildRequires:  python-nose
 BuildRequires:  openscap openscap-utils openscap-python
 BuildRequires:  python-cpio
-BuildRequires:  anaconda >= 21.35
-Requires:       anaconda >= 21.35
+BuildRequires:  anaconda >= 21.48.22.99
+Requires:       anaconda >= 21.48.22.99
 Requires:       openscap openscap-utils openscap-python
 Requires:       python-cpio
 
