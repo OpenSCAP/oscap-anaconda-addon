@@ -406,20 +406,6 @@
                       </packing>
                     </child>
                     <child>
-                      <placeholder/>
-                    </child>
-                    <child type="tab">
-                      <object class="GtkLabel" id="label2">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label">Fetch Content</property>
-                      </object>
-                      <packing>
-                        <property name="position">1</property>
-                        <property name="tab_fill">False</property>
-                      </packing>
-                    </child>
-                    <child>
                       <object class="GtkBox" id="contentUrlBox">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -554,7 +540,18 @@
                         </child>
                       </object>
                       <packing>
-                        <property name="position">2</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child type="tab">
+                      <object class="GtkLabel" id="label2">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label">Fetch Content</property>
+                      </object>
+                      <packing>
+                        <property name="position">1</property>
+                        <property name="tab_fill">False</property>
                       </packing>
                     </child>
                   </object>
