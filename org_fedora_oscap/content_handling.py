@@ -29,6 +29,10 @@ import os.path
 from collections import namedtuple, OrderedDict
 from openscap_api import OSCAP
 from pyanaconda.iutil import execReadlines
+try:
+    from html.parser import HTMLParser
+except ImportError:
+    from HTMLParser import HTMLParser
 
 class ContentHandlingError(Exception):
     """Exception class for errors related to SCAP content handling."""
@@ -49,6 +53,47 @@ class ContentCheckError(ContentHandlingError):
     """Exception class for errors related to content (integrity,...) checking."""
 
     pass
+
+class ParseHTMLContent(HTMLParser):
+    """Parser class for HTML tags within content"""
+
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.content = ""
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "html:ul":
+            self.content += "\n"
+        elif tag == "html:li":
+            self.content += "\n"
+        elif tag == "html:br":
+            self.content += "\n"
+
+    def handle_endtag(self, tag):
+        if tag == "html:ul":
+            self.content += "\n"
+        elif tag == "html:li":
+            self.content += "\n"
+
+    def handle_data(self, data):
+        self.content += data.strip()
+
+    def get_content(self):
+        return self.content
+
+def parse_HTML_from_content(content):
+    """This is a very simple HTML to text parser.
+
+    HTML tags will be removed while trying to maintain readability
+    of content.
+
+    :param content: content whose HTML tags will be parsed
+    :return: content without HTML tags
+    """
+
+    parser = ParseHTMLContent()
+    parser.feed(content)
+    return parser.get_content()
 
 # namedtuple class (not a constant, pylint!) for info about a XCCDF profile
 # pylint: disable-msg=C0103
@@ -307,7 +352,7 @@ class DataStreamHandler(object):
 
             id_ = OSCAP.xccdf_profile_get_id(profile)
             title = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_title(profile))
-            desc = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile))
+            desc = parse_HTML_from_content(oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile)))
             info = ProfileInfo(id_, title, desc)
 
             profiles.append(info)
@@ -376,7 +421,7 @@ class BenchmarkHandler(object):
 
             id_ = OSCAP.xccdf_profile_get_id(profile)
             title = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_title(profile))
-            desc = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile))
+            desc = parse_HTML_from_content(oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile)))
             info = ProfileInfo(id_, title, desc)
 
             self._profiles.append(info)
@@ -389,7 +434,7 @@ class BenchmarkHandler(object):
 
                 id_ = OSCAP.xccdf_profile_get_id(profile)
                 title = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_title(profile))
-                desc = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile))
+                desc = parse_HTML_from_content(oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile)))
                 info = ProfileInfo(id_, title, desc)
 
                 self._profiles.append(info)
