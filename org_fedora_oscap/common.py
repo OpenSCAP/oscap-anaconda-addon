@@ -56,6 +56,7 @@ if product.productName.lower() != 'anaconda':
         SSG_XCCDF = "ssg-%s%s-xccdf.xml" %(product.productName.lower(), product.productVersion)
 
 RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR, "eval_remediate_results.xml")
+REPORT_PATH = utils.join_paths(TARGET_CONTENT_DIR, "eval_remediate_results.html")
 
 PRE_INSTALL_FIX_SYSTEM_ATTR = "urn:redhat:anaconda:pre"
 
@@ -200,6 +201,7 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     args = ["oscap", "xccdf", "eval"]
     args.append("--remediate")
     args.append("--results=%s" % RESULTS_PATH)
+    args.append("--report=%s" % REPORT_PATH)
 
     # oscap uses the default profile by default
     if profile.lower() != "default":
