@@ -27,7 +27,10 @@ it.
 import os.path
 
 from collections import namedtuple, OrderedDict
-from openscap_api import OSCAP
+try:
+    from openscap_api import OSCAP
+except ImportError:
+    import openscap as OSCAP
 from pyanaconda.iutil import execReadlines
 
 class ContentHandlingError(Exception):
