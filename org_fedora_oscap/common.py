@@ -56,6 +56,7 @@ SSG_DIR = "/usr/share/xml/scap/ssg/content/"
 SSG_XCCDF = "ssg-rhel7-xccdf.xml"
 
 RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR, "eval_remediate_results.xml")
+REPORT_PATH = utils.join_paths(TARGET_CONTENT_DIR, "eval_remediate_report.html")
 
 PRE_INSTALL_FIX_SYSTEM_ATTR = "urn:redhat:anaconda:pre"
 
@@ -206,6 +207,7 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     args = ["oscap", "xccdf", "eval"]
     args.append("--remediate")
     args.append("--results=%s" % RESULTS_PATH)
+    args.append("--report=%s" % REPORT_PATH)
 
     # oscap uses the default profile by default
     if profile.lower() != "default":
