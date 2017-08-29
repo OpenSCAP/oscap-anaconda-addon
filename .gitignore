@@ -8,3 +8,4 @@
 *.orig
 updates*
 po/*.po
+.idea/
