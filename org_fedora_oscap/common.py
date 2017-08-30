@@ -30,6 +30,10 @@ import subprocess
 import zipfile
 import tarfile
 import cpioarchive
+import re
+
+import logging
+log = logging.getLogger("anaconda")
 
 from collections import namedtuple
 from functools import wraps
@@ -49,13 +53,14 @@ __all__ = ["run_oscap_remediate", "get_fix_rules_pre", "wait_and_fetch_net_data"
 INSTALLATION_CONTENT_DIR = "/tmp/openscap_data/"
 TARGET_CONTENT_DIR = "/root/openscap_data/"
 
-SSG_DIR = "/usr/share/xml/scap/ssg/fedora/"
+SSG_DIR = "/usr/share/xml/scap/ssg/content/"
 SSG_XCCDF = "ssg-fedora-xccdf.xml"
 if product.productName.lower() != 'anaconda':
     if product.productName.lower() != 'fedora':
         SSG_XCCDF = "ssg-%s%s-xccdf.xml" %(product.productName.lower(), product.productVersion)
 
 RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR, "eval_remediate_results.xml")
+REPORT_PATH = utils.join_paths(TARGET_CONTENT_DIR, "eval_remediate_report.html")
 
 PRE_INSTALL_FIX_SYSTEM_ATTR = "urn:redhat:anaconda:pre"
 
@@ -86,9 +91,10 @@ MESSAGE_TYPE_WARNING = 1
 MESSAGE_TYPE_INFO = 2
 
 # namedtuple for messages returned from the rules evaluation
+#   origin -- class (inherited from RuleHandler) that generated the message
 #   type -- one of the MESSAGE_TYPE_* constants defined above
 #   text -- the actual message that should be displayed, logged, ...
-RuleMessage = namedtuple("RuleMessage", ["type", "text"])
+RuleMessage = namedtuple("RuleMessage", ["origin", "type", "text"])
 
 def get_fix_rules_pre(profile, fpath, ds_id="", xccdf_id="", tailoring=""):
     """
@@ -148,9 +154,14 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id="",
 
     (stdout, stderr) = proc.communicate()
 
+    messages = re.findall(r'OpenSCAP Error:.*', stderr)
+    if messages:
+        for message in messages:
+            log.warning("OSCAP addon: " + message)
+
     # pylint thinks Popen has no attribute returncode
     # pylint: disable-msg=E1101
-    if proc.returncode != 0 or stderr:
+    if proc.returncode != 0:
         msg = "Failed to generate fix rules with the oscap tool: %s" % stderr
         raise OSCAPaddonError(msg)
 
@@ -200,6 +211,7 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     args = ["oscap", "xccdf", "eval"]
     args.append("--remediate")
     args.append("--results=%s" % RESULTS_PATH)
+    args.append("--report=%s" % REPORT_PATH)
 
     # oscap uses the default profile by default
     if profile.lower() != "default":
@@ -224,10 +236,15 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
 
     (stdout, stderr) = proc.communicate()
 
+    messages = re.findall(r'OpenSCAP Error:.*', stderr)
+    if messages:
+        for message in messages:
+            log.warning("OSCAP addon: " + message)
+
     # save stdout?
     # pylint thinks Popen has no attribute returncode
     # pylint: disable-msg=E1101
-    if proc.returncode not in (0, 2) or stderr:
+    if proc.returncode not in (0, 2):
         # 0 -- success; 2 -- no error, but checks/remediation failed
         msg = "Content evaluation and remediation with the oscap tool "\
             "failed: %s" % stderr
@@ -401,21 +418,27 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
     entry_names = [entry.name.lstrip(".") for entry in entries]
 
     for fpath in ensure_has_files or ():
-        if not fpath in entry_names:
+        # RPM->cpio entries have absolute paths
+        if fpath not in entry_names and os.path.join("/", fpath) not in entry_names:
             msg = "File '%s' not found in the archive '%s'" % (fpath, rpm_path)
             raise ExtractionError(msg)
 
-    for entry in entries:
-        dirname = os.path.dirname(entry.name.lstrip("."))
-        out_dir = os.path.normpath(root + dirname)
-        utils.ensure_dir_exists(out_dir)
+    try:
+        for entry in entries:
+            dirname = os.path.dirname(entry.name.lstrip("."))
+            out_dir = os.path.normpath(root + dirname)
+            utils.ensure_dir_exists(out_dir)
 
-        out_fpath = os.path.normpath(root + entry.name.lstrip("."))
-        with open(out_fpath, "wb") as out_file:
-            buf = entry.read(IO_BUF_SIZE)
-            while buf:
-                out_file.write(buf)
+            out_fpath = os.path.normpath(root + entry.name.lstrip("."))
+            if os.path.exists(out_fpath):
+                continue
+            with open(out_fpath, "wb") as out_file:
                 buf = entry.read(IO_BUF_SIZE)
+                while buf:
+                    out_file.write(buf)
+                    buf = entry.read(IO_BUF_SIZE)
+    except (IOError, cpioarchive.CpioError) as e:
+        raise ExtractionError(e)
 
     # cleanup
     archive.close()

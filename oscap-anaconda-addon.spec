@@ -1,17 +1,17 @@
 Name:           oscap-anaconda-addon
 Version:        0.7
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Anaconda addon integrating OpenSCAP to the installation process
 
 License:        GPLv2+
-URL:            https://git.fedorahosted.org/cgit/oscap-anaconda-addon.git
+URL:            https://github.com/OpenSCAP/oscap-anaconda-addon.git
 
 # This is a Red Hat maintained package which is specific to
 # our distribution.
 #
 # The source is thus available only from within this SRPM
 # or via direct git checkout:
-# git clone git://git.fedorahosted.org/oscap-anaconda-addon.git
+# git clone https://github.com/OpenSCAP/oscap-anaconda-addon.git
 Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      noarch
@@ -21,8 +21,8 @@ BuildRequires:  python-mock
 BuildRequires:  python-nose
 BuildRequires:  openscap openscap-utils openscap-python
 BuildRequires:  python-cpio
-BuildRequires:  anaconda >= 21.35
-Requires:       anaconda >= 21.35
+BuildRequires:  anaconda >= 21.48.22.99
+Requires:       anaconda >= 21.48.22.99
 Requires:       openscap openscap-utils openscap-python
 Requires:       python-cpio
 
@@ -51,6 +51,9 @@ make install DESTDIR=%{buildroot}
 %doc COPYING ChangeLog README
 
 %changelog
+* Mon Feb 13 2017 Jiri Konecny <jkonecny@redhat.com> - 0.7-2
+- Fix URL which is now poiting to GitHub instead of fedorahosted
+
 * Wed Jan 07 2015 Vratislav Podzimek <vpodzime@redhat.com> - 0.7-1
 - Adapt to changes in Anaconda
 - Add *~ to EXCLUDES (#1081735)

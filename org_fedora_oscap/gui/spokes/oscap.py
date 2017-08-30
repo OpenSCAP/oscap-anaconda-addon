@@ -19,6 +19,7 @@
 #
 
 import threading
+from functools import wraps
 
 import gettext
 _ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
@@ -26,7 +27,6 @@ N_ = lambda x: x
 
 # the path to addons is in sys.path so we can import things
 # from org_fedora_oscap
-from org_fedora_oscap.categories.security import SecurityCategory
 from org_fedora_oscap import common
 from org_fedora_oscap import data_fetch
 from org_fedora_oscap import rule_handling
@@ -39,10 +39,16 @@ from pyanaconda.threads import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
 from pyanaconda.ui.gui.utils import gtk_action_wait, really_hide, really_show
-from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action
+from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action, GtkActionList
+from pyanaconda.ui.categories.system import SystemCategory
+
+from pykickstart.errors import KickstartValueError
 
 # pylint: disable-msg=E0611
 from gi.repository import Gdk
+
+import logging
+log = logging.getLogger("anaconda")
 
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
@@ -52,7 +58,7 @@ SET_PARAMS_PAGE = 0
 GET_CONTENT_PAGE = 1
 
 # helper functions
-def set_combo_selection(combo, item):
+def set_combo_selection(combo, item, unset_first=False):
     """
     Set selected item of the combobox.
 
@@ -60,6 +66,9 @@ def set_combo_selection(combo, item):
     :rtype: bool
 
     """
+
+    if unset_first:
+        combo.set_active_iter(None)
 
     model = combo.get_model()
     if not model:
@@ -103,6 +112,21 @@ def render_message_type(column, renderer, model, itr, user_data=None):
     else:
         renderer.set_property("stock-id", "gtk-dialog-question")
 
+def set_ready(func):
+    @wraps(func)
+    def decorated(self, *args, **kwargs):
+        ret = func(self, *args, **kwargs)
+
+        self._unitialized_status = None
+        self._ready = True
+        # pylint: disable-msg=E1101
+        hubQ.send_ready(self.__class__.__name__, True)
+        hubQ.send_message(self.__class__.__name__, self.status)
+
+        return ret
+
+    return decorated
+
 class OSCAPSpoke(NormalSpoke):
     """
     Main class of the OSCAP addon spoke that will appear in the Security
@@ -130,8 +154,11 @@ class OSCAPSpoke(NormalSpoke):
     # name of the .glade file in the same directory as this source
     uiFile = "oscap.glade"
 
+    # name of the file providing help content for this spoke
+    helpFile = "SecurityPolicySpoke.xml"
+
     # category this spoke belongs to
-    category = SecurityCategory
+    category = SystemCategory
 
     # spoke icon (will be displayed on the hub)
     # preferred are the -symbolic icons as these are used in Anaconda's spokes
@@ -173,12 +200,27 @@ class OSCAPSpoke(NormalSpoke):
         # leaving the spoke
         self._rule_data = None
 
+        # used for storing previously set root password if we need to remove it
+        # due to the chosen policy (so that we can put it back in case of
+        # revert)
+        self.__old_root_pw = None
+
         # used to check if the profile was changed or not
         self._active_profile = None
 
         # prevent multiple simultaneous data fetches
         self._fetching = False
         self._fetch_flag_lock = threading.Lock()
+
+        self._error = None
+
+        # wait for all Anaconda spokes to initialiuze
+        self._anaconda_spokes_initialized = threading.Event()
+        self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
+
+    def _all_anaconda_spokes_initialized(self):
+        log.debug("OSCAP addon: Anaconda init_done signal triggered")
+        self._anaconda_spokes_initialized.set()
 
     def initialize(self):
         """
@@ -277,10 +319,21 @@ class OSCAPSpoke(NormalSpoke):
         if any(self._addon_data.content_url.startswith(net_prefix)
                for net_prefix in data_fetch.NET_URL_PREFIXES):
             # need to fetch data over network
-            thread_name = common.wait_and_fetch_net_data(
+            try:
+                thread_name = common.wait_and_fetch_net_data(
                                      self._addon_data.content_url,
                                      self._addon_data.raw_preinst_content_path,
                                      self._addon_data.certificates)
+            except common.OSCAPaddonNetworkError:
+                self._network_problem()
+                with self._fetch_flag_lock:
+                    self._fetching = False
+                return
+            except KickstartValueError:
+                self._invalid_url()
+                with self._fetch_flag_lock:
+                    self._fetching = False
+                return
 
         # pylint: disable-msg=E1101
         hubQ.send_message(self.__class__.__name__,
@@ -291,6 +344,7 @@ class OSCAPSpoke(NormalSpoke):
                                      target=self._init_after_data_fetch,
                                      args=(thread_name,)))
 
+    @set_ready
     def _init_after_data_fetch(self, wait_for):
         """
         Waits for data fetching to be finished, extracts it (if needed),
@@ -319,8 +373,11 @@ class OSCAPSpoke(NormalSpoke):
                                        self._addon_data.raw_preinst_content_path,
                                        hash_obj)
             if digest != self._addon_data.fingerprint:
-                msg = _("Integrity check failed")
-                raise content_handling.ContentCheckError(msg)
+                self._integrity_check_failed()
+                # fetching done
+                with self._fetch_flag_lock:
+                    self._fetching = False
+                return
 
         # RPM is an archive at this phase
         if self._addon_data.content_type in ("archive", "rpm"):
@@ -363,23 +420,39 @@ class OSCAPSpoke(NormalSpoke):
             # fetching done
             with self._fetch_flag_lock:
                 self._fetching = False
+
             return
 
         if self._using_ds:
             # populate the stores from items from the content
             self._ds_checklists = self._content_handler.get_data_streams_checklists()
+            add_ds_ids = GtkActionList()
+            add_ds_ids.add_action(self._ds_store.clear)
             for dstream in self._ds_checklists.iterkeys():
-                self._add_ds_id(dstream)
-        else:
-            # hide the labels and comboboxes for datastream-id and xccdf-id
-            # selection
-            fire_gtk_action(really_hide, self._ids_box)
+                add_ds_ids.add_action(self._add_ds_id, dstream)
+            add_ds_ids.fire()
+
+        self._update_ids_visibility()
 
         # refresh UI elements
         self.refresh()
 
+        # let all initialization and configuration happen before we evaluate the
+        # setup
+        if not self._anaconda_spokes_initialized.is_set():
+            # only wait (and log the messages) if the event is not set yet
+            log.debug("OSCAP addon: waiting for all Anaconda spokes to be initialized")
+            self._anaconda_spokes_initialized.wait()
+            log.debug("OSCAP addon: all Anaconda spokes have been initialized - continuing")
+
         # try to switch to the chosen profile (if any)
-        self._switch_profile()
+        selected = self._switch_profile()
+
+        if self._addon_data.profile_id and not selected:
+            # profile ID given, but it was impossible to select it -> invalid
+            # profile ID given
+            self._invalid_profile_id()
+            return
 
         # initialize the self._addon_data.rule_data
         self._addon_data.rule_data = self._rule_data
@@ -387,23 +460,18 @@ class OSCAPSpoke(NormalSpoke):
         # update the message store with the messages
         self._update_message_store()
 
-        # no more being unitialized
-        self._unitialized_status = None
-        self._ready = True
-
         # all initialized, we can now let user set parameters
-        self._main_notebook.set_current_page(SET_PARAMS_PAGE)
+        fire_gtk_action(self._main_notebook.set_current_page, SET_PARAMS_PAGE)
 
         # and use control buttons
-        really_show(self._control_buttons)
-
-        # pylint: disable-msg=E1101
-        hubQ.send_ready(self.__class__.__name__, True)
-        hubQ.send_message(self.__class__.__name__, self.status)
+        fire_gtk_action(really_show, self._control_buttons)
 
         # fetching done
         with self._fetch_flag_lock:
             self._fetching = False
+
+        # no error
+        self._set_error(None)
 
     @property
     def _using_ds(self):
@@ -436,6 +504,26 @@ class OSCAPSpoke(NormalSpoke):
 
         self._ds_store.append([ds_id])
 
+    @gtk_action_wait
+    def _update_ids_visibility(self):
+        """
+        Updates visibility of the combo boxes that are used to select the DS and
+        XCCDF IDs.
+
+        """
+
+        if self._using_ds:
+            # only show the combo boxes if there are multiple data streams or
+            # multiple xccdfs (IOW if there's something to choose from)
+            ds_ids = self._ds_checklists.keys()
+            if len(ds_ids) > 1 or len(self._ds_checklists[ds_ids[0]]) > 1:
+                really_show(self._ids_box)
+                return
+
+        # not showing, hide instead
+        really_hide(self._ids_box)
+
+    @gtk_action_wait
     def _update_xccdfs_store(self):
         """
         Clears and repopulates the store with XCCDF IDs from the currently
@@ -451,6 +539,7 @@ class OSCAPSpoke(NormalSpoke):
         for xccdf_id in self._ds_checklists[self._current_ds_id]:
             self._xccdf_store.append([xccdf_id])
 
+    @gtk_action_wait
     def _update_profiles_store(self):
         """
         Clears and repopulates the store with profiles from the currently
@@ -470,7 +559,7 @@ class OSCAPSpoke(NormalSpoke):
 
         if self._using_ds:
             profiles = self._content_handler.get_profiles(self._current_ds_id,
-                                                     self._current_xccdf_id)
+                                                          self._current_xccdf_id)
         else:
             # pylint: disable-msg=E1103
             profiles = self._content_handler.profiles
@@ -494,6 +583,7 @@ class OSCAPSpoke(NormalSpoke):
         self._message_store.append([message.type, message.text])
 
     @dry_run_skip
+    @gtk_action_wait
     def _update_message_store(self, report_only=False):
         """
         Updates the message store with messages from rule evaluation.
@@ -503,11 +593,11 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
+        self._message_store.clear()
+
         if not self._rule_data:
             # RuleData instance not initialized, cannot do anything
             return
-
-        self._message_store.clear()
 
         messages = self._rule_data.eval_rules(self.data, self._storage,
                                               report_only)
@@ -515,19 +605,42 @@ class OSCAPSpoke(NormalSpoke):
             # no messages from the rules, add a message informing about that
             if not self._active_profile:
                 # because of no profile
-                message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
-                                           _("No profile selected"))
+                message = common.RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO,
+                                             _("No profile selected"))
             else:
                 # because of no pre-inst rules
-                message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
-                              _("No rules for the pre-installation phase"))
+                message = common.RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO,
+                                             _("No rules for the pre-installation phase"))
             self._add_message(message)
 
             # nothing more to be done
             return
 
+        self._resolve_rootpw_issues(messages, report_only)
         for msg in messages:
             self._add_message(msg)
+
+    def _resolve_rootpw_issues(self, messages, report_only):
+        """Mitigate root password issues (which are not fatal in GUI)"""
+        fatal_rootpw_msgs = [msg for msg in messages
+                             if msg.origin == rule_handling.PasswdRules and msg.type == common.MESSAGE_TYPE_FATAL]
+        if fatal_rootpw_msgs:
+            for msg in fatal_rootpw_msgs:
+                # cannot just change the message type because it is a namedtuple
+                messages.remove(msg)
+                messages.append(common.RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING, msg.text))
+            if not report_only:
+                self.__old_root_pw = self.data.rootpw.password
+                self.data.rootpw.password = None
+                self.__old_root_pw_seen = self.data.rootpw.seen
+                self.data.rootpw.seen = False
+
+    def _revert_rootpw_changes(self):
+        if self.__old_root_pw is not None:
+            self.data.rootpw.password = self.__old_root_pw
+            self.data.rootpw.seen = self.__old_root_pw_seen
+            self.__old_root_pw = None
+            self.__old_root_pw_seen = None
 
     @gtk_action_wait
     def _unselect_profile(self, profile_id):
@@ -546,6 +659,7 @@ class OSCAPSpoke(NormalSpoke):
         if self._rule_data:
             # revert changes and clear rule_data (no longer valid)
             self._rule_data.revert_changes(self.data, self._storage)
+            self._revert_rootpw_changes()
             self._rule_data = None
 
         self._active_profile = None
@@ -556,13 +670,7 @@ class OSCAPSpoke(NormalSpoke):
 
         if not profile_id:
             # no profile specified, nothing to do
-            return
-
-        itr = self._profiles_store.get_iter_first()
-        while itr:
-            if self._profiles_store[itr][0] == profile_id:
-                self._profiles_store.set_value(itr, 2, True)
-            itr = self._profiles_store.iter_next(itr)
+            return False
 
         if self._using_ds:
             ds = self._current_ds_id
@@ -570,16 +678,26 @@ class OSCAPSpoke(NormalSpoke):
 
             if not all((ds, xccdf, profile_id)):
                 # something is not set -> do nothing
-                return
+                return False
         else:
             ds = None
             xccdf = None
 
         # get pre-install fix rules from the content
-        rules = common.get_fix_rules_pre(profile_id,
-                                         self._addon_data.preinst_content_path,
-                                         ds, xccdf,
-                                         self._addon_data.preinst_tailoring_path)
+        try:
+            rules = common.get_fix_rules_pre(profile_id,
+                                             self._addon_data.preinst_content_path,
+                                             ds, xccdf,
+                                             self._addon_data.preinst_tailoring_path)
+        except common.OSCAPaddonError:
+            self._set_error("Failed to get rules for the profile '%s'" % profile_id)
+            return False
+
+        itr = self._profiles_store.get_iter_first()
+        while itr:
+            if self._profiles_store[itr][0] == profile_id:
+                self._profiles_store.set_value(itr, 2, True)
+            itr = self._profiles_store.iter_next(itr)
 
         # parse and store rules with a clean RuleData instance
         self._rule_data = rule_handling.RuleData()
@@ -589,38 +707,81 @@ class OSCAPSpoke(NormalSpoke):
         # remember the active profile
         self._active_profile = profile_id
 
+        return True
+
     @gtk_action_wait
     @dry_run_skip
     def _switch_profile(self):
-        """Switches to a current selected profile."""
+        """Switches to a current selected profile.
 
+        :returns: whether some profile was selected or not
+
+        """
+
+        self._set_error(None)
         profile = self._current_profile_id
         if not profile:
-            return
+            return False
 
         self._unselect_profile(self._active_profile)
-        self._select_profile(profile)
+        ret = self._select_profile(profile)
 
         # update messages according to the newly chosen profile
         self._update_message_store()
+
+        return ret
+
+    @set_ready
+    def _set_error(self, msg):
+        """Set or clear error message"""
+        if msg:
+            self._error = msg
+            self.clear_info()
+            self.set_error(msg)
+        else:
+            self._error = None
+            self.clear_info()
 
     @gtk_action_wait
     def _invalid_content(self):
         """Callback for informing user about provided content invalidity."""
 
-        self._progress_label.set_markup("<b>%s</b>" % _("Invalid content "
-                                        "provided. Enter a different URL, "
-                                        "please."))
-        self._wrong_content()
+        msg = _("Invalid content provided. Enter a different URL, please.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
+        self._wrong_content(msg)
+
+    @gtk_action_wait
+    def _invalid_url(self):
+        """Callback for informing user about provided URL invalidity."""
+
+        msg = _("Invalid or unsupported content URL, please enter a different one.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
+        self._wrong_content(msg)
 
     @gtk_action_wait
     def _data_fetch_failed(self):
         """Adapts the UI if fetching data from entered URL failed"""
 
-        self._progress_label.set_markup("<b>%s</b>" % _("Failed to fetch "
-                                        "content. Enter a different URL, "
-                                        "please."))
-        self._wrong_content()
+        msg = _("Failed to fetch content. Enter a different URL, please.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
+        self._wrong_content(msg)
+
+    @gtk_action_wait
+    def _network_problem(self):
+        """Adapts the UI if network error was encountered during data fetch"""
+
+        msg = _("Network error encountered when fetching data."
+                " Please check that network is setup and working.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
+        self._wrong_content(msg)
+
+    @gtk_action_wait
+    def _integrity_check_failed(self):
+        """Adapts the UI if integrity check fails"""
+
+        msg = _("The integrity check of the content failed. Cannot use the content.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
+        self._wrong_content(msg)
 
     @gtk_action_wait
     def _extraction_failed(self, err_msg):
@@ -629,17 +790,24 @@ class OSCAPSpoke(NormalSpoke):
         msg = _("Failed to extract content (%s). Enter a different URL, "
                 "please.") % err_msg
         self._progress_label.set_markup("<b>%s</b>" % msg)
-        self._wrong_content()
+        self._wrong_content(msg)
 
     @gtk_action_wait
-    def _wrong_content(self):
-        self._addon_data.content_url = ""
-        self._addon_data.content_type = ""
+    def _wrong_content(self, msg):
+        self._addon_data.clear_all()
         really_hide(self._progress_spinner)
         self._fetch_button.set_sensitive(True)
         self._content_url_entry.set_sensitive(True)
         self._content_url_entry.grab_focus()
         self._content_url_entry.select_region(0, -1)
+        self._content_handling_cls == None
+        self._set_error(msg)
+
+    @gtk_action_wait
+    def _invalid_profile_id(self):
+        msg = _("Profile with ID '%s' not defined in the content. Select a different profile, please") % self._addon_data.profile_id
+        self._set_error(msg)
+        self._addon_data.profile_id = None
 
     @gtk_action_wait
     def _switch_dry_run(self, dry_run):
@@ -651,10 +819,11 @@ class OSCAPSpoke(NormalSpoke):
 
             # no messages in the dry-run mode
             self._message_store.clear()
-            message = common.RuleMessage(common.MESSAGE_TYPE_INFO,
+            message = common.RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO,
                                          _("Not applying security policy"))
             self._add_message(message)
 
+            self._set_error(None)
         else:
             # mark the active profile as selected
             self._select_profile(self._active_profile)
@@ -713,26 +882,27 @@ class OSCAPSpoke(NormalSpoke):
 
             self._main_notebook.set_current_page(SET_PARAMS_PAGE)
 
-        dry_run = self._dry_run_switch.get_active()
-        self._switch_dry_run(dry_run)
-
         self._active_profile = self._addon_data.profile_id
+
+        self._update_ids_visibility()
 
         if self._using_ds:
             if self._addon_data.datastream_id:
                 set_combo_selection(self._ds_combo,
-                                    self._addon_data.datastream_id)
+                                    self._addon_data.datastream_id,
+                                    unset_first=True)
             else:
                 try:
                     default_ds = self._ds_checklists.iterkeys().next()
-                    set_combo_selection(self._ds_combo, default_ds)
+                    set_combo_selection(self._ds_combo, default_ds, unset_first=True)
                 except StopIteration:
                     # no data stream available
                     pass
 
                 if self._addon_data.datastream_id and self._addon_data.xccdf_id:
                     set_combo_selection(self._xccdf_combo,
-                                        self._addon_data.xccdf_id)
+                                        self._addon_data.xccdf_id,
+                                        unset_first=True)
         else:
             # no combobox changes --> need to update profiles store manually
             self._update_profiles_store()
@@ -751,6 +921,10 @@ class OSCAPSpoke(NormalSpoke):
         update the contents of self.data with values set in the GUI elements.
 
         """
+
+        if not self._addon_data.content_defined or not self._active_profile:
+            # no errors for no content or no profile
+            self._set_error(None)
 
         # store currently selected values to the addon data attributes
         if self._using_ds:
@@ -798,8 +972,8 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         # no error message in the store
-        return all(row[0] != common.MESSAGE_TYPE_FATAL
-                   for row in self._message_store)
+        return not self._error and all(row[0] != common.MESSAGE_TYPE_FATAL
+                                       for row in self._message_store)
 
     @property
     @gtk_action_wait
@@ -814,12 +988,18 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
+        if self._error:
+            return _("Error fetching and loading content")
+
         if self._unitialized_status:
             # not initialized
             return self._unitialized_status
 
         if not self._addon_data.content_defined:
             return _("No content found")
+
+        if not self._active_profile:
+            return _("No profile selected")
 
         # update message store, something may changed from the last update
         self._update_message_store(report_only=True)
@@ -840,9 +1020,11 @@ class OSCAPSpoke(NormalSpoke):
     def on_ds_combo_changed(self, *args):
         """Handler for the datastream ID change."""
 
-        self._update_xccdfs_store()
-
         ds_id = self._current_ds_id
+        if not ds_id:
+            return
+
+        self._update_xccdfs_store()
         first_checklist = self._ds_checklists[ds_id][0]
 
         set_combo_selection(self._xccdf_combo, first_checklist)
@@ -908,9 +1090,10 @@ class OSCAPSpoke(NormalSpoke):
         really_show(self._progress_spinner)
 
         if not data_fetch.can_fetch_from(url):
+            msg = _("Invalid or unsupported URL")
             # cannot start fetching
-            self._progress_label.set_markup("<b>%s</b>" % _("Invalid or unsupported URL"))
-            self._wrong_content()
+            self._progress_label.set_markup("<b>%s</b>" % msg)
+            self._wrong_content(msg)
             return
 
         self._progress_label.set_text(_("Fetching content..."))
@@ -936,6 +1119,7 @@ class OSCAPSpoke(NormalSpoke):
         self.refresh()
 
     def on_use_ssg_clicked(self, *args):
+        self._addon_data.clear_all()
         self._addon_data.content_type = "scap-security-guide"
         self._addon_data.xccdf_path = common.SSG_DIR + common.SSG_XCCDF
         self._fetch_data_and_initialize()

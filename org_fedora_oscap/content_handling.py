@@ -29,6 +29,10 @@ import os.path
 from collections import namedtuple, OrderedDict
 from openscap_api import OSCAP
 from pyanaconda.iutil import execReadlines
+try:
+    from html.parser import HTMLParser
+except ImportError:
+    from HTMLParser import HTMLParser
 
 class ContentHandlingError(Exception):
     """Exception class for errors related to SCAP content handling."""
@@ -49,6 +53,47 @@ class ContentCheckError(ContentHandlingError):
     """Exception class for errors related to content (integrity,...) checking."""
 
     pass
+
+class ParseHTMLContent(HTMLParser):
+    """Parser class for HTML tags within content"""
+
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.content = ""
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "html:ul":
+            self.content += "\n"
+        elif tag == "html:li":
+            self.content += "\n"
+        elif tag == "html:br":
+            self.content += "\n"
+
+    def handle_endtag(self, tag):
+        if tag == "html:ul":
+            self.content += "\n"
+        elif tag == "html:li":
+            self.content += "\n"
+
+    def handle_data(self, data):
+        self.content += data.strip()
+
+    def get_content(self):
+        return self.content
+
+def parse_HTML_from_content(content):
+    """This is a very simple HTML to text parser.
+
+    HTML tags will be removed while trying to maintain readability
+    of content.
+
+    :param content: content whose HTML tags will be parsed
+    :return: content without HTML tags
+    """
+
+    parser = ParseHTMLContent()
+    parser.feed(content)
+    return parser.get_content()
 
 # namedtuple class (not a constant, pylint!) for info about a XCCDF profile
 # pylint: disable-msg=C0103
@@ -92,10 +137,14 @@ def explore_content_files(fpaths):
     """
 
     def get_doc_type(file_path):
-        for line in execReadlines("oscap", ["info", file_path]):
-            if line.startswith("Document type:"):
-                _prefix, _sep, type_info = line.partition(":")
-                return type_info.strip()
+        try:
+            for line in execReadlines("oscap", ["info", file_path]):
+                if line.startswith("Document type:"):
+                    _prefix, _sep, type_info = line.partition(":")
+                    return type_info.strip()
+        except OSError:
+            # 'oscap info' exitted with a non-zero exit code -> unknown doc type
+            return None
 
     xccdf_file = ""
     cpe_file = ""
@@ -105,6 +154,8 @@ def explore_content_files(fpaths):
 
     for fpath in fpaths:
         doc_type = get_doc_type(fpath)
+        if not doc_type:
+            continue
 
         # prefer DS over standalone XCCDF
         if doc_type == "Source Data Stream" and (not xccdf_file or not found_ds):
@@ -149,11 +200,15 @@ class DataStreamHandler(object):
             msg = "Invalid file path: '%s'" % dsc_file_path
             raise DataStreamHandlingError(msg)
 
+        self._dsc_file_path = dsc_file_path
+
         # create an XCCDF session for the file
         self._session = OSCAP.xccdf_session_new(dsc_file_path)
         if not self._session:
             msg = "'%s' is not a valid SCAP content file" % dsc_file_path
             raise DataStreamHandlingError(msg)
+        if OSCAP.xccdf_session_load(self._session) != 0:
+            raise DataStreamHandlingError(OSCAP.oscap_err_desc())
 
         if tailoring_file_path:
             OSCAP.xccdf_session_set_user_tailoring_file(self._session,
@@ -263,16 +318,31 @@ class DataStreamHandler(object):
         # not found in the cache, needs to be gathered
 
         # set the data stream and component (checklist) for the session
+        OSCAP.xccdf_session_free(self._session)
+
+        self._session = OSCAP.xccdf_session_new(self._dsc_file_path)
+        if not self._session:
+            msg = "'%s' is not a valid SCAP content file" % self._dsc_file_path
+            raise DataStreamHandlingError(msg)
+
         OSCAP.xccdf_session_set_datastream_id(self._session, data_stream_id)
         OSCAP.xccdf_session_set_component_id(self._session, checklist_id)
         if OSCAP.xccdf_session_load(self._session) != 0:
             raise DataStreamHandlingError(OSCAP.oscap_err_desc())
 
-        # will hold items for the profiles for the speficied DS and checklist
-        profiles = [ProfileInfo("default", "Default", "The default profile")]
-
         # get the benchmark (checklist)
         policy_model = OSCAP.xccdf_session_get_policy_model(self._session)
+
+        default_policy = OSCAP.xccdf_policy_new(policy_model, None)
+        default_rules_count = OSCAP.xccdf_policy_get_selected_rules_count(default_policy)
+
+        # will hold items for the profiles for the speficied DS and checklist
+        profiles = []
+
+        if default_rules_count > 0:
+            profiles.append(ProfileInfo("default", "Default",
+                                "The implicit XCCDF profile. Usually, the default contains no rules."))
+
         benchmark = OSCAP.xccdf_policy_model_get_benchmark(policy_model)
 
         # iterate over the profiles in the benchmark and store them
@@ -282,7 +352,7 @@ class DataStreamHandler(object):
 
             id_ = OSCAP.xccdf_profile_get_id(profile)
             title = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_title(profile))
-            desc = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile))
+            desc = parse_HTML_from_content(oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile)))
             info = ProfileInfo(id_, title, desc)
 
             profiles.append(info)
@@ -315,10 +385,6 @@ class BenchmarkHandler(object):
             msg = "Invalid file path: '%s'" % xccdf_file_path
             raise BenchmarkHandlingError(msg)
 
-        # stores a list of profiles in the benchmark
-        self._profiles = [ProfileInfo("default", "Default",
-                                      "The default profile")]
-
         session = OSCAP.xccdf_session_new(xccdf_file_path)
         if not session:
             msg = "'%s' is not a valid SCAP content file" % xccdf_file_path
@@ -334,6 +400,16 @@ class BenchmarkHandler(object):
         policy_model = OSCAP.xccdf_session_get_policy_model(session)
         benchmark = OSCAP.xccdf_policy_model_get_benchmark(policy_model)
 
+        default_policy = OSCAP.xccdf_policy_new(policy_model, None)
+        default_rules_count = OSCAP.xccdf_policy_get_selected_rules_count(default_policy)
+
+        # stores a list of profiles in the benchmark
+        self._profiles = []
+
+        if default_rules_count > 0:
+            self._profiles.append(ProfileInfo("default", "Default",
+                                      "The implicit XCCDF profile. Usually, the default contains no rules."))
+
         if not benchmark:
             msg = "Not a valid benchmark file: '%s'" % xccdf_file_path
             raise BenchmarkHandlingError(msg)
@@ -345,7 +421,7 @@ class BenchmarkHandler(object):
 
             id_ = OSCAP.xccdf_profile_get_id(profile)
             title = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_title(profile))
-            desc = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile))
+            desc = parse_HTML_from_content(oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile)))
             info = ProfileInfo(id_, title, desc)
 
             self._profiles.append(info)
@@ -358,7 +434,7 @@ class BenchmarkHandler(object):
 
                 id_ = OSCAP.xccdf_profile_get_id(profile)
                 title = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_title(profile))
-                desc = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile))
+                desc = parse_HTML_from_content(oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile)))
                 info = ProfileInfo(id_, title, desc)
 
                 self._profiles.append(info)

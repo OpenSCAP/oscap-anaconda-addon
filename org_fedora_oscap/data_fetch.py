@@ -9,7 +9,13 @@ import os
 import os.path
 import pycurl
 
+from pyanaconda.flags import flags as ana_flags
+
 from org_fedora_oscap import utils
+
+import logging
+log = logging.getLogger("anaconda")
+
 
 # everything else should be private
 __all__ = ["fetch_data", "can_fetch_from"]
@@ -160,7 +166,14 @@ def _curl_fetch(url, out_file, ca_certs=None):
     if ca_certs and protocol == "https":
         # the strictest verification
         curl.setopt(pycurl.SSL_VERIFYHOST, 2)
+        curl.setopt(pycurl.SSL_VERIFYPEER, 1)
         curl.setopt(pycurl.CAINFO, ca_certs)
+
+    # may be turned off by flags (specified on command line, take precedence)
+    if ana_flags.noverifyssl:
+        log.warning("Disabling SSL verification due to the noverifyssl flag")
+        curl.setopt(pycurl.SSL_VERIFYHOST, 0)
+        curl.setopt(pycurl.SSL_VERIFYPEER, 0)
 
     try:
         with open(out_file, "w") as fobj:

@@ -1,0 +1,76 @@
+= SCAP Security Guide Developer Guide
+:imagesdir: ./images
+:toc:
+:toc-placement: preamble
+:numbered:
+
+toc::[]
+
+== Testing
+
+=== How to Test oscap Anaconda Addon
+
+Anaconda has capability to load installer updates using _"updates image"_. This image can loaded from different storages and use different formats. This page should show one working use case, not all possibilities.
+
+(https://fedoraproject.org/wiki/Anaconda/Updates#How_to_Create_an_Anaconda_Updates_Image)
+
+## What do you need to test your changes? (Summary)
+1. Clone repository & use required branch & change code
+2. Build image
+3. Serve image using HTTP server
+4. Load system with update image
+
+## Clone repository & use required branch
+You probably want to use rhel7-branch. Currently we don't support Fedora (unsupported python3, ...)
+
+## Build image
+We will create cpio archive `ASCII cpio archive (SVR4 with no CRC)` packed using gzip (`gzip compressed data`).
+
+You can call this script in oscap-anaconda-addon repository. It will create `update.img` image.
+
+```
+#!/bin/bash
+
+tmp_root=$(mktemp -d)
+build_dir=$PWD
+
+# "copy files" to new root
+make install DESTDIR="${tmp_root}" >&2
+
+# create update image
+cd "$tmp_root"
+find -L . | cpio -oc | gzip > "$build_dir/update.img"
+
+# cleanup
+rm -rf "$tmp_root"
+```
+If you want to see what was packed, you can extract the image.
+```
+mkdir /tmp/content; cd /tmp/content
+gzip --decompress | cpio -id < REPO_PATH/update.img
+```
+
+
+### Serve image using HTTP server
+You don't need public HTTP server or setup Apache.
+You can use simple python HTTP server - it serves all files in you current directory.
+```
+python -m SimpleHTTPServer
+```
+**Setup your firewall rules correctly to make webserver port accessible from virtual machine.**
+
+## Load system with update image
+If you want to load your changes to anaconda, you have to setup boot options correctly.
+You have two ways how to setup it:
+- Manually
+- With PXE boot
+
+If you want to set it manually, you have to boot your machine into grub. Then you can change options (usually using "tab" key).
+
+If you use PXE boot you can pass requires parameters there. Advantage of this solution is that you will not need to change parameters during every boot.
+
+**Required boot parameters:**
+```
+inst.updates=http://192.168.122.1:8000/update.img
+```
+

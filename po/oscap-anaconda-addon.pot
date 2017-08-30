@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-03-30 17:36+0200\n"
+"POT-Creation-Date: 2017-08-30 12:27-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,128 +17,158 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../org_fedora_oscap/rule_handling.py:320
+#: ../org_fedora_oscap/rule_handling.py:330
 #, python-format
 msgid "%s must be on a separate partition or logical volume"
 msgstr ""
 
 #. template for the message
-#: ../org_fedora_oscap/rule_handling.py:328
+#: ../org_fedora_oscap/rule_handling.py:338
 #, python-format
 msgid ""
 "mount option '%(mount_option)s' added for the mount point %(mount_point)s"
 msgstr ""
 
 #. root password was not set
-#. password length enforcement is not suported in the Anaconda yet
-#: ../org_fedora_oscap/rule_handling.py:422
+#: ../org_fedora_oscap/rule_handling.py:434
 #, python-format
 msgid "make sure to create password with minimal length of %d characters"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:428
+#: ../org_fedora_oscap/rule_handling.py:440
 msgid "cannot check root password length (password is crypted)"
 msgstr ""
 
-#. too short or already removed
-#: ../org_fedora_oscap/rule_handling.py:433
+#. too short
+#: ../org_fedora_oscap/rule_handling.py:445
 #, python-format
 msgid ""
-"root password was too short, a longer one with at least %d characters will "
-"be required"
+"root password is too short, a longer one with at least %d characters is "
+"required"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:512
-#: ../org_fedora_oscap/rule_handling.py:526
+#: ../org_fedora_oscap/rule_handling.py:542
+#: ../org_fedora_oscap/rule_handling.py:556
 #, python-format
 msgid "package '%s' has been added to the list of to be installed packages"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:534
-#: ../org_fedora_oscap/rule_handling.py:548
+#: ../org_fedora_oscap/rule_handling.py:564
+#: ../org_fedora_oscap/rule_handling.py:578
 #, python-format
 msgid "package '%s' has been added to the list of excluded packages"
 msgstr ""
 
-#: ../org_fedora_oscap/categories/security.py:39
-msgid "SECURITY"
+#: ../org_fedora_oscap/ks/oscap.py:418
+#, python-format
+msgid ""
+"There was an error fetching and loading the security content:\n"
+"%s\n"
+"The installation should be aborted. Do you wish to continue anyway?"
+msgstr ""
+
+#: ../org_fedora_oscap/ks/oscap.py:447
+msgid ""
+"The integrity check of the security content failed.\n"
+"The installation should be aborted. Do you wish to continue anyway?"
 msgstr ""
 
 #. title of the spoke (will be displayed on the hub)
-#: ../org_fedora_oscap/gui/spokes/oscap.py:141
+#: ../org_fedora_oscap/gui/spokes/oscap.py:168
 msgid "_SECURITY POLICY"
 msgstr ""
 
 #. the first status provided
-#: ../org_fedora_oscap/gui/spokes/oscap.py:166
+#: ../org_fedora_oscap/gui/spokes/oscap.py:193
 msgid "Not ready"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:287
+#: ../org_fedora_oscap/gui/spokes/oscap.py:340
 msgid "Fetching content data"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:322
-msgid "Integrity check failed"
-msgstr ""
-
-#: ../org_fedora_oscap/gui/spokes/oscap.py:519
+#: ../org_fedora_oscap/gui/spokes/oscap.py:609
+#: ../org_fedora_oscap/gui/spokes/oscap.py:1002
 msgid "No profile selected"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:523
+#: ../org_fedora_oscap/gui/spokes/oscap.py:613
 msgid "No rules for the pre-installation phase"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:611
+#: ../org_fedora_oscap/gui/spokes/oscap.py:749
 msgid "Invalid content provided. Enter a different URL, please."
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:620
+#: ../org_fedora_oscap/gui/spokes/oscap.py:757
+msgid "Invalid or unsupported content URL, please enter a different one."
+msgstr ""
+
+#: ../org_fedora_oscap/gui/spokes/oscap.py:765
 msgid "Failed to fetch content. Enter a different URL, please."
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:629
+#: ../org_fedora_oscap/gui/spokes/oscap.py:773
+msgid ""
+"Network error encountered when fetching data. Please check that network is "
+"setup and working."
+msgstr ""
+
+#: ../org_fedora_oscap/gui/spokes/oscap.py:782
+msgid "The integrity check of the content failed. Cannot use the content."
+msgstr ""
+
+#: ../org_fedora_oscap/gui/spokes/oscap.py:790
 #, python-format
 msgid "Failed to extract content (%s). Enter a different URL, please."
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:655
+#: ../org_fedora_oscap/gui/spokes/oscap.py:808
+#, python-format
+msgid ""
+"Profile with ID '%s' not defined in the content. Select a different profile, "
+"please"
+msgstr ""
+
+#: ../org_fedora_oscap/gui/spokes/oscap.py:823
 msgid "Not applying security policy"
 msgstr ""
 
 #. TRANSLATORS: the other choice if SCAP Security Guide is also available
-#: ../org_fedora_oscap/gui/spokes/oscap.py:683
+#: ../org_fedora_oscap/gui/spokes/oscap.py:852
 msgid " or enter data stream content or archive URL below:"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:687
+#: ../org_fedora_oscap/gui/spokes/oscap.py:856
 msgid ""
 "No content found. Please enter data stream content or archive URL below:"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:822
+#: ../org_fedora_oscap/gui/spokes/oscap.py:992
+msgid "Error fetching and loading content"
+msgstr ""
+
+#: ../org_fedora_oscap/gui/spokes/oscap.py:999
 msgid "No content found"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:830
+#: ../org_fedora_oscap/gui/spokes/oscap.py:1010
 msgid "Misconfiguration detected"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:836
+#: ../org_fedora_oscap/gui/spokes/oscap.py:1016
 msgid "Warnings appeared"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:838
+#: ../org_fedora_oscap/gui/spokes/oscap.py:1018
 msgid "Everything okay"
 msgstr ""
 
-#. cannot start fetching
-#: ../org_fedora_oscap/gui/spokes/oscap.py:912
+#: ../org_fedora_oscap/gui/spokes/oscap.py:1093
 msgid "Invalid or unsupported URL"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:916 tmp/oscap.glade.h:13
+#: ../org_fedora_oscap/gui/spokes/oscap.py:1099 tmp/oscap.glade.h:13
 msgid "Fetching content..."
 msgstr ""
 

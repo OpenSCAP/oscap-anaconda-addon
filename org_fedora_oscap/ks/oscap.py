@@ -22,14 +22,25 @@
 
 import shutil
 import re
+import os
+import time
 
 from pyanaconda.addons import AddonData
 from pyanaconda.iutil import getSysroot
+from pyanaconda.progress import progressQ
+from pyanaconda import errors
 from pyanaconda import iutil
+from pyanaconda import flags
 from pykickstart.errors import KickstartParseError, KickstartValueError
-from org_fedora_oscap import utils, common, rule_handling
+from org_fedora_oscap import utils, common, rule_handling, data_fetch
 from org_fedora_oscap.common import SUPPORTED_ARCHIVES
 from org_fedora_oscap.content_handling import ContentCheckError
+
+import logging
+log = logging.getLogger("anaconda")
+
+import gettext
+_ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
 
 # export OSCAPdata class to prevent Anaconda's collect method from taking
 # AddonData class instead of the OSCAPdata class
@@ -44,7 +55,7 @@ SUPPORTED_URL_PREFIXES = ("http://", "https://", "ftp://"
                           # LABEL:?, hdaX:?,
                           )
 
-REQUIRED_PACKAGES = ("openscap", "openscap-utils", )
+REQUIRED_PACKAGES = ("openscap", "openscap-scanner", )
 
 FINGERPRINT_REGEX = re.compile(r'^[a-z0-9]+$')
 
@@ -99,7 +110,7 @@ class OSCAPdata(AddonData):
 
         """
 
-        if self.dry_run:
+        if self.dry_run or not self.profile_id:
             # the addon was run in the dry run mode, omit it from the kickstart
             return ""
 
@@ -108,13 +119,14 @@ class OSCAPdata(AddonData):
 
         ret = "%%addon %s" % self.name
         ret += "\n%s" % key_value_pair("content-type", self.content_type)
-        ret += "\n%s" % key_value_pair("content-url", self.content_url)
 
+        if self.content_url:
+            ret += "\n%s" % key_value_pair("content-url", self.content_url)
         if self.datastream_id:
             ret += "\n%s" % key_value_pair("datastream-id", self.datastream_id)
         if self.xccdf_id:
             ret += "\n%s" % key_value_pair("xccdf-id", self.xccdf_id)
-        if self.xccdf_path:
+        if self.xccdf_path and self.content_type != "scap-security-guide":
             ret += "\n%s" % key_value_pair("xccdf-path", self.xccdf_path)
         if self.cpe_path:
             ret += "\n%s" % key_value_pair("cpe-path", self.cpe_path)
@@ -129,7 +141,7 @@ class OSCAPdata(AddonData):
         if self.certificates:
             ret += "\n%s" % key_value_pair("certificates", self.certificates)
 
-        ret += "\n%end"
+        ret += "\n%end\n\n"
         return ret
 
     def _parse_content_type(self, value):
@@ -275,7 +287,13 @@ class OSCAPdata(AddonData):
         if self.content_type == "scap-security-guide":
             raise ValueError("Using scap-security-guide, no single content file")
 
-        parts = self.content_url.rsplit("/", 1)
+        rest = "/anonymous_content"
+        for prefix in SUPPORTED_URL_PREFIXES:
+            if self.content_url.startswith(prefix):
+                rest = self.content_url[len(prefix):]
+                break
+
+        parts = rest.rsplit("/", 1)
         if len(parts) != 2:
             msg = "Unsupported url '%s' in the %s addon" % (self.content_url,
                                                             self.name)
@@ -349,7 +367,28 @@ class OSCAPdata(AddonData):
         return utils.join_paths(common.TARGET_CONTENT_DIR,
                                 self.tailoring_path)
 
-    def setup(self, storage, ksdata, instclass):
+    def _fetch_content_and_initialize(self):
+        """Fetch content and initialize from it"""
+
+        data_fetch.fetch_data(self.content_url, self.raw_preinst_content_path, self.certificates)
+        # RPM is an archive at this phase
+        if self.content_type in ("archive", "rpm"):
+            # extract the content
+            common.extract_data(self.raw_preinst_content_path,
+                                common.INSTALLATION_CONTENT_DIR,
+                                [self.xccdf_path])
+
+        rules = common.get_fix_rules_pre(self.profile_id,
+                                         self.preinst_content_path,
+                                         self.datastream_id, self.xccdf_id,
+                                         self.preinst_tailoring_path)
+
+        # parse and store rules with a clean RuleData instance
+        self.rule_data = rule_handling.RuleData()
+        for rule in rules.splitlines():
+            self.rule_data.new_rule(rule)
+
+    def setup(self, storage, ksdata, instclass, payload):
         """
         The setup method that should make changes to the runtime environment
         according to the data stored in this object.
@@ -365,25 +404,90 @@ class OSCAPdata(AddonData):
 
         """
 
+        if self.dry_run or not self.profile_id:
+            # nothing more to be done in the dry-run mode or if no profile is
+            # selected
+            return
+
+        if not os.path.exists(self.preinst_content_path) and not os.path.exists(self.raw_preinst_content_path):
+            # content not available/fetched yet
+            try:
+                self._fetch_content_and_initialize()
+            except (common.OSCAPaddonError, data_fetch.DataFetchError) as e:
+                log.error("Failed to fetch and initialize SCAP content!")
+                msg = _("There was an error fetching and loading the security content:\n" +
+                        "%s\n" +
+                        "The installation should be aborted. Do you wish to continue anyway?") % e
+
+                if flags.flags.automatedInstall and not flags.flags.ksprompt:
+                    # cannot have ask in a non-interactive kickstart installation
+                    raise errors.CmdlineError(msg)
+
+                answ = errors.errorHandler.ui.showYesNoQuestion(msg)
+                if answ == errors.ERROR_CONTINUE:
+                    # prevent any futher actions here by switching to the dry
+                    # run mode and let things go on
+                    self.dry_run = True
+                    return
+                else:
+                    # Let's sleep forever to prevent any further actions and wait for
+                    # the main thread to quit the process.
+                    progressQ.send_quit(1)
+                    while True:
+                        time.sleep(100000)
+
+
         # check fingerprint if given
         if self.fingerprint:
             hash_obj = utils.get_hashing_algorithm(self.fingerprint)
             digest = utils.get_file_fingerprint(self.raw_preinst_content_path,
                                                 hash_obj)
             if digest != self.fingerprint:
-                msg = "Integrity check of the content failed!"
-                raise ContentCheckError(msg)
+                log.error("Failed to fetch and initialize SCAP content!")
+                msg = _("The integrity check of the security content failed.\n" +
+                        "The installation should be aborted. Do you wish to continue anyway?")
 
-        if self.dry_run:
-            # nothing more to be done in the dry-run mode
-            return
+                if flags.flags.automatedInstall and not flags.flags.ksprompt:
+                    # cannot have ask in a non-interactive kickstart installation
+                    raise errors.CmdlineError(msg)
+
+                answ = errors.errorHandler.ui.showYesNoQuestion(msg)
+                if answ == errors.ERROR_CONTINUE:
+                    # prevent any futher actions here by switching to the dry
+                    # run mode and let things go on
+                    self.dry_run = True
+                    return
+                else:
+                    # Let's sleep forever to prevent any further actions and wait for
+                    # the main thread to quit the process.
+                    progressQ.send_quit(1)
+                    while True:
+                        time.sleep(100000)
 
         # evaluate rules, do automatic fixes and stop if something that cannot
         # be fixed automatically is wrong
-        messages = self.rule_data.eval_rules(ksdata, storage)
-        if any(message.type == common.MESSAGE_TYPE_FATAL
-               for message in messages):
-            raise MisconfigurationError("Wrong configuration detected!")
+        fatal_messages = [message for message in self.rule_data.eval_rules(ksdata, storage)
+                          if message.type == common.MESSAGE_TYPE_FATAL]
+        if any(fatal_messages):
+            msg = "Wrong configuration detected!\n"
+            msg += "\n".join(message.text for message in fatal_messages)
+            msg += "\nThe installation should be aborted. Do you wish to continue anyway?"
+            if flags.flags.automatedInstall and not flags.flags.ksprompt:
+                # cannot have ask in a non-interactive kickstart installation
+                raise errors.CmdlineError(msg)
+
+            answ = errors.errorHandler.ui.showYesNoQuestion(msg)
+            if answ == errors.ERROR_CONTINUE:
+                # prevent any futher actions here by switching to the dry
+                # run mode and let things go on
+                self.dry_run = True
+                return
+            else:
+                # Let's sleep forever to prevent any further actions and wait for
+                # the main thread to quit the process.
+                progressQ.send_quit(1)
+                while True:
+                    time.sleep(100000)
 
         # add packages needed on the target system to the list of packages
         # that are requested to be installed
@@ -394,7 +498,7 @@ class OSCAPdata(AddonData):
             if pkg not in ksdata.packages.packageList:
                 ksdata.packages.packageList.append(pkg)
 
-    def execute(self, storage, ksdata, instclass, users):
+    def execute(self, storage, ksdata, instclass, users, payload):
         """
         The execute method that should make changes to the installed system. It
         is called only once in the post-install setup phase.
@@ -405,8 +509,9 @@ class OSCAPdata(AddonData):
 
         """
 
-        if self.dry_run:
-            # nothing to be done in the dry-run mode
+        if self.dry_run or not self.profile_id:
+            # nothing more to be done in the dry-run mode or if no profile is
+            # selected
             return
 
         target_content_dir = utils.join_paths(getSysroot(),
@@ -420,7 +525,7 @@ class OSCAPdata(AddonData):
             shutil.copy2(self.raw_preinst_content_path, target_content_dir)
 
             # and install it with yum
-            ret = iutil.execInSysroot("yum", ["-y", "install",
+            ret = iutil.execInSysroot("yum", ["-y", "--nogpg", "install",
                                               self.raw_postinst_content_path])
             if ret != 0:
                 raise common.ExtractionError("Failed to install content "

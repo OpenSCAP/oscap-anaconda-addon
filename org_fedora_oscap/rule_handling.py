@@ -26,6 +26,8 @@ Module with various classes for handling pre-installation rules.
 import optparse
 import shlex
 
+from pyanaconda.pwpolicy import F22_PwPolicyData
+
 from org_fedora_oscap import common
 from org_fedora_oscap.common import OSCAPaddonError, RuleMessage
 
@@ -34,6 +36,9 @@ __all__ = ["RuleData"]
 
 import gettext
 _ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
+
+import logging
+log = logging.getLogger("anaconda")
 
 # TODO: use set instead of list for mount options?
 def parse_csv(option, opt_str, value, parser):
@@ -218,6 +223,11 @@ class RuleData(RuleHandler):
         if opts.passwd:
             self._bootloader_rules.require_password()
 
+    @property
+    def passwd_rules(self):
+        # needed for fixups in GUI
+        return self._passwd_rules
+
 class PartRules(RuleHandler):
     """Simple class holding data from the rules affecting partitioning."""
 
@@ -319,7 +329,7 @@ class PartRule(RuleHandler):
         if self._mount_point not in storage.mountpoints:
             msg = _("%s must be on a separate partition or logical "
                     "volume" % self._mount_point)
-            messages.append(RuleMessage(common.MESSAGE_TYPE_FATAL, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_FATAL, msg))
 
             # mount point doesn't exist, nothing more can be found here
             return messages
@@ -332,7 +342,7 @@ class PartRule(RuleHandler):
         for opt in self._added_mount_options:
             msg = msg_tmpl % { "mount_option": opt,
                                "mount_point": self._mount_point }
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
         # mount point to be created during installation
         target_mount_point = storage.mountpoints[self._mount_point]
@@ -347,7 +357,7 @@ class PartRule(RuleHandler):
                                "mount_point": self._mount_point }
 
             # add message for the mount option in any case
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
             # add new options to the target mount point if not reporting only
             if not report_only:
@@ -392,7 +402,9 @@ class PasswdRules(RuleHandler):
         """Constructor initializing attributes."""
 
         self._minlen = 0
-        self._removed_password = None
+        self._created_policy = False
+        self._orig_minlen = None
+        self._orig_strict = None
 
     def __str__(self):
         """Standard method useful for debugging and testing."""
@@ -415,41 +427,59 @@ class PasswdRules(RuleHandler):
             # no password restrictions, nothing to be done here
             return []
 
-        if not ksdata.rootpw.password and self._removed_password is None:
+        ret = []
+        if not ksdata.rootpw.password:
             # root password was not set
 
-            # password length enforcement is not suported in the Anaconda yet
             msg = _("make sure to create password with minimal length of %d "
-                    "characters" % self._minlen)
-            return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
+                    "characters") % self._minlen
+            ret = [RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING, msg)]
         else:
             # root password set
             if ksdata.rootpw.isCrypted:
                 msg = _("cannot check root password length (password is crypted)")
-                return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
-            elif len(ksdata.rootpw.password) < self._minlen or \
-                    self._removed_password is not None:
-                # too short or already removed
-                msg = _("root password was too short, a longer one with at "
-                        "least %d characters will be required" % self._minlen)
-                if not report_only and self._removed_password is None:
-                    # remove the password and reset the seen flag no to confuse Anaconda
-                    self._removed_password = ksdata.rootpw.password
-                    ksdata.rootpw.password = ""
-                    ksdata.rootpw.seen = False
-                return [RuleMessage(common.MESSAGE_TYPE_WARNING, msg)]
+                log.warning("cannot check root password length (password is crypted)")
+                return [RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING, msg)]
+            elif len(ksdata.rootpw.password) < self._minlen:
+                # too short
+                msg = _("root password is too short, a longer one with at "
+                        "least %d characters is required") % self._minlen
+                ret = [RuleMessage(self.__class__, common.MESSAGE_TYPE_FATAL, msg)]
             else:
-                return []
+                ret = []
+
+        # set the policy in any case (so that a weaker password is not entered)
+        pw_policy = ksdata.anaconda.pwpolicy.get_policy("root")
+        if pw_policy is None:
+            pw_policy = F22_PwPolicyData()
+            log.info("OSCAP addon: setting password policy %s" % pw_policy)
+            ksdata.anaconda.pwpolicy.policyList.append(pw_policy)
+            log.info("OSCAP addon: password policy list: %s" % ksdata.anaconda.pwpolicy.policyList)
+            self._created_policy = True
+
+        self._orig_minlen = pw_policy.minlen
+        self._orig_strict = pw_policy.strict
+        pw_policy.minlen = self._minlen
+        pw_policy.strict = True
+
+        return ret
 
     def revert_changes(self, ksdata, storage):
-        """:see: RuleHandler.revert_changes"""
+        """:see: RuleHander.revert_changes"""
 
-        # set the old password back
-        if self._removed_password is not None:
-            ksdata.rootpw.password = self._removed_password
-            ksdata.rootpw.seen = True
-
-            self._removed_password = None
+        pw_policy = ksdata.anaconda.pwpolicy.get_policy("root")
+        if self._created_policy:
+            log.info("OSCAP addon: removing password policy: %s" % pw_policy)
+            ksdata.anaconda.pwpolicy.policyList.remove(pw_policy)
+            log.info("OSCAP addon: password policy list: %s" % ksdata.anaconda.pwpolicy.policyList)
+            self._created_policy = False
+        else:
+            if self._orig_minlen is not None:
+                pw_policy.minlen = self._orig_minlen
+                self._orig_minlen = None
+            if self._orig_strict is not None:
+                pw_policy.strict = self._orig_strict
+                self._orig_strict = None
 
 class PackageRules(RuleHandler):
     """Simple class holding data from the rules affecting installed packages."""
@@ -511,7 +541,7 @@ class PackageRules(RuleHandler):
         for pkg in self._added_pkgs:
             msg = _("package '%s' has been added to the list of to be installed "
                     "packages" % pkg)
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
         # packages, that should be added
         packages_to_add = (pkg for pkg in self._add_pkgs
@@ -525,7 +555,7 @@ class PackageRules(RuleHandler):
 
             msg = _("package '%s' has been added to the list of to be installed "
                     "packages" % pkg)
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
         ### now do the same for the packages that should be excluded
 
@@ -533,7 +563,7 @@ class PackageRules(RuleHandler):
         for pkg in self._removed_pkgs:
             msg = _("package '%s' has been added to the list of excluded "
                     "packages" % pkg)
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
         # packages, that should be added
         packages_to_remove = (pkg for pkg in self._remove_pkgs
@@ -547,7 +577,7 @@ class PackageRules(RuleHandler):
 
             msg = _("package '%s' has been added to the list of excluded "
                     "packages" % pkg)
-            messages.append(RuleMessage(common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
 
         return messages
 
@@ -597,8 +627,8 @@ class BootloaderRules(RuleHandler):
             # Anaconda doesn't provide a way to set bootloader password, so
             # users cannot do much about that --> we shouldn't stop the
             # installation, should we?
-            return [RuleMessage(common.MESSAGE_TYPE_WARNING,
-                               "boot loader password not set up")]
+            return [RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING,
+                                "boot loader password not set up")]
         else:
             return []
 
