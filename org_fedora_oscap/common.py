@@ -19,8 +19,8 @@
 #
 
 """
-Module with various classes and functions needed by the OSCAP addon that are not
-specific to any installation mode (tui, gui, ks).
+Module with various classes and functions needed by the OSCAP addon that are
+not specific to any installation mode (tui, gui, ks).
 
 """
 
@@ -31,36 +31,40 @@ import zipfile
 import tarfile
 import cpioarchive
 import re
-
 import logging
-log = logging.getLogger("anaconda")
 
 from collections import namedtuple
 from functools import wraps
-
 from pyanaconda import constants
 from pyanaconda import nm
 from pyanaconda.constants import product
 from pyanaconda.threads import threadMgr, AnacondaThread
-
 from org_fedora_oscap import utils
 from org_fedora_oscap.data_fetch import fetch_data
 
+log = logging.getLogger("anaconda")
+
 # everything else should be private
-__all__ = ["run_oscap_remediate", "get_fix_rules_pre", "wait_and_fetch_net_data",
-           "extract_data", "strip_content_dir", "OSCAPaddonError"]
+__all__ = ["run_oscap_remediate", "get_fix_rules_pre",
+           "wait_and_fetch_net_data", "extract_data", "strip_content_dir",
+           "OSCAPaddonError"]
 
 INSTALLATION_CONTENT_DIR = "/tmp/openscap_data/"
 TARGET_CONTENT_DIR = "/root/openscap_data/"
 
 SSG_DIR = "/usr/share/xml/scap/ssg/content/"
-SSG_XCCDF = "ssg-fedora-xccdf.xml"
+SSG_XCCDF = "ssg-rhel7-xccdf.xml"
 if product.productName.lower() != 'anaconda':
-    if product.productName.lower() != 'fedora':
-        SSG_XCCDF = "ssg-%s%s-xccdf.xml" %(product.productName.lower(), product.productVersion)
+    if product.productName.lower() == 'fedora':
+        SSG_XCCDF = "ssg-fedora-xccdf.xml"
+    else:
+        SSG_XCCDF = "ssg-%s%s-xccdf.xml" % (product.productName.lower(),
+                                            product.productVersion)
 
-RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR, "eval_remediate_results.xml")
-REPORT_PATH = utils.join_paths(TARGET_CONTENT_DIR, "eval_remediate_report.html")
+RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR,
+                                "eval_remediate_results.xml")
+REPORT_PATH = utils.join_paths(TARGET_CONTENT_DIR,
+                               "eval_remediate_report.html")
 
 PRE_INSTALL_FIX_SYSTEM_ATTR = "urn:redhat:anaconda:pre"
 
@@ -71,20 +75,24 @@ SUPPORTED_ARCHIVES = (".zip", ".tar", ".tar.gz", ".tar.bz2", )
 # buffer size for reading and writing out data (in bytes)
 IO_BUF_SIZE = 2 * 1024 * 1024
 
+
 class OSCAPaddonError(Exception):
     """Exception class for OSCAP addon related errors."""
 
     pass
+
 
 class OSCAPaddonNetworkError(OSCAPaddonError):
     """Exception class for OSCAP addon related network errors."""
 
     pass
 
+
 class ExtractionError(OSCAPaddonError):
     """Exception class for the extraction errors."""
 
     pass
+
 
 MESSAGE_TYPE_FATAL = 0
 MESSAGE_TYPE_WARNING = 1
@@ -95,6 +103,7 @@ MESSAGE_TYPE_INFO = 2
 #   type -- one of the MESSAGE_TYPE_* constants defined above
 #   text -- the actual message that should be displayed, logged, ...
 RuleMessage = namedtuple("RuleMessage", ["origin", "type", "text"])
+
 
 def get_fix_rules_pre(profile, fpath, ds_id="", xccdf_id="", tailoring=""):
     """
@@ -111,6 +120,7 @@ def get_fix_rules_pre(profile, fpath, ds_id="", xccdf_id="", tailoring=""):
     return _run_oscap_gen_fix(profile, fpath, PRE_INSTALL_FIX_SYSTEM_ATTR,
                               ds_id=ds_id, xccdf_id=xccdf_id,
                               tailoring=tailoring)
+
 
 def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id="",
                        tailoring=""):
@@ -166,6 +176,7 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id="",
         raise OSCAPaddonError(msg)
 
     return stdout
+
 
 def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
                         chroot=""):
@@ -252,6 +263,7 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
 
     return stdout
 
+
 def wait_and_fetch_net_data(url, out_file, ca_certs=None):
     """
     Function that waits for network connection and starts a thread that fetches
@@ -281,6 +293,7 @@ def wait_and_fetch_net_data(url, out_file, ca_certs=None):
     threadMgr.add(fetch_data_thread)
 
     return THREAD_FETCH_DATA
+
 
 def extract_data(archive, out_dir, ensure_has_files=None):
     """
@@ -314,7 +327,7 @@ def extract_data(archive, out_dir, ensure_has_files=None):
         files = set(info.filename for info in zfile.filelist
                     if not info.filename.endswith("/"))
         for fpath in ensure_has_files or ():
-            if not fpath in files:
+            if fpath not in files:
                 msg = "File '%s' not found in the archive '%s'" % (fpath,
                                                                    archive)
                 raise ExtractionError(msg)
@@ -335,9 +348,10 @@ def extract_data(archive, out_dir, ensure_has_files=None):
     elif archive.endswith(".rpm"):
         # RPM
         return _extract_rpm(archive, out_dir, ensure_has_files)
-    #elif other types of archives
+    # elif other types of archives
     else:
         raise ExtractionError("Unsuported archive type")
+
 
 def _extract_tarball(archive, out_dir, ensure_has_files, alg):
     """
@@ -369,7 +383,7 @@ def _extract_tarball(archive, out_dir, ensure_has_files, alg):
                 if member.isfile())
 
     for fpath in ensure_has_files or ():
-        if not fpath in files:
+        if fpath not in files:
             msg = "File '%s' not found in the archive '%s'" % (fpath, archive)
             raise ExtractionError(msg)
 
@@ -379,10 +393,11 @@ def _extract_tarball(archive, out_dir, ensure_has_files, alg):
 
     return [utils.join_paths(out_dir, member.path) for member in tfile.getmembers()]
 
+
 def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
     """
-    Extract the given RPM into the directory tree given by the root argument and
-    make sure the given file exists in the archive.
+    Extract the given RPM into the directory tree given by the root argument
+    and make sure the given file exists in the archive.
 
     :param rpm_path: path to the RPM file that should be extracted
     :type rpm_path: str
@@ -419,7 +434,8 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
 
     for fpath in ensure_has_files or ():
         # RPM->cpio entries have absolute paths
-        if fpath not in entry_names and os.path.join("/", fpath) not in entry_names:
+        if fpath not in entry_names and \
+           os.path.join("/", fpath) not in entry_names:
             msg = "File '%s' not found in the archive '%s'" % (fpath, rpm_path)
             raise ExtractionError(msg)
 
@@ -446,17 +462,19 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
 
     return [os.path.normpath(root + name) for name in entry_names]
 
+
 def strip_content_dir(fpaths, phase="preinst"):
     """
     Strip content directory prefix from the file paths for either
     pre-installation or post-installation phase.
 
-    :param fpaths: iterable of file paths to strip content directory prefix from
+    :param fpaths: iterable of file paths to strip content directory prefix
+                   from
     :type fpaths: iterable of strings
     :param phase: specifies pre-installation or post-installation phase
     :type phase: "preinst" or "postinst"
-    :return: the same iterable of file paths as given with the content directory
-             prefix stripped
+    :return: the same iterable of file paths as given with the content
+             directory prefix stripped
     :rtype: same type as fpaths
 
     """
@@ -468,6 +486,7 @@ def strip_content_dir(fpaths, phase="preinst"):
 
     return utils.keep_type_map(remove_prefix, fpaths)
 
+
 def ssg_available(root="/"):
     """
     Tries to find the SCAP Security Guide under the given root.
@@ -478,9 +497,11 @@ def ssg_available(root="/"):
 
     return os.path.exists(utils.join_paths(root, SSG_DIR + SSG_XCCDF))
 
+
 def dry_run_skip(func):
     """
-    Decorator that makes sure the decorated function is noop in the dry-run mode.
+    Decorator that makes sure the decorated function is noop in the dry-run
+    mode.
 
     :param func: a decorated function that needs to have the first parameter an
                  object with the _addon_data attribute referencing the OSCAP
