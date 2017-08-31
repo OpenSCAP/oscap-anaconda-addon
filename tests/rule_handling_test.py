@@ -25,6 +25,7 @@ import mock
 
 from org_fedora_oscap import rule_handling, common
 
+
 class PartRulesSyntaxSupportTest(unittest.TestCase):
     """Test functionality of the PartRules' methods with syntax support."""
 
@@ -49,6 +50,7 @@ class PartRulesSyntaxSupportTest(unittest.TestCase):
     def delitem_test(self):
         del(self.part_rules["/tmp"])
         self.assertNotIn("/tmp", self.part_rules)
+
 
 class RuleDataParsingTest(unittest.TestCase):
     """Test rule data parsing."""
@@ -112,6 +114,7 @@ class RuleDataParsingTest(unittest.TestCase):
         self.assertEqual(str(self.rule_data._part_rules),
                          "part /tmp --mountoptions=nodev")
 
+
 class RuleEvaluationTest(unittest.TestCase):
     """Test if the rule evaluation works properly."""
 
@@ -129,9 +132,9 @@ class RuleEvaluationTest(unittest.TestCase):
         root_part_mock = mock.Mock()
         root_part_mock.format.options = "defaults"
 
-        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
-                                          "/": root_part_mock,
-                                          }
+        self.storage_mock.mountpoints = {"/tmp": tmp_part_mock,
+                                         "/": root_part_mock,
+                                         }
 
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
@@ -149,8 +152,8 @@ class RuleEvaluationTest(unittest.TestCase):
         tmp_part_mock = mock.Mock()
         tmp_part_mock.format.options = "defaults"
 
-        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
-                                          }
+        self.storage_mock.mountpoints = {"/tmp": tmp_part_mock,
+                                         }
 
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
@@ -171,9 +174,9 @@ class RuleEvaluationTest(unittest.TestCase):
         root_part_mock = mock.Mock()
         root_part_mock.format.options = "defaults"
 
-        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
-                                          "/": root_part_mock,
-                                          }
+        self.storage_mock.mountpoints = {"/tmp": tmp_part_mock,
+                                         "/": root_part_mock,
+                                         }
 
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
@@ -211,9 +214,9 @@ class RuleEvaluationTest(unittest.TestCase):
         root_part_mock = mock.Mock()
         root_part_mock.format.options = "defaults"
 
-        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
-                                          "/": root_part_mock,
-                                          }
+        self.storage_mock.mountpoints = {"/tmp": tmp_part_mock,
+                                         "/": root_part_mock,
+                                         }
 
         # evaluate twice, so that duplicates could possible by created
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
@@ -255,9 +258,9 @@ class RuleEvaluationTest(unittest.TestCase):
         root_part_mock = mock.Mock()
         root_part_mock.format.options = "defaults"
 
-        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
-                                          "/": root_part_mock,
-                                          }
+        self.storage_mock.mountpoints = {"/tmp": tmp_part_mock,
+                                         "/": root_part_mock,
+                                         }
 
         messages = self.rule_data.eval_rules(self.ksdata_mock,
                                              self.storage_mock, report_only=True)
@@ -298,9 +301,9 @@ class RuleEvaluationTest(unittest.TestCase):
         root_part_mock = mock.Mock()
         root_part_mock.format.options = "defaults"
 
-        self.storage_mock.mountpoints = { "/tmp": tmp_part_mock,
-                                          "/": root_part_mock,
-                                          }
+        self.storage_mock.mountpoints = {"/tmp": tmp_part_mock,
+                                         "/": root_part_mock,
+                                         }
 
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
@@ -324,8 +327,8 @@ class RuleEvaluationTest(unittest.TestCase):
         root_part_mock = mock.Mock()
         root_part_mock.format.options = "defaults"
 
-        self.storage_mock.mountpoints = { "/": root_part_mock,
-                                          }
+        self.storage_mock.mountpoints = {"/": root_part_mock,
+                                         }
 
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
@@ -374,7 +377,7 @@ class RuleEvaluationTest(unittest.TestCase):
 
         # minimal password length greater than actual length --> one warning
         self.assertEqual(len(messages), 1)
-        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_WARNING)
+        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_FATAL)
 
         # warning has to mention the length
         self.assertIn("8", messages[0].text)
@@ -396,7 +399,7 @@ class RuleEvaluationTest(unittest.TestCase):
 
         # minimal password length greater than actual length --> one warning
         self.assertEqual(len(messages), 1)
-        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_WARNING)
+        self.assertEqual(messages[0].type, common.MESSAGE_TYPE_FATAL)
 
         # warning has to mention the length
         self.assertIn("8", messages[0].text)
@@ -514,7 +517,7 @@ class RuleEvaluationTest(unittest.TestCase):
 
     def various_rules_test(self):
         for rule in ["part /tmp", "part /", "passwd --minlen=14",
-                     "package --add=firewalld",]:
+                     "package --add=firewalld", ]:
             self.rule_data.new_rule(rule)
 
         self.storage_mock.mountpoints = dict()
@@ -525,6 +528,7 @@ class RuleEvaluationTest(unittest.TestCase):
 
         # four rules, all fail --> four messages
         self.assertEqual(len(messages), 4)
+
 
 class RevertingTest(unittest.TestCase):
     """Test for reverting changes done by the rule evaluation."""
@@ -569,7 +573,7 @@ class RevertingTest(unittest.TestCase):
         self.assertEqual(self.storage_mock.mountpoints["/tmp"].format.options,
                          "defaults")
 
-        ### another cycle of the same ###
+        # another cycle of the same #
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
         # mount option added --> one message
@@ -609,7 +613,7 @@ class RevertingTest(unittest.TestCase):
         self.assertEqual(self.ksdata_mock.rootpw.password, "aaaa")
         self.assertTrue(self.ksdata_mock.rootpw.seen)
 
-        ### another run of the same ###
+        # another run of the same #
 
         # run twice --> first run removes the password, but the second one should
         #               also mention the old password
@@ -629,7 +633,7 @@ class RevertingTest(unittest.TestCase):
         self.assertEqual(self.ksdata_mock.rootpw.password, "aaaa")
         self.assertTrue(self.ksdata_mock.rootpw.seen)
 
-        ### with long enough password this time ###
+        # with long enough password this time #
         self.ksdata_mock.rootpw.password = "aaaaaaaaaaaaa"
 
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
@@ -658,7 +662,7 @@ class RevertingTest(unittest.TestCase):
         self.assertEqual(self.ksdata_mock.packages.packageList, ["vim"])
         self.assertEqual(self.ksdata_mock.packages.excludedList, [])
 
-        ### now do the same again ###
+        # now do the same again #
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
         # one info message for each added/removed package
