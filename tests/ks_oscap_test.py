@@ -6,6 +6,7 @@ from pykickstart.errors import KickstartValueError
 from org_fedora_oscap.ks.oscap import OSCAPdata
 from org_fedora_oscap import common
 
+
 class ParsingTest(unittest.TestCase):
     def setUp(self):
         self.oscap_data = OSCAPdata("org_fedora_oscap")
@@ -54,7 +55,7 @@ class ParsingTest(unittest.TestCase):
                                           self.oscap_data.tailoring_path))
 
     def str_test(self):
-        str_ret = str(self.oscap_data)
+        str_ret = str(self.oscap_data).strip()
         self.assertEqual(str_ret,
                          "%addon org_fedora_oscap\n"
                          "    content-type = datastream\n"
@@ -67,6 +68,7 @@ class ParsingTest(unittest.TestCase):
                          "    profile = Web Server\n"
                          "%end"
                          )
+
     def str_parse_test(self):
         self.oscap_data2 = OSCAPdata("org_fedora_oscap")
         str_ret = str(self.oscap_data)
@@ -75,6 +77,7 @@ class ParsingTest(unittest.TestCase):
 
         str_ret2 = str(self.oscap_data)
         self.assertEqual(str_ret, str_ret2)
+
 
 class IncompleteDataTest(unittest.TestCase):
     def setUp(self):
@@ -109,6 +112,7 @@ class IncompleteDataTest(unittest.TestCase):
 
         self.oscap_data.finalize()
         self.assertEqual(self.oscap_data.profile_id, "default")
+
 
 class InvalidDataTest(unittest.TestCase):
     def setUp(self):
@@ -155,6 +159,7 @@ class InvalidDataTest(unittest.TestCase):
         with self.assertRaises(KickstartValueError):
             self.oscap_data.finalize()
 
+
 class EverythingOKtest(unittest.TestCase):
     def setUp(self):
         self.oscap_data = OSCAPdata("org_fedora_oscap")
@@ -187,6 +192,7 @@ class EverythingOKtest(unittest.TestCase):
             self.oscap_data.handle_line(line)
 
         self.oscap_data.finalize()
+
 
 class ArchiveHandlingTest(unittest.TestCase):
     """Tests for handling archives."""
@@ -299,6 +305,8 @@ class ArchiveHandlingTest(unittest.TestCase):
                                                          "scap_content.xml"))
         self.assertTrue(self.oscap_data.raw_postinst_content_path.endswith(
                                                          "scap_content.xml"))
+
+
 class FingerprintTests(unittest.TestCase):
     """Tests for fingerprint pre-processing."""
 
@@ -316,7 +324,7 @@ class FingerprintTests(unittest.TestCase):
     def invalid_fingerprints_test(self):
         # invalid character
         with self.assertRaisesRegexp(KickstartValueError, "Unsupported or invalid fingerprint"):
-             self.oscap_data.handle_line("fingerprint = %s?" % ("a" * 31))
+            self.oscap_data.handle_line("fingerprint = %s?" % ("a" * 31))
 
         # invalid lengths (odd and even)
         with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
@@ -331,4 +339,3 @@ class FingerprintTests(unittest.TestCase):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 98))
         with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 124))
-
