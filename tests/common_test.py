@@ -143,14 +143,14 @@ class OSCAPtoolRunningTest(unittest.TestCase):
     def run_oscap_remediate_create_dir_test(self):
         self.run_oscap_remediate("myprofile", "my_ds.xml")
 
-        self.mock_utils.ensure_dir_exists.assert_called_with_args(
+        self.mock_utils.ensure_dir_exists.assert_called_with(
             os.path.dirname(common.RESULTS_PATH))
 
     def run_oscap_remediate_create_chroot_dir_test(self):
         self.run_oscap_remediate("myprofile", "my_ds.xml", chroot="/mnt/test")
 
-        chroot_dir = "/mnt/test" + common.RESULTS_PATH
-        self.mock_utils.ensure_dir_exists.assert_called_with_args(chroot_dir)
+        chroot_dir = "/mnt/test" + os.path.dirname(common.RESULTS_PATH)
+        self.mock_utils.ensure_dir_exists.assert_called_with(chroot_dir)
 
 
 if __name__ == "__main__":
