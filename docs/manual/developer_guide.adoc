@@ -1,4 +1,4 @@
-= SCAP Security Guide Developer Guide
+= OSCAP Anaconda Addon Developer Guide
 :imagesdir: ./images
 :toc:
 :toc-placement: preamble
