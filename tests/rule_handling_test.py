@@ -369,10 +369,6 @@ class RuleEvaluationTest(unittest.TestCase):
 
         self.ksdata_mock.rootpw.password = "aaaa"
         self.ksdata_mock.rootpw.isCrypted = False
-
-        # run twice --> first run removes the password, but the second one should
-        #               also mention the old password
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
         # minimal password length greater than actual length --> one warning
@@ -382,11 +378,11 @@ class RuleEvaluationTest(unittest.TestCase):
         # warning has to mention the length
         self.assertIn("8", messages[0].text)
 
-        # warning should mention that something happened to the old password
-        self.assertIn("was", messages[0].text)
+        # warning should mention that something is wrong with the old password
+        self.assertIn("is", messages[0].text)
 
-        # doing changes --> password should be cleared
-        self.assertEqual(self.ksdata_mock.rootpw.password, "")
+        # doing changes --> password should not be cleared
+        self.assertEqual(self.ksdata_mock.rootpw.password, "aaaa")
 
     def passwd_minlen_short_passwd_report_only_test(self):
         self.rule_data.new_rule("passwd --minlen=8")
@@ -589,56 +585,28 @@ class RevertingTest(unittest.TestCase):
         self.assertEqual(self.storage_mock.mountpoints["/tmp"].format.options,
                          "defaults")
 
-    def revert_password_changes_test(self):
+    def revert_password_policy_changes_test(self):
+        # FIXME: Add password policy changes to this test. It only checks
+        # password length right now outside of policy changes.
         self.rule_data.new_rule("passwd --minlen=8")
 
         self.ksdata_mock.rootpw.password = "aaaa"
         self.ksdata_mock.rootpw.isCrypted = False
-
-        # run twice --> first run removes the password, but the second one should
-        #               also mention the old password
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
-        # password removed --> one message
+        # password error --> one message
         self.assertEqual(len(messages), 1)
-
-        # weak password should be removed
-        self.assertEqual(self.ksdata_mock.rootpw.password, "")
+        self.assertEqual(self.ksdata_mock.rootpw.password, "aaaa")
         self.assertFalse(self.ksdata_mock.rootpw.seen)
 
         self.rule_data.revert_changes(self.ksdata_mock, self.storage_mock)
-
-        # changes should be reverted
-        self.assertEqual(self.ksdata_mock.rootpw.password, "aaaa")
-        self.assertTrue(self.ksdata_mock.rootpw.seen)
-
-        # another run of the same #
-
-        # run twice --> first run removes the password, but the second one should
-        #               also mention the old password
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
-
-        # password removed --> one message
-        self.assertEqual(len(messages), 1)
-
-        # weak password should be removed
-        self.assertEqual(self.ksdata_mock.rootpw.password, "")
-        self.assertFalse(self.ksdata_mock.rootpw.seen)
-
-        self.rule_data.revert_changes(self.ksdata_mock, self.storage_mock)
-
-        # changes should be reverted
-        self.assertEqual(self.ksdata_mock.rootpw.password, "aaaa")
-        self.assertTrue(self.ksdata_mock.rootpw.seen)
 
         # with long enough password this time #
         self.ksdata_mock.rootpw.password = "aaaaaaaaaaaaa"
 
         messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
 
-        # revert should have cleared everything, long enough password
+        # long enough password
         # entered --> no message
         self.assertEqual(messages, [])
 
