@@ -37,9 +37,9 @@ from org_fedora_oscap.common import SUPPORTED_ARCHIVES
 from org_fedora_oscap.content_handling import ContentCheckError
 
 import logging
-log = logging.getLogger("anaconda")
-
 import gettext
+
+log = logging.getLogger("anaconda")
 _ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
 
 # export OSCAPdata class to prevent Anaconda's collect method from taking
@@ -59,10 +59,12 @@ REQUIRED_PACKAGES = ("openscap", "openscap-scanner", )
 
 FINGERPRINT_REGEX = re.compile(r'^[a-z0-9]+$')
 
+
 class MisconfigurationError(common.OSCAPaddonError):
     """Exception for reporting misconfiguration."""
 
     pass
+
 
 class OSCAPdata(AddonData):
     """
@@ -83,7 +85,7 @@ class OSCAPdata(AddonData):
             # do not call the parent's __init__ more than once
             AddonData.__init__(self, name)
 
-        ## values specifying the content
+        # values specifying the content
         self.content_type = ""
         self.content_url = ""
         self.datastream_id = ""
@@ -93,13 +95,13 @@ class OSCAPdata(AddonData):
         self.cpe_path = ""
         self.tailoring_path = ""
 
-        ## additional values
+        # additional values
         self.fingerprint = ""
 
         # certificate to verify HTTPS connection or signed data
         self.certificates = ""
 
-        ## internal values
+        # internal values
         self.rule_data = rule_handling.RuleData()
         self.dry_run = False
 
@@ -209,17 +211,17 @@ class OSCAPdata(AddonData):
 
         """
 
-        actions = { "content-type" : self._parse_content_type,
-                    "content-url" : self._parse_content_url,
-                    "datastream-id" : self._parse_datastream_id,
-                    "profile" : self._parse_profile_id,
-                    "xccdf-id" : self._parse_xccdf_id,
-                    "xccdf-path": self._parse_xccdf_path,
-                    "cpe-path": self._parse_cpe_path,
-                    "tailoring-path": self._parse_tailoring_path,
-                    "fingerprint": self._parse_fingerprint,
-                    "certificates": self._parse_certificates,
-                    }
+        actions = {"content-type": self._parse_content_type,
+                   "content-url": self._parse_content_url,
+                   "datastream-id": self._parse_datastream_id,
+                   "profile": self._parse_profile_id,
+                   "xccdf-id": self._parse_xccdf_id,
+                   "xccdf-path": self._parse_xccdf_path,
+                   "cpe-path": self._parse_cpe_path,
+                   "tailoring-path": self._parse_tailoring_path,
+                   "fingerprint": self._parse_fingerprint,
+                   "certificates": self._parse_certificates,
+                   }
 
         line = line.strip()
         (pre, sep, post) = line.partition("=")
@@ -230,8 +232,9 @@ class OSCAPdata(AddonData):
         try:
             actions[pre](post)
         except KeyError:
-            msg = "Unknown item '%s' for %s addon" % (line, self.name)
-            raise KickstartParseError(msg)
+            if "%end" not in line:
+                msg = "Unknown item '%s' for %s addon" % (line, self.name)
+                raise KickstartParseError(msg)
 
     def finalize(self):
         """
@@ -242,7 +245,7 @@ class OSCAPdata(AddonData):
 
         tmpl = "%s missing for the %s addon"
 
-        ## check provided data
+        # check provided data
         if not self.content_type:
             raise KickstartValueError(tmpl % ("content-type", self.name))
 
@@ -270,7 +273,7 @@ class OSCAPdata(AddonData):
                       "file '%s'" % self.content_url
                 raise KickstartValueError(msg)
 
-        ## do some initialization magic in case of SSG
+        # do some initialization magic in case of SSG
         if self.content_type == "scap-security-guide":
             if not common.ssg_available():
                 msg = "SCAP Security Guide not found on the system"
@@ -436,7 +439,6 @@ class OSCAPdata(AddonData):
                     while True:
                         time.sleep(100000)
 
-
         # check fingerprint if given
         if self.fingerprint:
             hash_obj = utils.get_hashing_algorithm(self.fingerprint)
@@ -535,7 +537,7 @@ class OSCAPdata(AddonData):
             pass
         else:
             utils.universal_copy(utils.join_paths(common.INSTALLATION_CONTENT_DIR,
-                                              "*"),
+                                                  "*"),
                                  target_content_dir)
 
         common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
