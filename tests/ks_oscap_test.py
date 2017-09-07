@@ -55,7 +55,7 @@ class ParsingTest(unittest.TestCase):
                                           self.oscap_data.tailoring_path))
 
     def str_test(self):
-        str_ret = str(self.oscap_data).strip()
+        str_ret = str(self.oscap_data)
         self.assertEqual(str_ret,
                          "%addon org_fedora_oscap\n"
                          "    content-type = datastream\n"
@@ -66,7 +66,7 @@ class ParsingTest(unittest.TestCase):
                          "    cpe-path = /usr/share/oscap/cpe.xml\n"
                          "    tailoring-path = /usr/share/oscap/tailoring.xml\n"
                          "    profile = Web Server\n"
-                         "%end"
+                         "%end\n\n"
                          )
 
     def str_parse_test(self):
