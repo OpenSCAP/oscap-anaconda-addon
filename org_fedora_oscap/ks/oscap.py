@@ -537,6 +537,8 @@ class OSCAPdata(AddonData):
             utils.universal_copy(utils.join_paths(common.INSTALLATION_CONTENT_DIR,
                                               "*"),
                                  target_content_dir)
+        if os.path.exists(self.preinst_tailoring_path):
+            shutil.copy2(self.preinst_tailoring_path, target_content_dir)
 
         common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
                                    self.datastream_id, self.xccdf_id,
