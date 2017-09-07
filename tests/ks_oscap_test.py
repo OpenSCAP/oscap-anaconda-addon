@@ -73,7 +73,8 @@ class ParsingTest(unittest.TestCase):
         self.oscap_data2 = OSCAPdata("org_fedora_oscap")
         str_ret = str(self.oscap_data)
         for line in str_ret.splitlines()[1:-1]:
-            self.oscap_data2.handle_line(line)
+            if "%end" not in line:
+                self.oscap_data2.handle_line(line)
 
         str_ret2 = str(self.oscap_data)
         self.assertEqual(str_ret, str_ret2)
