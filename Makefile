@@ -17,7 +17,7 @@ FILES = $(ADDON) \
 	po \
 	COPYING \
 	Makefile \
-	README
+	README.md
 
 EXCLUDES = \
 	*~ \
