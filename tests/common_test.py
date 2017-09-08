@@ -25,6 +25,7 @@ import os
 import mock
 from org_fedora_oscap import common
 
+
 class OSCAPtoolRunningTest(unittest.TestCase):
     def setUp(self):
         self.mock_subprocess = mock.Mock()
@@ -52,14 +53,16 @@ class OSCAPtoolRunningTest(unittest.TestCase):
 
         # check calls where done right
         args = ["oscap", "xccdf", "eval", "--remediate",
-                "--results=%s" % common.RESULTS_PATH, "--profile=myprofile",
+                "--results=%s" % common.RESULTS_PATH,
+                "--report=%s" % common.REPORT_PATH,
+                "--profile=myprofile",
                 "my_ds.xml"]
 
         # it's impossible to check the preexec_func as it is an internal
         # function of the run_oscap_remediate function
-        kwargs = { "stdout": self.mock_subprocess.PIPE,
-                   "stderr": self.mock_subprocess.PIPE,
-                   }
+        kwargs = {"stdout": self.mock_subprocess.PIPE,
+                  "stderr": self.mock_subprocess.PIPE,
+                  }
 
         for arg in args:
             self.assertIn(arg, self.mock_subprocess.Popen.call_args[0][0])
@@ -80,14 +83,16 @@ class OSCAPtoolRunningTest(unittest.TestCase):
 
         # check calls where done right
         args = ["oscap", "xccdf", "eval", "--remediate",
-                "--results=%s" % common.RESULTS_PATH, "--profile=myprofile",
+                "--results=%s" % common.RESULTS_PATH,
+                "--report=%s" % common.REPORT_PATH,
+                "--profile=myprofile",
                 "--datastream-id=my_ds_id", "my_ds.xml"]
 
         # it's impossible to check the preexec_func as it is an internal
         # function of the run_oscap_remediate function
-        kwargs = { "stdout": self.mock_subprocess.PIPE,
-                   "stderr": self.mock_subprocess.PIPE,
-                   }
+        kwargs = {"stdout": self.mock_subprocess.PIPE,
+                  "stderr": self.mock_subprocess.PIPE,
+                  }
 
         for arg in args:
             self.assertIn(arg, self.mock_subprocess.Popen.call_args[0][0])
@@ -109,15 +114,17 @@ class OSCAPtoolRunningTest(unittest.TestCase):
 
         # check calls where done right
         args = ["oscap", "xccdf", "eval", "--remediate",
-                "--results=%s" % common.RESULTS_PATH, "--profile=myprofile",
+                "--results=%s" % common.RESULTS_PATH,
+                "--report=%s" % common.REPORT_PATH,
+                "--profile=myprofile",
                 "--datastream-id=my_ds_id", "--xccdf-id=my_xccdf_id",
                 "my_ds.xml"]
 
         # it's impossible to check the preexec_func as it is an internal
         # function of the run_oscap_remediate function
-        kwargs = { "stdout": self.mock_subprocess.PIPE,
-                   "stderr": self.mock_subprocess.PIPE,
-                   }
+        kwargs = {"stdout": self.mock_subprocess.PIPE,
+                  "stderr": self.mock_subprocess.PIPE,
+                  }
 
         for arg in args:
             self.assertIn(arg, self.mock_subprocess.Popen.call_args[0][0])
@@ -136,14 +143,15 @@ class OSCAPtoolRunningTest(unittest.TestCase):
     def run_oscap_remediate_create_dir_test(self):
         self.run_oscap_remediate("myprofile", "my_ds.xml")
 
-        self.mock_utils.ensure_dir_exists.assert_called_with_args(
+        self.mock_utils.ensure_dir_exists.assert_called_with(
             os.path.dirname(common.RESULTS_PATH))
 
     def run_oscap_remediate_create_chroot_dir_test(self):
         self.run_oscap_remediate("myprofile", "my_ds.xml", chroot="/mnt/test")
 
-        chroot_dir = "/mnt/test" + common.RESULTS_PATH
-        self.mock_utils.ensure_dir_exists.assert_called_with_args(chroot_dir)
+        chroot_dir = "/mnt/test" + os.path.dirname(common.RESULTS_PATH)
+        self.mock_utils.ensure_dir_exists.assert_called_with(chroot_dir)
+
 
 if __name__ == "__main__":
     unittest.main()

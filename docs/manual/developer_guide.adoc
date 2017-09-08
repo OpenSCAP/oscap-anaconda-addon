@@ -1,4 +1,4 @@
-= SCAP Security Guide Developer Guide
+= OSCAP Anaconda Addon Developer Guide
 :imagesdir: ./images
 :toc:
 :toc-placement: preamble
@@ -26,23 +26,10 @@ You probably want to use rhel7-branch. Currently we don't support Fedora (unsupp
 ## Build image
 We will create cpio archive `ASCII cpio archive (SVR4 with no CRC)` packed using gzip (`gzip compressed data`).
 
-You can call this script in oscap-anaconda-addon repository. It will create `update.img` image.
+You can use the `create_update_image.sh` script in the oscap-anaconda-addon repository to create the `update.img` image.
 
 ```
-#!/bin/bash
-
-tmp_root=$(mktemp -d)
-build_dir=$PWD
-
-# "copy files" to new root
-make install DESTDIR="${tmp_root}" >&2
-
-# create update image
-cd "$tmp_root"
-find -L . | cpio -oc | gzip > "$build_dir/update.img"
-
-# cleanup
-rm -rf "$tmp_root"
+./create_update_image.sh
 ```
 If you want to see what was packed, you can extract the image.
 ```
