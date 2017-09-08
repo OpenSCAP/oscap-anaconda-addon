@@ -1,6 +1,14 @@
+%if 0%{?fedora} >= 25
+%define _py python3
+%endif
+
+%if 0%{?rhel} || 0%{?fedora} < 25
+%define _py python
+%endif
+
 Name:           oscap-anaconda-addon
 Version:        0.7
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Anaconda addon integrating OpenSCAP to the installation process
 
 License:        GPLv2+
@@ -16,15 +24,22 @@ Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      noarch
 BuildRequires:  gettext
-BuildRequires:	python2-devel
-BuildRequires:  python-mock
-BuildRequires:  python-nose
-BuildRequires:  openscap openscap-utils openscap-python
-BuildRequires:  python-cpio
+%if 0%{?fedora} >= 25
+BuildRequires:  %{_py}-devel
+BuildRequires:  %{_py}-mock
+BuildRequires:  %{_py}-kickstart
+%else
+BuildRequires:	%{_py}2-devel
+BuildRequires:  %{_py}2-mock
+BuildRequires:  pykickstart
+%endif
+BuildRequires:  %{_py}-nose
+BuildRequires:  openscap openscap-utils openscap-%{_py}
+BuildRequires:  %{_py}-cpio
 BuildRequires:  anaconda >= 21.48.22.99
 Requires:       anaconda >= 21.48.22.99
-Requires:       openscap openscap-utils openscap-python
-Requires:       python-cpio
+Requires:       openscap openscap-utils openscap-%{_py}
+Requires:       %{_py}-cpio
 
 %description
 This is an addon that integrates OpenSCAP utilities with the Anaconda installer
@@ -48,9 +63,12 @@ make install DESTDIR=%{buildroot}
 %files -f %{name}.lang
 %{_datadir}/anaconda/addons/org_fedora_oscap
 
-%doc COPYING ChangeLog README
+%doc COPYING ChangeLog README.md
 
 %changelog
+* Fri Sep 08 2017 Gabriel Alford <galford@redhat.com> -0.7-3
+- Add python3 support to .spec file and upstream code
+
 * Mon Feb 13 2017 Jiri Konecny <jkonecny@redhat.com> - 0.7-2
 - Fix URL which is now poiting to GitHub instead of fedorahosted
 
