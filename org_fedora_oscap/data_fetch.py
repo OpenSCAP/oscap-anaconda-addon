@@ -36,25 +36,30 @@ FTP_URL_RE = re.compile(FTP_URL_RE_STR)
 FILE_URL_RE_STR = r"(file)://(.*)"
 FILE_URL_RE = re.compile(FILE_URL_RE_STR)
 
+
 class DataFetchError(Exception):
     """Parent class for the exception classes defined in this module."""
 
     pass
+
 
 class CertificateValidationError(DataFetchError):
     """Class for the certificate validation related errors."""
 
     pass
 
+
 class WrongRequestError(DataFetchError):
     """Class for the wrong combination of parameters errors."""
 
     pass
 
+
 class UnknownURLformatError(DataFetchError):
     """Class for invalid URL cases."""
 
     pass
+
 
 class FetchError(DataFetchError):
     """
@@ -63,6 +68,7 @@ class FetchError(DataFetchError):
     """
 
     pass
+
 
 def can_fetch_from(url):
     """
@@ -77,6 +83,7 @@ def can_fetch_from(url):
     """
     resources = NET_URL_PREFIXES + LOCAL_URL_PREFIXES
     return any(url.startswith(prefix) for prefix in resources)
+
 
 def fetch_data(url, out_file, ca_certs=None):
     """
@@ -107,6 +114,7 @@ def fetch_data(url, out_file, ca_certs=None):
     else:
         msg = "Cannot fetch data from '%s': unknown URL format" % url
         raise UnknownURLformatError(msg)
+
 
 def _curl_fetch(url, out_file, ca_certs=None):
     """

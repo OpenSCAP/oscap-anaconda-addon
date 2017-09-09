@@ -72,11 +72,14 @@ class RuleDataParsingTest(unittest.TestCase):
         self.assertIn("/var/log", self.rule_data._part_rules)
 
         # mount options should be parsed
-        self.assertIn("nodev", self.rule_data._part_rules["/tmp"]._mount_options)
-        self.assertIn("noauto", self.rule_data._part_rules["/tmp"]._mount_options)
+        self.assertIn("nodev",
+                      self.rule_data._part_rules["/tmp"]._mount_options)
+        self.assertIn("noauto",
+                      self.rule_data._part_rules["/tmp"]._mount_options)
 
         # no mount options for /var/log
-        self.assertEqual(self.rule_data._part_rules["/var/log"]._mount_options, [])
+        self.assertEqual(self.rule_data._part_rules["/var/log"]._mount_options,
+                         [])
 
         # minimal password length should be parsed and stored correctly
         self.assertEqual(self.rule_data._passwd_rules._minlen, 14)
@@ -94,21 +97,25 @@ class RuleDataParsingTest(unittest.TestCase):
     def quoted_opt_values_test(self):
         self.rule_data.new_rule('part /tmp --mountoptions="nodev,noauto"')
 
-        self.assertIn("nodev", self.rule_data._part_rules["/tmp"]._mount_options)
-        self.assertIn("noauto", self.rule_data._part_rules["/tmp"]._mount_options)
-        self.assertNotIn('"', self.rule_data._part_rules["/tmp"]._mount_options)
+        self.assertIn("nodev",
+                      self.rule_data._part_rules["/tmp"]._mount_options)
+        self.assertIn("noauto",
+                      self.rule_data._part_rules["/tmp"]._mount_options)
+        self.assertNotIn('"',
+                         self.rule_data._part_rules["/tmp"]._mount_options)
 
     def real_output_test(self):
-        output = """          
+        output = """
       part /tmp
-    
+
       part /tmp --mountoptions=nodev
     """
         for line in output.splitlines():
             self.rule_data.new_rule(line)
 
         self.assertIn("/tmp", self.rule_data._part_rules)
-        self.assertIn("nodev", self.rule_data._part_rules["/tmp"]._mount_options)
+        self.assertIn("nodev",
+                      self.rule_data._part_rules["/tmp"]._mount_options)
 
         # should be stripped and merged
         self.assertEqual(str(self.rule_data._part_rules),
@@ -136,7 +143,8 @@ class RuleEvaluationTest(unittest.TestCase):
                                          "/": root_part_mock,
                                          }
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # partitions exist --> no errors, warnings or additional info
         self.assertEqual(messages, [])
@@ -155,7 +163,8 @@ class RuleEvaluationTest(unittest.TestCase):
         self.storage_mock.mountpoints = {"/tmp": tmp_part_mock,
                                          }
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # / mount point missing --> one error
         self.assertEqual(len(messages), 1)
@@ -178,15 +187,16 @@ class RuleEvaluationTest(unittest.TestCase):
                                          "/": root_part_mock,
                                          }
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # two mount options added --> two info messages
         self.assertEqual(len(messages), 2)
         self.assertTrue(all(message.type == common.MESSAGE_TYPE_INFO
                             for message in messages))
 
-        # newly added mount options should be mentioned in the messages together
-        # with their mount points
+        # newly added mount options should be mentioned in the messages
+        # together with their mount points
         nodev_found = False
         noauto_found = False
 
@@ -219,16 +229,18 @@ class RuleEvaluationTest(unittest.TestCase):
                                          }
 
         # evaluate twice, so that duplicates could possible by created
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # two mount options added --> two info messages
         self.assertEqual(len(messages), 2)
         self.assertTrue(all(message.type == common.MESSAGE_TYPE_INFO
                             for message in messages))
 
-        # newly added mount options should be mentioned in the messages together
-        # with their mount points
+        # newly added mount options should be mentioned in the messages
+        # together with their mount points
         nodev_found = False
         noauto_found = False
 
@@ -263,15 +275,16 @@ class RuleEvaluationTest(unittest.TestCase):
                                          }
 
         messages = self.rule_data.eval_rules(self.ksdata_mock,
-                                             self.storage_mock, report_only=True)
+                                             self.storage_mock,
+                                             report_only=True)
 
         # two mount options added --> two info messages
         self.assertEqual(len(messages), 2)
         self.assertEqual(messages[0].type, common.MESSAGE_TYPE_INFO)
         self.assertEqual(messages[1].type, common.MESSAGE_TYPE_INFO)
 
-        # newly added mount options should be mentioned in the messages together
-        # with their mount points
+        # newly added mount options should be mentioned in the messages
+        # together with their mount points
         nodev_found = False
         noauto_found = False
 
@@ -305,7 +318,8 @@ class RuleEvaluationTest(unittest.TestCase):
                                          "/": root_part_mock,
                                          }
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # two mount options added (even though it is a prefix of another one)
         #   --> two info messages
@@ -330,7 +344,8 @@ class RuleEvaluationTest(unittest.TestCase):
         self.storage_mock.mountpoints = {"/": root_part_mock,
                                          }
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # one mount option added, one mount point missing (mount options
         # cannot be added) --> one info, one error
@@ -355,7 +370,8 @@ class RuleEvaluationTest(unittest.TestCase):
         self.rule_data.new_rule("passwd --minlen=8")
 
         self.ksdata_mock.rootpw.password = ""
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # minimal password length required --> one warning
         self.assertEqual(len(messages), 1)
@@ -369,7 +385,8 @@ class RuleEvaluationTest(unittest.TestCase):
 
         self.ksdata_mock.rootpw.password = "aaaa"
         self.ksdata_mock.rootpw.isCrypted = False
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # minimal password length greater than actual length --> one warning
         self.assertEqual(len(messages), 1)
@@ -390,7 +407,8 @@ class RuleEvaluationTest(unittest.TestCase):
         self.ksdata_mock.rootpw.password = "aaaa"
         self.ksdata_mock.rootpw.isCrypted = False
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock,
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock,
                                              report_only=True)
 
         # minimal password length greater than actual length --> one warning
@@ -409,7 +427,8 @@ class RuleEvaluationTest(unittest.TestCase):
         self.ksdata_mock.rootpw.password = "aaaa"
         self.ksdata_mock.rootpw.isCrypted = True
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # minimal password length greater than actual length --> one warning
         self.assertEqual(len(messages), 1)
@@ -424,7 +443,8 @@ class RuleEvaluationTest(unittest.TestCase):
         self.ksdata_mock.rootpw.password = "aaaaaaaaaaaaaaaaa"
         self.ksdata_mock.rootpw.isCrypted = False
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # minimal password length less than actual length --> no warning
         self.assertEqual(messages, [])
@@ -436,7 +456,8 @@ class RuleEvaluationTest(unittest.TestCase):
         self.ksdata_mock.packages.packageList = ["vim"]
         self.ksdata_mock.packages.excludedList = []
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # one info message for each (really) added/removed package
         self.assertEqual(len(messages), 3)
@@ -467,7 +488,8 @@ class RuleEvaluationTest(unittest.TestCase):
         self.ksdata_mock.packages.excludedList = []
 
         messages = self.rule_data.eval_rules(self.ksdata_mock,
-                                             self.storage_mock, report_only=True)
+                                             self.storage_mock,
+                                             report_only=True)
 
         # one info message for each added/removed package
         self.assertEqual(len(messages), 3)
@@ -495,7 +517,8 @@ class RuleEvaluationTest(unittest.TestCase):
 
         self.storage_mock.bootloader.password = None
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # bootloader password not set --> one warning
         self.assertEqual(len(messages), 1)
@@ -506,7 +529,8 @@ class RuleEvaluationTest(unittest.TestCase):
 
         self.storage_mock.bootloader.password = "aaaaa"
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # bootloader password set --> no warnings
         self.assertEqual(messages, [])
@@ -520,7 +544,8 @@ class RuleEvaluationTest(unittest.TestCase):
         self.ksdata_mock.packages.packageList = []
         self.ksdata_mock.packages.excludedList = []
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # four rules, all fail --> four messages
         self.assertEqual(len(messages), 4)
@@ -538,7 +563,8 @@ class RevertingTest(unittest.TestCase):
         self.rule_data.new_rule("part /tmp --mountoptions=nodev")
         self.storage_mock.mountpoints = dict()
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # mount point doesn't exist -> one message, nothing done
         self.assertEqual(len(messages), 1)
@@ -554,7 +580,8 @@ class RevertingTest(unittest.TestCase):
         self.storage_mock.mountpoints["/tmp"] = mock.Mock()
         self.storage_mock.mountpoints["/tmp"].format.options = "defaults"
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # mount option added --> one message
         self.assertEqual(len(messages), 1)
@@ -570,7 +597,8 @@ class RevertingTest(unittest.TestCase):
                          "defaults")
 
         # another cycle of the same #
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # mount option added --> one message
         self.assertEqual(len(messages), 1)
@@ -592,7 +620,8 @@ class RevertingTest(unittest.TestCase):
 
         self.ksdata_mock.rootpw.password = "aaaa"
         self.ksdata_mock.rootpw.isCrypted = False
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # password error --> one message
         self.assertEqual(len(messages), 1)
@@ -604,7 +633,8 @@ class RevertingTest(unittest.TestCase):
         # with long enough password this time #
         self.ksdata_mock.rootpw.password = "aaaaaaaaaaaaa"
 
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # long enough password
         # entered --> no message
@@ -618,26 +648,31 @@ class RevertingTest(unittest.TestCase):
         self.ksdata_mock.packages.excludedList = []
 
         # run twice --> nothing should be different in the second run
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # one info message for each added/removed package
         self.assertEqual(len(messages), 3)
 
         self.rule_data.revert_changes(self.ksdata_mock, self.storage_mock)
 
-        # (only) added and excluded packages should have been removed from the list
+        # (only) added and excluded packages should have been removed from the
+        # list
         self.assertEqual(self.ksdata_mock.packages.packageList, ["vim"])
         self.assertEqual(self.ksdata_mock.packages.excludedList, [])
 
         # now do the same again #
-        messages = self.rule_data.eval_rules(self.ksdata_mock, self.storage_mock)
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock)
 
         # one info message for each added/removed package
         self.assertEqual(len(messages), 3)
 
         self.rule_data.revert_changes(self.ksdata_mock, self.storage_mock)
 
-        # (only) added and excluded packages should have been removed from the list
+        # (only) added and excluded packages should have been removed from the
+        # list
         self.assertEqual(self.ksdata_mock.packages.packageList, ["vim"])
         self.assertEqual(self.ksdata_mock.packages.excludedList, [])

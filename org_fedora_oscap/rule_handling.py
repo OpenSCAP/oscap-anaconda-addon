@@ -25,26 +25,26 @@ Module with various classes for handling pre-installation rules.
 
 import optparse
 import shlex
-
+import gettext
+import logging
 from pyanaconda.pwpolicy import F22_PwPolicyData
-
 from org_fedora_oscap import common
 from org_fedora_oscap.common import OSCAPaddonError, RuleMessage
 
 # everything else should be private
 __all__ = ["RuleData"]
 
-import gettext
 _ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
 
-import logging
 log = logging.getLogger("anaconda")
+
 
 # TODO: use set instead of list for mount options?
 def parse_csv(option, opt_str, value, parser):
     for item in value.split(","):
         if item:
             parser.values.ensure_value(option.dest, []).append(item)
+
 
 PART_RULE_PARSER = optparse.OptionParser()
 PART_RULE_PARSER.add_option("--mountoptions", dest="mount_options",
@@ -64,6 +64,7 @@ PACKAGE_RULE_PARSER.add_option("--remove", dest="remove_pkgs", action="append",
 BOOTLOADER_RULE_PARSER = optparse.OptionParser()
 BOOTLOADER_RULE_PARSER.add_option("--passwd", dest="passwd", action="store_true",
                                   default=False)
+
 
 class RuleHandler(object):
     """Base class for the rule handlers."""
@@ -106,10 +107,12 @@ class RuleHandler(object):
         # inheriting classes are supposed to override this
         pass
 
+
 class UknownRuleError(OSCAPaddonError):
     """Exception class for cases when an uknown rule is to be processed."""
 
     pass
+
 
 class RuleData(RuleHandler):
     """Class holding data parsed from the applied rules."""
@@ -154,11 +157,11 @@ class RuleData(RuleHandler):
 
         """
 
-        actions = { "part" : self._new_part_rule,
-                    "passwd" : self._new_passwd_rule,
-                    "package": self._new_package_rule,
-                    "bootloader": self._new_bootloader_rule,
-                    }
+        actions = {"part": self._new_part_rule,
+                   "passwd": self._new_passwd_rule,
+                   "package": self._new_package_rule,
+                   "bootloader": self._new_bootloader_rule,
+                   }
 
         rule = rule.strip()
         if not rule:
@@ -228,6 +231,7 @@ class RuleData(RuleHandler):
         # needed for fixups in GUI
         return self._passwd_rules
 
+
 class PartRules(RuleHandler):
     """Simple class holding data from the rules affecting partitioning."""
 
@@ -285,6 +289,7 @@ class PartRules(RuleHandler):
         for part_rule in self._rules.itervalues():
             part_rule.revert_changes(ksdata, storage)
 
+
 class PartRule(RuleHandler):
     """Simple class holding rule data for a single partition/mount point."""
 
@@ -306,7 +311,7 @@ class PartRule(RuleHandler):
 
         ret = "part %s" % self._mount_point
         if self._mount_options:
-            ret +=  " --mountoptions=%s" % ",".join(self._mount_options)
+            ret += " --mountoptions=%s" % ",".join(self._mount_options)
 
         return ret
 
@@ -329,7 +334,8 @@ class PartRule(RuleHandler):
         if self._mount_point not in storage.mountpoints:
             msg = _("%s must be on a separate partition or logical "
                     "volume" % self._mount_point)
-            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_FATAL, msg))
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_FATAL, msg))
 
             # mount point doesn't exist, nothing more can be found here
             return messages
@@ -340,9 +346,10 @@ class PartRule(RuleHandler):
 
         # add message for every option already added
         for opt in self._added_mount_options:
-            msg = msg_tmpl % { "mount_option": opt,
-                               "mount_point": self._mount_point }
-            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
+            msg = msg_tmpl % {"mount_option": opt,
+                              "mount_point": self._mount_point}
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
 
         # mount point to be created during installation
         target_mount_point = storage.mountpoints[self._mount_point]
@@ -353,11 +360,12 @@ class PartRule(RuleHandler):
 
         # add message for every mount option added
         for opt in new_opts:
-            msg = msg_tmpl % { "mount_option": opt,
-                               "mount_point": self._mount_point }
+            msg = msg_tmpl % {"mount_option": opt,
+                              "mount_point": self._mount_point}
 
             # add message for the mount option in any case
-            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
 
             # add new options to the target mount point if not reporting only
             if not report_only:
@@ -375,7 +383,7 @@ class PartRule(RuleHandler):
 
         """
 
-        if not self._mount_point in storage.mountpoints:
+        if self._mount_point not in storage.mountpoints:
             # mount point doesn't exist, nothing can be reverted
             return
 
@@ -394,6 +402,7 @@ class PartRule(RuleHandler):
 
         # reset the remembered added mount options
         self._added_mount_options = []
+
 
 class PasswdRules(RuleHandler):
     """Simple class holding data from the rules affecting passwords."""
@@ -433,18 +442,21 @@ class PasswdRules(RuleHandler):
 
             msg = _("make sure to create password with minimal length of %d "
                     "characters") % self._minlen
-            ret = [RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING, msg)]
+            ret = [RuleMessage(self.__class__,
+                               common.MESSAGE_TYPE_WARNING, msg)]
         else:
             # root password set
             if ksdata.rootpw.isCrypted:
                 msg = _("cannot check root password length (password is crypted)")
                 log.warning("cannot check root password length (password is crypted)")
-                return [RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING, msg)]
+                return [RuleMessage(self.__class__,
+                                    common.MESSAGE_TYPE_WARNING, msg)]
             elif len(ksdata.rootpw.password) < self._minlen:
                 # too short
                 msg = _("root password is too short, a longer one with at "
                         "least %d characters is required") % self._minlen
-                ret = [RuleMessage(self.__class__, common.MESSAGE_TYPE_FATAL, msg)]
+                ret = [RuleMessage(self.__class__,
+                                   common.MESSAGE_TYPE_FATAL, msg)]
             else:
                 ret = []
 
@@ -480,6 +492,7 @@ class PasswdRules(RuleHandler):
             if self._orig_strict is not None:
                 pw_policy.strict = self._orig_strict
                 self._orig_strict = None
+
 
 class PackageRules(RuleHandler):
     """Simple class holding data from the rules affecting installed packages."""
@@ -541,7 +554,8 @@ class PackageRules(RuleHandler):
         for pkg in self._added_pkgs:
             msg = _("package '%s' has been added to the list of to be installed "
                     "packages" % pkg)
-            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
 
         # packages, that should be added
         packages_to_add = (pkg for pkg in self._add_pkgs
@@ -555,15 +569,17 @@ class PackageRules(RuleHandler):
 
             msg = _("package '%s' has been added to the list of to be installed "
                     "packages" % pkg)
-            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
 
-        ### now do the same for the packages that should be excluded
+        # now do the same for the packages that should be excluded
 
         # add messages for the already excluded packages
         for pkg in self._removed_pkgs:
             msg = _("package '%s' has been added to the list of excluded "
                     "packages" % pkg)
-            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
 
         # packages, that should be added
         packages_to_remove = (pkg for pkg in self._remove_pkgs
@@ -577,7 +593,8 @@ class PackageRules(RuleHandler):
 
             msg = _("package '%s' has been added to the list of excluded "
                     "packages" % pkg)
-            messages.append(RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO, msg))
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
 
         return messages
 
@@ -596,6 +613,7 @@ class PackageRules(RuleHandler):
 
         self._added_pkgs = set()
         self._removed_pkgs = set()
+
 
 class BootloaderRules(RuleHandler):
     """Simple class holding data from the rules affecting bootloader."""

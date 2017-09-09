@@ -19,11 +19,9 @@
 #
 
 import threading
-from functools import wraps
-
+import logging
 import gettext
-_ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
-N_ = lambda x: x
+from functools import wraps
 
 # the path to addons is in sys.path so we can import things
 # from org_fedora_oscap
@@ -32,23 +30,21 @@ from org_fedora_oscap import data_fetch
 from org_fedora_oscap import rule_handling
 from org_fedora_oscap import content_handling
 from org_fedora_oscap import utils
-
 from org_fedora_oscap.common import dry_run_skip
-
 from pyanaconda.threads import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
 from pyanaconda.ui.gui.utils import gtk_action_wait, really_hide, really_show
 from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action, GtkActionList
 from pyanaconda.ui.categories.system import SystemCategory
-
 from pykickstart.errors import KickstartValueError
 
 # pylint: disable-msg=E0611
 from gi.repository import Gdk
 
-import logging
 log = logging.getLogger("anaconda")
+_ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
+N_ = lambda x: x
 
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
@@ -56,6 +52,7 @@ __all__ = ["OSCAPSpoke"]
 # pages in the main notebook
 SET_PARAMS_PAGE = 0
 GET_CONTENT_PAGE = 1
+
 
 # helper functions
 def set_combo_selection(combo, item, unset_first=False):
@@ -84,6 +81,7 @@ def set_combo_selection(combo, item, unset_first=False):
 
         return False
 
+
 def get_combo_selection(combo):
     """
     Get the selected item of the combobox.
@@ -99,8 +97,9 @@ def get_combo_selection(combo):
 
     return model[itr][0]
 
+
 def render_message_type(column, renderer, model, itr, user_data=None):
-    #get message type from the first column
+    # get message type from the first column
     value = model[itr][0]
 
     if value == common.MESSAGE_TYPE_FATAL:
@@ -111,6 +110,7 @@ def render_message_type(column, renderer, model, itr, user_data=None):
         renderer.set_property("stock-id", "gtk-info")
     else:
         renderer.set_property("stock-id", "gtk-dialog-question")
+
 
 def set_ready(func):
     @wraps(func)
@@ -127,6 +127,7 @@ def set_ready(func):
 
     return decorated
 
+
 class OSCAPSpoke(NormalSpoke):
     """
     Main class of the OSCAP addon spoke that will appear in the Security
@@ -140,7 +141,7 @@ class OSCAPSpoke(NormalSpoke):
 
     """
 
-    ### class attributes defined by API ###
+    # class attributes defined by API #
 
     # list all top-level objects from the .glade file that should be exposed
     # to the spoke or leave empty to extract everything
@@ -167,7 +168,7 @@ class OSCAPSpoke(NormalSpoke):
     # title of the spoke (will be displayed on the hub)
     title = N_("_SECURITY POLICY")
 
-    ### methods defined by API and helper methods ###
+    # methods defined by API and helper methods #
     def __init__(self, data, storage, payload, instclass):
         """
         :see: pyanaconda.ui.common.Spoke.__init__
@@ -259,7 +260,8 @@ class OSCAPSpoke(NormalSpoke):
         self._profiles_selection = self.builder.get_object("profilesSelection")
         selected_column = self.builder.get_object("selectedColumn")
         selected_renderer = self.builder.get_object("selectedRenderer")
-        selected_column.set_cell_data_func(selected_renderer, self._render_selected)
+        selected_column.set_cell_data_func(selected_renderer,
+                                           self._render_selected)
 
         # button for switching profiles
         self._choose_button = self.builder.get_object("chooseProfileButton")
@@ -369,9 +371,8 @@ class OSCAPSpoke(NormalSpoke):
 
         if self._addon_data.fingerprint:
             hash_obj = utils.get_hashing_algorithm(self._addon_data.fingerprint)
-            digest = utils.get_file_fingerprint(\
-                                       self._addon_data.raw_preinst_content_path,
-                                       hash_obj)
+            digest = utils.get_file_fingerprint(self._addon_data.raw_preinst_content_path,
+                                                hash_obj)
             if digest != self._addon_data.fingerprint:
                 self._integrity_check_failed()
                 # fetching done
@@ -383,10 +384,9 @@ class OSCAPSpoke(NormalSpoke):
         if self._addon_data.content_type in ("archive", "rpm"):
             # extract the content
             try:
-                fpaths = common.extract_data(\
-                                    self._addon_data.raw_preinst_content_path,
-                                    common.INSTALLATION_CONTENT_DIR,
-                                    [self._addon_data.xccdf_path])
+                fpaths = common.extract_data(self._addon_data.raw_preinst_content_path,
+                                             common.INSTALLATION_CONTENT_DIR,
+                                             [self._addon_data.xccdf_path])
             except common.ExtractionError as err:
                 self._extraction_failed(err.message)
                 # fetching done
@@ -395,8 +395,7 @@ class OSCAPSpoke(NormalSpoke):
                 return
 
             # and populate missing fields
-            self._content_handling_cls, files = \
-                                 content_handling.explore_content_files(fpaths)
+            self._content_handling_cls, files = content_handling.explore_content_files(fpaths)
             files = common.strip_content_dir(files)
 
             # pylint: disable-msg=E1103
@@ -412,9 +411,8 @@ class OSCAPSpoke(NormalSpoke):
             raise common.OSCAPaddonError("Unsupported content type")
 
         try:
-            self._content_handler = self._content_handling_cls(\
-                                      self._addon_data.preinst_content_path,
-                                      self._addon_data.preinst_tailoring_path)
+            self._content_handler = self._content_handling_cls(self._addon_data.preinst_content_path,
+                                                               self._addon_data.preinst_tailoring_path)
         except content_handling.ContentHandlingError:
             self._invalid_content()
             # fetching done
@@ -437,8 +435,8 @@ class OSCAPSpoke(NormalSpoke):
         # refresh UI elements
         self.refresh()
 
-        # let all initialization and configuration happen before we evaluate the
-        # setup
+        # let all initialization and configuration happen before we evaluate
+        # the setup
         if not self._anaconda_spokes_initialized.is_set():
             # only wait (and log the messages) if the event is not set yet
             log.debug("OSCAP addon: waiting for all Anaconda spokes to be initialized")
@@ -507,8 +505,8 @@ class OSCAPSpoke(NormalSpoke):
     @gtk_action_wait
     def _update_ids_visibility(self):
         """
-        Updates visibility of the combo boxes that are used to select the DS and
-        XCCDF IDs.
+        Updates visibility of the combo boxes that are used to select the DS
+        and XCCDF IDs.
 
         """
 
@@ -588,7 +586,8 @@ class OSCAPSpoke(NormalSpoke):
         """
         Updates the message store with messages from rule evaluation.
 
-        :param report_only: wheter to do changes in configuration or just report
+        :param report_only: wheter to do changes in configuration or just
+                            report
         :type report_only: bool
 
         """
@@ -605,11 +604,13 @@ class OSCAPSpoke(NormalSpoke):
             # no messages from the rules, add a message informing about that
             if not self._active_profile:
                 # because of no profile
-                message = common.RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO,
+                message = common.RuleMessage(self.__class__,
+                                             common.MESSAGE_TYPE_INFO,
                                              _("No profile selected"))
             else:
                 # because of no pre-inst rules
-                message = common.RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO,
+                message = common.RuleMessage(self.__class__,
+                                             common.MESSAGE_TYPE_INFO,
                                              _("No rules for the pre-installation phase"))
             self._add_message(message)
 
@@ -628,7 +629,9 @@ class OSCAPSpoke(NormalSpoke):
             for msg in fatal_rootpw_msgs:
                 # cannot just change the message type because it is a namedtuple
                 messages.remove(msg)
-                messages.append(common.RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING, msg.text))
+                messages.append(common.RuleMessage(self.__class__,
+                                                   common.MESSAGE_TYPE_WARNING,
+                                                   msg.text))
             if not report_only:
                 self.__old_root_pw = self.data.rootpw.password
                 self.data.rootpw.password = None
@@ -800,7 +803,7 @@ class OSCAPSpoke(NormalSpoke):
         self._content_url_entry.set_sensitive(True)
         self._content_url_entry.grab_focus()
         self._content_url_entry.select_region(0, -1)
-        self._content_handling_cls == None
+        self._content_handling_cls = None
         self._set_error(msg)
 
     @gtk_action_wait
@@ -819,7 +822,8 @@ class OSCAPSpoke(NormalSpoke):
 
             # no messages in the dry-run mode
             self._message_store.clear()
-            message = common.RuleMessage(self.__class__, common.MESSAGE_TYPE_INFO,
+            message = common.RuleMessage(self.__class__,
+                                         common.MESSAGE_TYPE_INFO,
                                          _("Not applying security policy"))
             self._add_message(message)
 
@@ -846,9 +850,11 @@ class OSCAPSpoke(NormalSpoke):
 
             # provide SSG if available
             if common.ssg_available():
-                # show the SSG button and tweak the rest of the line (the label)
+                # show the SSG button and tweak the rest of the line
+                # (the label)
                 really_show(self._ssg_button)
-                # TRANSLATORS: the other choice if SCAP Security Guide is also available
+                # TRANSLATORS: the other choice if SCAP Security Guide is also
+                # available
                 tip = _(" or enter data stream content or archive URL below:")
             else:
                 # hide the SSG button
@@ -870,7 +876,8 @@ class OSCAPSpoke(NormalSpoke):
                         # no text -> no info/warning
                         self._progress_label.set_text("")
 
-            # switch  to the page allowing user to enter content URL and fetch it
+            # switch to the page allowing user to enter content URL and fetch
+            # it
             self._main_notebook.set_current_page(GET_CONTENT_PAGE)
             self._content_url_entry.grab_focus()
 
@@ -894,7 +901,8 @@ class OSCAPSpoke(NormalSpoke):
             else:
                 try:
                     default_ds = self._ds_checklists.iterkeys().next()
-                    set_combo_selection(self._ds_combo, default_ds, unset_first=True)
+                    set_combo_selection(self._ds_combo, default_ds,
+                                        unset_first=True)
                 except StopIteration:
                     # no data stream available
                     pass
@@ -1064,7 +1072,8 @@ class OSCAPSpoke(NormalSpoke):
 
     def on_profile_chosen(self, *args):
         """
-        Handler for the profile being chosen (e.g. "Select profile" button hit).
+        Handler for the profile being chosen
+        (e.g. "Select profile" button hit).
 
         """
 
