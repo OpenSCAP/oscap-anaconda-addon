@@ -23,6 +23,7 @@
 import unittest
 from org_fedora_oscap import data_fetch
 
+
 class CanFetchFromTest(unittest.TestCase):
     """Tests for the can_fetch_from function"""
 

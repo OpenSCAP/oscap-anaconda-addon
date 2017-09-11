@@ -27,6 +27,7 @@ from collections import namedtuple
 
 from org_fedora_oscap import utils
 
+
 class EnsureDirExistTest(unittest.TestCase):
     """Tests for the ensure_dir_exists function."""
 
@@ -63,6 +64,7 @@ class EnsureDirExistTest(unittest.TestCase):
         # restore the original os module for the utils module
         utils.ensure_dir_exists.func_globals["os"] = os
 
+
 class JoinPathsTest(unittest.TestCase):
     """Tests for the join_paths function."""
 
@@ -77,6 +79,7 @@ class JoinPathsTest(unittest.TestCase):
 
     def absolute_absolute_test(self):
         self.assertEqual(utils.join_paths("/foo", "/blah"), "/foo/blah")
+
 
 class KeepTypeMapTest(unittest.TestCase):
     """Tests for the keep_type_map function."""

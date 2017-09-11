@@ -34,25 +34,30 @@ try:
 except ImportError:
     from HTMLParser import HTMLParser
 
+
 class ContentHandlingError(Exception):
     """Exception class for errors related to SCAP content handling."""
 
     pass
+
 
 class DataStreamHandlingError(ContentHandlingError):
     """Exception class for errors related to data stream handling."""
 
     pass
 
+
 class BenchmarkHandlingError(ContentHandlingError):
     """Exception class for errors related to benchmark handling."""
 
     pass
 
+
 class ContentCheckError(ContentHandlingError):
     """Exception class for errors related to content (integrity,...) checking."""
 
     pass
+
 
 class ParseHTMLContent(HTMLParser):
     """Parser class for HTML tags within content"""
@@ -81,6 +86,7 @@ class ParseHTMLContent(HTMLParser):
     def get_content(self):
         return self.content
 
+
 def parse_HTML_from_content(content):
     """This is a very simple HTML to text parser.
 
@@ -95,6 +101,7 @@ def parse_HTML_from_content(content):
     parser.feed(content)
     return parser.get_content()
 
+
 # namedtuple class (not a constant, pylint!) for info about a XCCDF profile
 # pylint: disable-msg=C0103
 ProfileInfo = namedtuple("ProfileInfo", ["id", "title", "description"])
@@ -102,6 +109,7 @@ ProfileInfo = namedtuple("ProfileInfo", ["id", "title", "description"])
 # namedtuple class for info about content files found
 # pylint: disable-msg=C0103
 ContentFiles = namedtuple("ContentFiles", ["xccdf", "cpe", "tailoring"])
+
 
 def oscap_text_itr_get_text(itr):
     """
@@ -121,17 +129,19 @@ def oscap_text_itr_get_text(itr):
 
     return ret
 
+
 def explore_content_files(fpaths):
     """
-    Function for finding content files in a list of file paths. SIMPLY PICKS THE
-    FIRST USABLE CONTENT FILE OF A PARTICULAR TYPE AND JUST PREFERS DATA STREAMS
-    OVER STANDALONE BENCHMARKS.
+    Function for finding content files in a list of file paths. SIMPLY PICKS
+    THE FIRST USABLE CONTENT FILE OF A PARTICULAR TYPE AND JUST PREFERS DATA
+    STREAMS OVER STANDALONE BENCHMARKS.
 
     :param fpaths: a list of file paths to search for content files in
     :type fpaths: [str]
     :return: a tuple containing the content handling class and an ContentFiles
-             instance containing the file names of the XCCDF file, CPE dictionary
-             and tailoring file or "" in place of those items if not found
+             instance containing the file names of the XCCDF file, CPE
+             dictionary and tailoring file or "" in place of those items if not
+             found
     :rtype: (class, ContentFiles)
 
     """
@@ -174,11 +184,12 @@ def explore_content_files(fpaths):
     files = ContentFiles(xccdf_file, cpe_file, tailoring_file)
     return (content_class, files)
 
+
 class DataStreamHandler(object):
     """
-    Class for handling data streams in the data stream collection and retrieving
-    data from it. For example a list of data stream indices, checklists in a
-    given data stream of profiles.
+    Class for handling data streams in the data stream collection and
+    retrieving data from it. For example a list of data stream indices,
+    checklists in a given data stream of profiles.
 
     """
 
@@ -253,7 +264,8 @@ class DataStreamHandler(object):
 
     def get_data_streams(self):
         """
-        Method to get a list of data streams found in the data stream collection.
+        Method to get a list of data streams found in the data stream
+        collection.
 
         :return: list of data stream IDs
         :rtype: list of strings
@@ -264,8 +276,8 @@ class DataStreamHandler(object):
 
     def get_data_streams_checklists(self):
         """
-        Method to get data streams and their checklists found in the data stream
-        collection.
+        Method to get data streams and their checklists found in the data
+        stream collection.
 
         :return: a dictionary consisting of the IDs of the data streams as keys
                  and lists of their checklists' IDs as values
@@ -279,8 +291,8 @@ class DataStreamHandler(object):
 
     def get_checklists(self, data_stream_id):
         """
-        Method to get a list of checklists found in the data stream given by the
-        data_stream_id.
+        Method to get a list of checklists found in the data stream given by
+        the data_stream_id.
 
         :param data_stream_id: ID of the data stream to get checklists from
         :type data_stream_id: str
@@ -289,7 +301,7 @@ class DataStreamHandler(object):
 
         """
 
-        if not data_stream_id in self._items:
+        if data_stream_id not in self._items:
             msg = "Invalid data stream id given: '%s'" % data_stream_id
             raise DataStreamHandlingError(msg)
 
@@ -341,7 +353,7 @@ class DataStreamHandler(object):
 
         if default_rules_count > 0:
             profiles.append(ProfileInfo("default", "Default",
-                                "The implicit XCCDF profile. Usually, the default contains no rules."))
+                            "The implicit XCCDF profile. Usually, the default contains no rules."))
 
         benchmark = OSCAP.xccdf_policy_model_get_benchmark(policy_model)
 
@@ -363,6 +375,7 @@ class DataStreamHandler(object):
         self._profiles_cache[cache_id] = profiles
 
         return profiles
+
 
 class BenchmarkHandler(object):
     """
@@ -408,7 +421,7 @@ class BenchmarkHandler(object):
 
         if default_rules_count > 0:
             self._profiles.append(ProfileInfo("default", "Default",
-                                      "The implicit XCCDF profile. Usually, the default contains no rules."))
+                                  "The implicit XCCDF profile. Usually, the default contains no rules."))
 
         if not benchmark:
             msg = "Not a valid benchmark file: '%s'" % xccdf_file_path
