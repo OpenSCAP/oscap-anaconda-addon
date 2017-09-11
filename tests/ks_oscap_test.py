@@ -27,11 +27,13 @@ class ParsingTest(unittest.TestCase):
                          "https://example.com/hardening.xml")
         self.assertEqual(self.oscap_data.datastream_id, "id_datastream_1")
         self.assertEqual(self.oscap_data.xccdf_id, "id_xccdf_new")
-        self.assertEqual(self.oscap_data.xccdf_path, "/usr/share/oscap/xccdf.xml")
+        self.assertEqual(self.oscap_data.xccdf_path,
+                         "/usr/share/oscap/xccdf.xml")
         self.assertEqual(self.oscap_data.cpe_path, "/usr/share/oscap/cpe.xml")
         self.assertEqual(self.oscap_data.profile_id, "Web Server")
         self.assertEqual(self.oscap_data.content_name, "hardening.xml")
-        self.assertEqual(self.oscap_data.tailoring_path, "/usr/share/oscap/tailoring.xml")
+        self.assertEqual(self.oscap_data.tailoring_path,
+                         "/usr/share/oscap/tailoring.xml")
 
     def properties_test(self):
         self.assertEqual(self.oscap_data.preinst_content_path,
@@ -227,7 +229,8 @@ class ArchiveHandlingTest(unittest.TestCase):
 
         self.oscap_data.finalize()
 
-        # both content_name and content path should point to the data stream XML
+        # both content_name and content path should point to the data stream
+        # XML
         self.assertEqual(self.oscap_data.content_name, "scap_content.xml")
         self.assertTrue(self.oscap_data.preinst_content_path.endswith(
                                                          "scap_content.xml"))
@@ -300,7 +303,8 @@ class ArchiveHandlingTest(unittest.TestCase):
 
         self.oscap_data.finalize()
 
-        # content_name and content paths should all point to the data stream XML
+        # content_name and content paths should all point to the data stream
+        # XML
         self.assertEqual(self.oscap_data.content_name, "scap_content.xml")
         self.assertTrue(self.oscap_data.raw_preinst_content_path.endswith(
                                                          "scap_content.xml"))
@@ -324,19 +328,26 @@ class FingerprintTests(unittest.TestCase):
 
     def invalid_fingerprints_test(self):
         # invalid character
-        with self.assertRaisesRegexp(KickstartValueError, "Unsupported or invalid fingerprint"):
+        with self.assertRaisesRegexp(KickstartValueError,
+                                     "Unsupported or invalid fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s?" % ("a" * 31))
 
         # invalid lengths (odd and even)
-        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+        with self.assertRaisesRegexp(KickstartValueError,
+                                     "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 31))
-        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+        with self.assertRaisesRegexp(KickstartValueError,
+                                     "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 41))
-        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+        with self.assertRaisesRegexp(KickstartValueError,
+                                     "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 54))
-        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+        with self.assertRaisesRegexp(KickstartValueError,
+                                     "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 66))
-        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+        with self.assertRaisesRegexp(KickstartValueError,
+                                     "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 98))
-        with self.assertRaisesRegexp(KickstartValueError, "Unsupported fingerprint"):
+        with self.assertRaisesRegexp(KickstartValueError,
+                                     "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 124))

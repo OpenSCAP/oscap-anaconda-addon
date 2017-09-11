@@ -26,6 +26,7 @@ import shutil
 import glob
 import hashlib
 
+
 def ensure_dir_exists(dirpath):
     """
     Checks if a given directory exists and if not, it creates the directory as
@@ -42,6 +43,7 @@ def ensure_dir_exists(dirpath):
 
     if not os.path.isdir(dirpath):
         os.makedirs(dirpath)
+
 
 def universal_copy(src, dst):
     """
@@ -74,10 +76,11 @@ def universal_copy(src, dst):
         else:
             shutil.copy2(item, dst)
 
+
 def keep_type_map(func, iterable):
     """
-    Function that maps the given function to items in the given iterable keeping
-    the type of the iterable.
+    Function that maps the given function to items in the given iterable
+    keeping the type of the iterable.
 
     :param func: function to be mapped on the items in the iterable
     :type func: in_item -> out_item
@@ -109,6 +112,7 @@ def keep_type_map(func, iterable):
     else:
         return items_gen
 
+
 def join_paths(path1, path2):
     """
     Joins two paths as one would expect -- i.e. just like the os.path.join
@@ -128,6 +132,7 @@ def join_paths(path1, path2):
     path1.replace("//", "/")
 
     return os.path.normpath(path1 + os.path.sep + path2)
+
 
 def get_hashing_algorithm(fingerprint):
     """
@@ -155,6 +160,7 @@ def get_hashing_algorithm(fingerprint):
             return hash_obj
 
     return None
+
 
 def get_file_fingerprint(fpath, hash_obj):
     """

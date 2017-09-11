@@ -5,12 +5,19 @@ VERSION = 0.7
 ADDON = org_fedora_oscap
 TESTS = tests
 
+OSVERSION := $(shell grep -o " [0-9]\{1,\}" /etc/redhat-release | sed "s/ //g")
+ifeq ($(OSVERSION),7)
+	PYVERSION = ""
+else
+	PYVERSION = -3
+endif
+
 FILES = $(ADDON) \
 	$(TESTS) \
 	po \
 	COPYING \
 	Makefile \
-	README
+	README.md
 
 EXCLUDES = \
 	*~ \
@@ -76,15 +83,15 @@ install-po-files:
 	$(MAKE) -C po install
 
 test:
-	@echo "***Running pylint checks***"
-	@find . -name '*.py' -print|xargs -n1 --max-procs=$(NUM_PROCS) pylint -E 2> /dev/null
+	@echo "***Running pylint$(PYVERSION) checks***"
+	@find . -name '*.py' -print|xargs -n1 --max-procs=$(NUM_PROCS) pylint$(PYVERSION) -E 2> /dev/null
 	@echo "[ OK ]"
 	@echo "***Running unittests checks***"
-	@PYTHONPATH=. nosetests --processes=-1 -vw tests/
+	@PYTHONPATH=. nosetests$(PYVERSION) --processes=-1 -vw tests/
 
 runpylint:
-	@find . -name '*.py' -print|xargs -n1 --max-procs=$(NUM_PROCS) pylint -E 2> /dev/null
+	@find . -name '*.py' -print|xargs -n1 --max-procs=$(NUM_PROCS) pylint$(PYVERSION) -E 2> /dev/null
 	@echo "[ OK ]"
 
 unittest:
-	PYTHONPATH=. nosetests --processes=-1 -vw tests/
+	PYTHONPATH=. nosetests$(PYVERSION) --processes=-1 -vw tests/
