@@ -62,7 +62,8 @@ PACKAGE_RULE_PARSER.add_option("--remove", dest="remove_pkgs", action="append",
                                type="string")
 
 BOOTLOADER_RULE_PARSER = optparse.OptionParser()
-BOOTLOADER_RULE_PARSER.add_option("--passwd", dest="passwd", action="store_true",
+BOOTLOADER_RULE_PARSER.add_option("--passwd", dest="passwd",
+                                  action="store_true",
                                   default=False)
 
 
@@ -71,8 +72,8 @@ class RuleHandler(object):
 
     def eval_rules(self, ksdata, storage, report_only=False):
         """
-        Method that should check the current state (as defined by the ksdata and
-        storage parameters) against the rules the instance of RuleHandler
+        Method that should check the current state (as defined by the ksdata
+        and storage parameters) against the rules the instance of RuleHandler
         holds. Depending on the value of report_only it should fix the state
         with changes that can be done automatically or not and return the list
         of warnings and errors for fixes that need to be done manually together
@@ -87,8 +88,8 @@ class RuleHandler(object):
         :type storage: blivet.Blivet
         :param report_only: whether to do fixing or just report information
         :type report_only: bool
-        :return: errors and warnings for fixes that need to be done manually and
-                 info messages about the automatic changes
+        :return: errors and warnings for fixes that need to be done manually
+                 and info messages about the automatic changes
         :rtype: list of common.RuleMessage objects
 
         """
@@ -495,7 +496,9 @@ class PasswdRules(RuleHandler):
 
 
 class PackageRules(RuleHandler):
-    """Simple class holding data from the rules affecting installed packages."""
+    """Simple class holding data from the rules affecting installed packages.
+    
+    """
 
     def __init__(self):
         """Constructor setting the initial value of attributes."""
