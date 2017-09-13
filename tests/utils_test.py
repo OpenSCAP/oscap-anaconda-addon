@@ -141,4 +141,4 @@ class KeepTypeMapTest(unittest.TestCase):
         self.assertEqual(tuple(mapped_gen), tuple([1, 4, 16, 25]))
 
         # any better test for this?
-        self.assertIn("next", dir(mapped_gen))
+        self.assertIn("__next__", dir(mapped_gen))
