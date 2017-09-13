@@ -243,7 +243,7 @@ class PartRules(RuleHandler):
     def __str__(self):
         """Standard method useful for debugging and testing."""
 
-        return "\n".join(str(rule) for rule in self._rules.itervalues())
+        return "\n".join(str(rule) for rule in self._rules.values())
 
     def __getitem__(self, key):
         """Method to support dictionary-like syntax."""
@@ -278,7 +278,7 @@ class PartRules(RuleHandler):
         """:see: RuleHandler.eval_rules"""
 
         messages = []
-        for part_rule in self._rules.itervalues():
+        for part_rule in self._rules.values():
             messages += part_rule.eval_rules(ksdata, storage, report_only)
 
         return messages
@@ -286,7 +286,7 @@ class PartRules(RuleHandler):
     def revert_changes(self, ksdata, storage):
         """:see: RuleHandler.revert_changes"""
 
-        for part_rule in self._rules.itervalues():
+        for part_rule in self._rules.values():
             part_rule.revert_changes(ksdata, storage)
 
 

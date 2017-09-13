@@ -328,26 +328,26 @@ class FingerprintTests(unittest.TestCase):
 
     def invalid_fingerprints_test(self):
         # invalid character
-        with self.assertRaisesRegexp(KickstartValueError,
+        with self.assertRaisesRegex(KickstartValueError,
                                      "Unsupported or invalid fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s?" % ("a" * 31))
 
         # invalid lengths (odd and even)
-        with self.assertRaisesRegexp(KickstartValueError,
+        with self.assertRaisesRegex(KickstartValueError,
                                      "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 31))
-        with self.assertRaisesRegexp(KickstartValueError,
+        with self.assertRaisesRegex(KickstartValueError,
                                      "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 41))
-        with self.assertRaisesRegexp(KickstartValueError,
+        with self.assertRaisesRegex(KickstartValueError,
                                      "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 54))
-        with self.assertRaisesRegexp(KickstartValueError,
+        with self.assertRaisesRegex(KickstartValueError,
                                      "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 66))
-        with self.assertRaisesRegexp(KickstartValueError,
+        with self.assertRaisesRegex(KickstartValueError,
                                      "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 98))
-        with self.assertRaisesRegexp(KickstartValueError,
+        with self.assertRaisesRegex(KickstartValueError,
                                      "Unsupported fingerprint"):
             self.oscap_data.handle_line("fingerprint = %s" % ("a" * 124))

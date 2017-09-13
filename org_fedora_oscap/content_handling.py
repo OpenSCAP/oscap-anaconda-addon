@@ -272,7 +272,7 @@ class DataStreamHandler(object):
 
         """
 
-        return self._items.keys()
+        return list(self._items.keys())
 
     def get_data_streams_checklists(self):
         """

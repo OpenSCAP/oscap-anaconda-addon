@@ -45,8 +45,8 @@ class OSCAPtoolRunningTest(unittest.TestCase):
         self.mock_utils.ensure_dir_exists = mock.Mock()
 
         self.run_oscap_remediate = common.run_oscap_remediate
-        self.run_oscap_remediate.func_globals["subprocess"] = self.mock_subprocess
-        self.run_oscap_remediate.func_globals["utils"] = self.mock_utils
+        self.run_oscap_remediate.__globals__["subprocess"] = self.mock_subprocess
+        self.run_oscap_remediate.__globals__["utils"] = self.mock_utils
 
     def run_oscap_remediate_profile_only_test(self):
         self.run_oscap_remediate("myprofile", "my_ds.xml")
@@ -71,7 +71,7 @@ class OSCAPtoolRunningTest(unittest.TestCase):
         # nothing else should have been passed
         self.assertEqual(self.mock_subprocess.Popen.call_args[0][0], [])
 
-        for (key, val) in kwargs.iteritems():
+        for (key, val) in kwargs.items():
             self.assertEqual(kwargs[key],
                              self.mock_subprocess.Popen.call_args[1].pop(key))
 
@@ -101,7 +101,7 @@ class OSCAPtoolRunningTest(unittest.TestCase):
         # nothing else should have been passed
         self.assertEqual(self.mock_subprocess.Popen.call_args[0][0], [])
 
-        for (key, val) in kwargs.iteritems():
+        for (key, val) in kwargs.items():
             self.assertEqual(kwargs[key],
                              self.mock_subprocess.Popen.call_args[1].pop(key))
 
@@ -133,7 +133,7 @@ class OSCAPtoolRunningTest(unittest.TestCase):
         # nothing else should have been passed
         self.assertEqual(self.mock_subprocess.Popen.call_args[0][0], [])
 
-        for (key, val) in kwargs.iteritems():
+        for (key, val) in kwargs.items():
             self.assertEqual(kwargs[key],
                              self.mock_subprocess.Popen.call_args[1].pop(key))
 
