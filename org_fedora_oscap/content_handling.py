@@ -19,8 +19,8 @@
 #
 
 """
-Module with various classes for SCAP content processing and retrieving data from
-it.
+Module with various classes for SCAP content processing and retrieving data
+from it.
 
 """
 
@@ -54,7 +54,9 @@ class BenchmarkHandlingError(ContentHandlingError):
 
 
 class ContentCheckError(ContentHandlingError):
-    """Exception class for errors related to content (integrity,...) checking."""
+    """Exception class for errors related to content (integrity,...) checking.
+    
+    """
 
     pass
 
@@ -153,7 +155,8 @@ def explore_content_files(fpaths):
                     _prefix, _sep, type_info = line.partition(":")
                     return type_info.strip()
         except OSError:
-            # 'oscap info' exitted with a non-zero exit code -> unknown doc type
+            # 'oscap info' exitted with a non-zero exit code -> unknown doc
+            # type
             return None
 
     xccdf_file = ""
@@ -272,7 +275,7 @@ class DataStreamHandler(object):
 
         """
 
-        return self._items.keys()
+        return list(self._items.keys())
 
     def get_data_streams_checklists(self):
         """

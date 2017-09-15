@@ -426,7 +426,7 @@ class OSCAPSpoke(NormalSpoke):
             self._ds_checklists = self._content_handler.get_data_streams_checklists()
             add_ds_ids = GtkActionList()
             add_ds_ids.add_action(self._ds_store.clear)
-            for dstream in self._ds_checklists.iterkeys():
+            for dstream in self._ds_checklists.keys():
                 add_ds_ids.add_action(self._add_ds_id, dstream)
             add_ds_ids.fire()
 
@@ -513,7 +513,7 @@ class OSCAPSpoke(NormalSpoke):
         if self._using_ds:
             # only show the combo boxes if there are multiple data streams or
             # multiple xccdfs (IOW if there's something to choose from)
-            ds_ids = self._ds_checklists.keys()
+            ds_ids = list(self._ds_checklists.keys())
             if len(ds_ids) > 1 or len(self._ds_checklists[ds_ids[0]]) > 1:
                 really_show(self._ids_box)
                 return
@@ -900,7 +900,7 @@ class OSCAPSpoke(NormalSpoke):
                                     unset_first=True)
             else:
                 try:
-                    default_ds = self._ds_checklists.iterkeys().next()
+                    default_ds = next(iter(self._ds_checklists.keys()))
                     set_combo_selection(self._ds_combo, default_ds,
                                         unset_first=True)
                 except StopIteration:

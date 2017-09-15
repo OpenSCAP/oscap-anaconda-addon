@@ -38,7 +38,7 @@ class EnsureDirExistTest(unittest.TestCase):
         self.mock_os.path.isdir = mock.Mock()
 
         self.ensure_dir_exists = utils.ensure_dir_exists
-        self.ensure_dir_exists.func_globals["os"] = self.mock_os
+        self.ensure_dir_exists.__globals__["os"] = self.mock_os
 
     def existing_dir_test(self):
         self.mock_os.path.isdir.return_value = True
@@ -62,7 +62,7 @@ class EnsureDirExistTest(unittest.TestCase):
 
     def tearDown(self):
         # restore the original os module for the utils module
-        utils.ensure_dir_exists.func_globals["os"] = os
+        utils.ensure_dir_exists.__globals__["os"] = os
 
 
 class JoinPathsTest(unittest.TestCase):
@@ -88,7 +88,7 @@ class KeepTypeMapTest(unittest.TestCase):
         dct = {"a": 1, "b": 2}
 
         mapped_dct = utils.keep_type_map(str.upper, dct)
-        self.assertEqual(mapped_dct.keys(), ["A", "B"])
+        self.assertEqual(list(mapped_dct.keys()), ["A", "B"])
         self.assertIsInstance(mapped_dct, dict)
 
     def list_test(self):
@@ -141,4 +141,4 @@ class KeepTypeMapTest(unittest.TestCase):
         self.assertEqual(tuple(mapped_gen), tuple([1, 4, 16, 25]))
 
         # any better test for this?
-        self.assertIn("next", dir(mapped_gen))
+        self.assertIn("__next__", dir(mapped_gen))
