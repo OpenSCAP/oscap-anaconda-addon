@@ -28,7 +28,7 @@ class ParsingTest(unittest.TestCase):
         self.assertEqual(self.oscap_data.datastream_id, "id_datastream_1")
         self.assertEqual(self.oscap_data.xccdf_id, "id_xccdf_new")
         self.assertEqual(self.oscap_data.content_path,
-                         "/usr/share/oscap/xccdf.xml")
+                         "/usr/share/oscap/testing_ds.xml")
         self.assertEqual(self.oscap_data.cpe_path, "/usr/share/oscap/cpe.xml")
         self.assertEqual(self.oscap_data.profile_id, "Web Server")
         self.assertEqual(self.oscap_data.content_name, "hardening.xml")
