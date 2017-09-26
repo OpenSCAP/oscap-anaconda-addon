@@ -14,7 +14,7 @@ class ParsingTest(unittest.TestCase):
                      "content-url = \"https://example.com/hardening.xml\"\n",
                      "datastream-id = id_datastream_1\n",
                      "xccdf-id = id_xccdf_new\n",
-                     "xccdf-path = /usr/share/oscap/xccdf.xml",
+                     "content-path = /usr/share/oscap/testing_ds.xml",
                      "cpe-path = /usr/share/oscap/cpe.xml",
                      "tailoring-path = /usr/share/oscap/tailoring.xml",
                      "profile = \"Web Server\"\n",
@@ -64,7 +64,7 @@ class ParsingTest(unittest.TestCase):
                          "    content-url = https://example.com/hardening.xml\n"
                          "    datastream-id = id_datastream_1\n"
                          "    xccdf-id = id_xccdf_new\n"
-                         "    xccdf-path = /usr/share/oscap/xccdf.xml\n"
+                         "    content-path = /usr/share/oscap/testing_ds.xml\n"
                          "    cpe-path = /usr/share/oscap/cpe.xml\n"
                          "    tailoring-path = /usr/share/oscap/tailoring.xml\n"
                          "    profile = Web Server\n"
@@ -80,6 +80,36 @@ class ParsingTest(unittest.TestCase):
 
         str_ret2 = str(self.oscap_data)
         self.assertEqual(str_ret, str_ret2)
+
+
+class BackwardCompatibilityParsingTest(unittest.TestCase):
+    def setUp(self):
+        self.oscap_data = OSCAPdata("org_fedora_oscap")
+        for line in ["content-type = datastream\n",
+                     "content-url = \"https://example.com/hardening.xml\"\n",
+                     "datastream-id = id_datastream_1\n",
+                     "xccdf-id = id_xccdf_new\n",
+                     "xccdf-path = /usr/share/oscap/xccdf.xml",
+                     "cpe-path = /usr/share/oscap/cpe.xml",
+                     "tailoring-path = /usr/share/oscap/tailoring.xml",
+                     "profile = \"Web Server\"\n",
+                     ]:
+            self.oscap_data.handle_line(line)
+
+    def str_test(self):
+        str_ret = str(self.oscap_data)
+        self.assertEqual(str_ret,
+                         "%addon org_fedora_oscap\n"
+                         "    content-type = datastream\n"
+                         "    content-url = https://example.com/hardening.xml\n"
+                         "    datastream-id = id_datastream_1\n"
+                         "    xccdf-id = id_xccdf_new\n"
+                         "    content-path = /usr/share/oscap/xccdf.xml\n"
+                         "    cpe-path = /usr/share/oscap/cpe.xml\n"
+                         "    tailoring-path = /usr/share/oscap/tailoring.xml\n"
+                         "    profile = Web Server\n"
+                         "%end\n\n"
+                         )
 
 
 class IncompleteDataTest(unittest.TestCase):
