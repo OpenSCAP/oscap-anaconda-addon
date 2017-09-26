@@ -284,7 +284,7 @@ class OSCAPSpoke(NormalSpoke):
         # if no content was specified and SSG is available, use it
         if not self._addon_data.content_type and common.ssg_available():
             self._addon_data.content_type = "scap-security-guide"
-            self._addon_data.content_path = common.SSG_DIR + common.SSG_SDS
+            self._addon_data.content_path = common.SSG_DIR + common.SSG_CONTENT
 
         if not self._addon_data.content_defined:
             # nothing more to be done now, the spoke is ready
@@ -1130,5 +1130,5 @@ class OSCAPSpoke(NormalSpoke):
     def on_use_ssg_clicked(self, *args):
         self._addon_data.clear_all()
         self._addon_data.content_type = "scap-security-guide"
-        self._addon_data.content_path = common.SSG_DIR + common.SSG_SDS
+        self._addon_data.content_path = common.SSG_DIR + common.SSG_CONTENT
         self._fetch_data_and_initialize()

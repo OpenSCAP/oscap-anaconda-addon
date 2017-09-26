@@ -280,7 +280,7 @@ class OSCAPdata(AddonData):
                 msg = "SCAP Security Guide not found on the system"
                 raise KickstartValueError(msg)
 
-            self.content_path = common.SSG_DIR + common.SSG_SDS
+            self.content_path = common.SSG_DIR + common.SSG_CONTENT
 
     @property
     def content_defined(self):
