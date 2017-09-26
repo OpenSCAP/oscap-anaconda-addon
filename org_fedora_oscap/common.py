@@ -52,12 +52,12 @@ INSTALLATION_CONTENT_DIR = "/tmp/openscap_data/"
 TARGET_CONTENT_DIR = "/root/openscap_data/"
 
 SSG_DIR = "/usr/share/xml/scap/ssg/content/"
-SSG_XCCDF = "ssg-rhel7-xccdf.xml"
+SSG_SDS = "ssg-rhel7-ds.xml"
 if constants.shortProductName != 'anaconda':
     if constants.shortProductName == 'fedora':
-        SSG_XCCDF = "ssg-fedora-xccdf.xml"
+        SSG_SDS  = "ssg-fedora-ds.xml"
     else:
-        SSG_XCCDF = "ssg-%s%s-xccdf.xml" % (constants.shortProductName,
+        SSG_SDS = "ssg-%s%s-ds.xml" % (constants.shortProductName,
                                             constants.productVersion.strip(".")[0])
 
 RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR,
@@ -494,7 +494,7 @@ def ssg_available(root="/"):
 
     """
 
-    return os.path.exists(utils.join_paths(root, SSG_DIR + SSG_XCCDF))
+    return os.path.exists(utils.join_paths(root, SSG_DIR + SSG_SDS))
 
 
 def dry_run_skip(func):
