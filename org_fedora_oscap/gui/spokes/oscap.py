@@ -284,7 +284,7 @@ class OSCAPSpoke(NormalSpoke):
         # if no content was specified and SSG is available, use it
         if not self._addon_data.content_type and common.ssg_available():
             self._addon_data.content_type = "scap-security-guide"
-            self._addon_data.xccdf_path = common.SSG_DIR + common.SSG_SDS
+            self._addon_data.content_path = common.SSG_DIR + common.SSG_SDS
 
         if not self._addon_data.content_defined:
             # nothing more to be done now, the spoke is ready
@@ -386,7 +386,7 @@ class OSCAPSpoke(NormalSpoke):
             try:
                 fpaths = common.extract_data(self._addon_data.raw_preinst_content_path,
                                              common.INSTALLATION_CONTENT_DIR,
-                                             [self._addon_data.xccdf_path])
+                                             [self._addon_data.content_path])
             except common.ExtractionError as err:
                 self._extraction_failed(err.message)
                 # fetching done
@@ -399,7 +399,7 @@ class OSCAPSpoke(NormalSpoke):
             files = common.strip_content_dir(files)
 
             # pylint: disable-msg=E1103
-            self._addon_data.xccdf_path = self._addon_data.xccdf_path or files.xccdf
+            self._addon_data.content_path = self._addon_data.content_path or files.xccdf
             self._addon_data.cpe_path = self._addon_data.cpe_path or files.cpe
             self._addon_data.tailoring_path = (self._addon_data.tailoring_path or
                                                files.tailoring)
@@ -1130,5 +1130,5 @@ class OSCAPSpoke(NormalSpoke):
     def on_use_ssg_clicked(self, *args):
         self._addon_data.clear_all()
         self._addon_data.content_type = "scap-security-guide"
-        self._addon_data.xccdf_path = common.SSG_DIR + common.SSG_SDS
+        self._addon_data.content_path = common.SSG_DIR + common.SSG_SDS
         self._fetch_data_and_initialize()

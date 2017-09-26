@@ -91,7 +91,7 @@ class OSCAPdata(AddonData):
         self.datastream_id = ""
         self.xccdf_id = ""
         self.profile_id = ""
-        self.xccdf_path = ""
+        self.content_path = ""
         self.cpe_path = ""
         self.tailoring_path = ""
 
@@ -128,8 +128,8 @@ class OSCAPdata(AddonData):
             ret += "\n%s" % key_value_pair("datastream-id", self.datastream_id)
         if self.xccdf_id:
             ret += "\n%s" % key_value_pair("xccdf-id", self.xccdf_id)
-        if self.xccdf_path and self.content_type != "scap-security-guide":
-            ret += "\n%s" % key_value_pair("xccdf-path", self.xccdf_path)
+        if self.content_path and self.content_type != "scap-security-guide":
+            ret += "\n%s" % key_value_pair("content-path", self.content_path)
         if self.cpe_path:
             ret += "\n%s" % key_value_pair("cpe-path", self.cpe_path)
         if self.tailoring_path:
@@ -176,9 +176,9 @@ class OSCAPdata(AddonData):
         # need to be checked?
         self.profile_id = value
 
-    def _parse_xccdf_path(self, value):
+    def _parse_content_path(self, value):
         # need to be checked?
-        self.xccdf_path = value
+        self.content_path = value
 
     def _parse_cpe_path(self, value):
         # need to be checked?
@@ -214,10 +214,11 @@ class OSCAPdata(AddonData):
 
         actions = {"content-type": self._parse_content_type,
                    "content-url": self._parse_content_url,
+                   "content-path": self._parse_content_path,
                    "datastream-id": self._parse_datastream_id,
                    "profile": self._parse_profile_id,
                    "xccdf-id": self._parse_xccdf_id,
-                   "xccdf-path": self._parse_xccdf_path,
+                   "xccdf-path": self._parse_content_path,
                    "cpe-path": self._parse_cpe_path,
                    "tailoring-path": self._parse_tailoring_path,
                    "fingerprint": self._parse_fingerprint,
@@ -255,7 +256,7 @@ class OSCAPdata(AddonData):
         if not self.profile_id:
             self.profile_id = "default"
 
-        if self.content_type in ("rpm", "archive") and not self.xccdf_path:
+        if self.content_type in ("rpm", "archive") and not self.content_path:
             msg = "Path to the XCCDF file has to be given if content in RPM "\
                   "or archive is used"
             raise KickstartValueError(msg)
@@ -279,7 +280,7 @@ class OSCAPdata(AddonData):
                 msg = "SCAP Security Guide not found on the system"
                 raise KickstartValueError(msg)
 
-            self.xccdf_path = common.SSG_DIR + common.SSG_SDS
+            self.content_path = common.SSG_DIR + common.SSG_SDS
 
     @property
     def content_defined(self):
@@ -327,10 +328,10 @@ class OSCAPdata(AddonData):
                                     self.content_name)
         elif self.content_type == "scap-security-guide":
             # SSG is not copied to the standard place
-            return self.xccdf_path
+            return self.content_path
         else:
             return utils.join_paths(common.INSTALLATION_CONTENT_DIR,
-                                    self.xccdf_path)
+                                    self.content_path)
 
     @property
     def postinst_content_path(self):
@@ -341,10 +342,10 @@ class OSCAPdata(AddonData):
                                     self.content_name)
         elif self.content_type in ("rpm", "scap-security-guide"):
             # no path magic in case of RPM (SSG is installed as an RPM)
-            return self.xccdf_path
+            return self.content_path
         else:
             return utils.join_paths(common.TARGET_CONTENT_DIR,
-                                    self.xccdf_path)
+                                    self.content_path)
 
     @property
     def preinst_tailoring_path(self):
@@ -380,7 +381,7 @@ class OSCAPdata(AddonData):
             # extract the content
             common.extract_data(self.raw_preinst_content_path,
                                 common.INSTALLATION_CONTENT_DIR,
-                                [self.xccdf_path])
+                                [self.content_path])
 
         rules = common.get_fix_rules_pre(self.profile_id,
                                          self.preinst_content_path,

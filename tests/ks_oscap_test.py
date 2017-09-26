@@ -27,7 +27,7 @@ class ParsingTest(unittest.TestCase):
                          "https://example.com/hardening.xml")
         self.assertEqual(self.oscap_data.datastream_id, "id_datastream_1")
         self.assertEqual(self.oscap_data.xccdf_id, "id_xccdf_new")
-        self.assertEqual(self.oscap_data.xccdf_path,
+        self.assertEqual(self.oscap_data.content_path,
                          "/usr/share/oscap/xccdf.xml")
         self.assertEqual(self.oscap_data.cpe_path, "/usr/share/oscap/cpe.xml")
         self.assertEqual(self.oscap_data.profile_id, "Web Server")
@@ -287,12 +287,12 @@ class ArchiveHandlingTest(unittest.TestCase):
         # content paths should be returned as expected
         self.assertEqual(self.oscap_data.preinst_content_path,
                          os.path.normpath(common.INSTALLATION_CONTENT_DIR +
-                                          self.oscap_data.xccdf_path))
+                                          self.oscap_data.content_path))
 
-        # when using rpm, xccdf_path doesn't change for the post-installation
+        # when using rpm, content_path doesn't change for the post-installation
         # phase
         self.assertEqual(self.oscap_data.postinst_content_path,
-                         self.oscap_data.xccdf_path)
+                         self.oscap_data.content_path)
 
     def ds_raw_content_paths_test(self):
         for line in ["content-url = http://example.com/scap_content.xml",
