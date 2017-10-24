@@ -46,22 +46,36 @@ def parse_csv(option, opt_str, value, parser):
             parser.values.ensure_value(option.dest, []).append(item)
 
 
-PART_RULE_PARSER = optparse.OptionParser()
+class ModifiedOptionParserException(Exception):
+    """Exception to be raised by ModifiedOptionParser."""
+    pass
+
+
+class ModifiedOptionParser(optparse.OptionParser):
+    """Overrides error behavior of OptionParser."""
+    def error(self, msg):
+        raise ModifiedOptionParserException(msg)
+
+    def exit(self, status=0, msg=None):
+        raise ModifiedOptionParserException(msg)
+
+
+PART_RULE_PARSER = ModifiedOptionParser()
 PART_RULE_PARSER.add_option("--mountoptions", dest="mount_options",
                             action="callback", callback=parse_csv, nargs=1,
                             type="string")
 
-PASSWD_RULE_PARSER = optparse.OptionParser()
+PASSWD_RULE_PARSER = ModifiedOptionParser()
 PASSWD_RULE_PARSER.add_option("--minlen", dest="minlen", action="store",
                               default=0, type="int")
 
-PACKAGE_RULE_PARSER = optparse.OptionParser()
+PACKAGE_RULE_PARSER = ModifiedOptionParser()
 PACKAGE_RULE_PARSER.add_option("--add", dest="add_pkgs", action="append",
                                type="string")
 PACKAGE_RULE_PARSER.add_option("--remove", dest="remove_pkgs", action="append",
                                type="string")
 
-BOOTLOADER_RULE_PARSER = optparse.OptionParser()
+BOOTLOADER_RULE_PARSER = ModifiedOptionParser()
 BOOTLOADER_RULE_PARSER.add_option("--passwd", dest="passwd", action="store_true",
                                   default=False)
 
@@ -170,10 +184,8 @@ class RuleData(RuleHandler):
         first_word = rule.split(None, 1)[0]
         try:
             actions[first_word](rule)
-        except KeyError:
-            # should never happen
-            # TODO: only log error instead?
-            raise UknownRuleError("Unknown rule: '%s'" % first_word)
+        except ModifiedOptionParserException as e:
+            log.warning("Unknown OSCAP Addon rule '{}': {}".format(rule, e))
 
     def eval_rules(self, ksdata, storage, report_only=False):
         """:see: RuleHandler.eval_rules"""
