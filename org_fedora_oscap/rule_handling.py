@@ -184,7 +184,7 @@ class RuleData(RuleHandler):
         first_word = rule.split(None, 1)[0]
         try:
             actions[first_word](rule)
-        except ModifiedOptionParserException as e:
+        except (ModifiedOptionParserException, KeyError) as e:
             log.warning("Unknown OSCAP Addon rule '{}': {}".format(rule, e))
 
     def eval_rules(self, ksdata, storage, report_only=False):
