@@ -472,6 +472,9 @@ class PasswdRules(RuleHandler):
             else:
                 ret = []
 
+        if report_only:
+            return ret
+
         # set the policy in any case (so that a weaker password is not entered)
         pw_policy = ksdata.anaconda.pwpolicy.get_policy("root")
         if pw_policy is None:
