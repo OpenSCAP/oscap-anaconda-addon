@@ -7,8 +7,8 @@
 %endif
 
 Name:           oscap-anaconda-addon
-Version:        0.7
-Release:        3%{?dist}
+Version:        0.8
+Release:        1%{?dist}
 Summary:        Anaconda addon integrating OpenSCAP to the installation process
 
 License:        GPLv2+
@@ -66,7 +66,18 @@ make install DESTDIR=%{buildroot}
 %doc COPYING ChangeLog README.md
 
 %changelog
-* Fri Sep 08 2017 Gabriel Alford <galford@redhat.com> -0.7-3
+* Mon Nov 13 2017 Martin Preisler <mpreisle@redhat.com> - 0.8-1
+- Log password policy changes
+- Log openscap errors
+- Hide default profile if it's empty
+- Parse HTML tags in SCAP content formatting
+- Allow file:// URL for SCAP content
+- Copy tailoring file to target when applying SCAP policy
+- Catch Anaconda remediation syntax errors without causing Anaconda to crash (#1452667)
+- Fixed password rule handling
+- Minor bugfixes
+
+* Fri Sep 08 2017 Gabriel Alford <galford@redhat.com> - 0.7-3
 - Add python3 support to .spec file and upstream code
 
 * Mon Feb 13 2017 Jiri Konecny <jkonecny@redhat.com> - 0.7-2
