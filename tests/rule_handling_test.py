@@ -449,6 +449,28 @@ class RuleEvaluationTest(unittest.TestCase):
         # minimal password length less than actual length --> no warning
         self.assertEqual(messages, [])
 
+    def passwd_minlen_report_only_not_ignored_test(self):
+        self.rule_data.new_rule("passwd --minlen=8")
+        self.ksdata_mock.rootpw.password = "aaaaaaaaaaaaaaaaa"
+        self.ksdata_mock.rootpw.isCrypted = False
+
+        # call eval_rules with report_only=False
+        # should set password minimal length to 8
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock,
+                                             False)
+        self.rule_data._passwd_rules._orig_minlen = 6
+        self.assertEqual(self.rule_data._passwd_rules._orig_minlen, 6)
+        self.assertEqual(self.rule_data._passwd_rules._minlen, 8)
+
+        # call of eval_rules with report_only=True
+        # should not change anything
+        messages = self.rule_data.eval_rules(self.ksdata_mock,
+                                             self.storage_mock,
+                                             True)
+        self.assertEqual(self.rule_data._passwd_rules._orig_minlen, 6)
+        self.assertEqual(self.rule_data._passwd_rules._minlen, 8)
+
     def package_rules_test(self):
         self.rule_data.new_rule("package --add=firewalld --remove=telnet "
                                 "--add=iptables --add=vim")
