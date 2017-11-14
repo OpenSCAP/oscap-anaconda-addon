@@ -62,3 +62,20 @@ If you use PXE boot you can pass requires parameters there. Advantage of this so
 inst.updates=http://192.168.122.1:8000/update.img
 ```
 
+== Running Unit Tests
+
+Following packages are needed to run unit tests:
+
+```
+anaconda
+openscap-python
+python-cpio
+python-mock
+python-nose
+```
+
+Run the unit tests using:
+
+```
+make unittest
+```
