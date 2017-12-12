@@ -352,7 +352,7 @@ class OSCAPdata(AddonData):
         """Path to the pre-installation tailoring file (if any)"""
 
         if not self.tailoring_path:
-            return None
+            return ""
 
         return utils.join_paths(common.INSTALLATION_CONTENT_DIR,
                                 self.tailoring_path)
@@ -362,7 +362,7 @@ class OSCAPdata(AddonData):
         """Path to the post-installation tailoring file (if any)"""
 
         if not self.tailoring_path:
-            return None
+            return ""
 
         if self.content_type == "rpm":
             # no path magic in case of RPM
