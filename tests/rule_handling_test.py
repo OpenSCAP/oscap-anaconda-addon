@@ -454,21 +454,38 @@ class RuleEvaluationTest(unittest.TestCase):
         self.ksdata_mock.rootpw.password = "aaaaaaaaaaaaaaaaa"
         self.ksdata_mock.rootpw.isCrypted = False
 
+        # Mock pw_policy returned by anaconda.pwpolicy.get_policy()
+        pw_policy_mock = mock.Mock()
+        pw_policy_mock.minlen = 6
+        pw_policy_mock.strict = False
+        self.ksdata_mock.anaconda.pwpolicy.get_policy.return_value = \
+            pw_policy_mock
+
         # call eval_rules with report_only=False
         # should set password minimal length to 8
         messages = self.rule_data.eval_rules(self.ksdata_mock,
                                              self.storage_mock,
-                                             False)
-        self.rule_data._passwd_rules._orig_minlen = 6
+                                             report_only=False)
+        # Password Policy changed --> no warnings
+        self.assertEqual(messages, [])
         self.assertEqual(self.rule_data._passwd_rules._orig_minlen, 6)
+        self.assertEqual(self.rule_data._passwd_rules._orig_strict, False)
+        self.assertEqual(pw_policy_mock.minlen, 8)
+        self.assertEqual(pw_policy_mock.strict, True)
         self.assertEqual(self.rule_data._passwd_rules._minlen, 8)
 
         # call of eval_rules with report_only=True
         # should not change anything
         messages = self.rule_data.eval_rules(self.ksdata_mock,
                                              self.storage_mock,
-                                             True)
+                                             report_only=True)
+        # Password Policy stayed the same --> no warnings
+        self.assertEqual(messages, [])
+
         self.assertEqual(self.rule_data._passwd_rules._orig_minlen, 6)
+        self.assertEqual(self.rule_data._passwd_rules._orig_strict, False)
+        self.assertEqual(pw_policy_mock.minlen, 8)
+        self.assertEqual(pw_policy_mock.strict, True)
         self.assertEqual(self.rule_data._passwd_rules._minlen, 8)
 
     def package_rules_test(self):
