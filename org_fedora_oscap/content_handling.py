@@ -259,8 +259,9 @@ class DataStreamHandler(object):
     def __del__(self):
         """Destructor for the DataStreamHandler class."""
 
-        # we should free the session
-        OSCAP.xccdf_session_free(self._session)
+        if '_session' in locals():
+            # we should free the session
+            OSCAP.xccdf_session_free(self._session)
 
     def get_data_streams(self):
         """
