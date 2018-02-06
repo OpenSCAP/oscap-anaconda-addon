@@ -158,6 +158,9 @@ class OSCAPSpoke(NormalSpoke):
     # name of the file providing help content for this spoke
     helpFile = "SecurityPolicySpoke.xml"
 
+    # domain of oscap-anaconda-addon translations
+    translationDomain = "oscap-anaconda-addon"
+
     # category this spoke belongs to
     category = SystemCategory
 
