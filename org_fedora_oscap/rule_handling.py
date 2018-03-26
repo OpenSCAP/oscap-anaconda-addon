@@ -345,7 +345,9 @@ class PartRule(RuleHandler):
         messages = []
         if self._mount_point not in storage.mountpoints:
             msg = _("%s must be on a separate partition or logical "
-                    "volume" % self._mount_point)
+                    "volume and has to be created in the "
+                    "partitioning layout before selecting a "
+                    "security profile." % self._mount_point)
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_FATAL, msg))
 
