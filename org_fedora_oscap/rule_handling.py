@@ -729,3 +729,5 @@ class KdumpRules(RuleHandler):
 
         if not self._kdump_enabled:
             ksdata.addons.com_redhat_kdump.enabled = True
+
+        self._kdump_enabled = True
