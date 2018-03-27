@@ -81,7 +81,7 @@ BOOTLOADER_RULE_PARSER.add_option("--passwd", dest="passwd", action="store_true"
 
 KDUMP_RULE_PARSER = ModifiedOptionParser()
 KDUMP_RULE_PARSER.add_option("--disable", action="store_false",
-                             dest="enabled", help="Disable kdump")
+                             dest="enabled", default=True)
 
 
 class RuleHandler(object):
