@@ -735,14 +735,19 @@ class KdumpRules(RuleHandler):
                 ksdata.addons.com_redhat_kdump.enabled = self._kdump_enabled
         except AttributeError:
             log.warning("com_redhat_kdump is not installed. "
-                        "Skipping disabling kdump configuration")
+                        "Skipping kdump configuration")
 
         return messages
 
     def revert_changes(self, ksdata, storage):
         """:see: RuleHander.revert_changes"""
 
-        if self._kdump_enabled == False:
-            ksdata.addons.com_redhat_kdump.enabled = True
+        try:
+            if ksdata.addons.com_redhat_kdump.enabled == False or \
+               self._kdump_enabled == False:
+                ksdata.addons.com_redhat_kdump.enabled = True
+        except AttributeError:
+            log.warning("com_redhat_kdump is not installed. "
+                        "Skipping reverting kdump configuration")
 
         self._kdump_enabled = None
