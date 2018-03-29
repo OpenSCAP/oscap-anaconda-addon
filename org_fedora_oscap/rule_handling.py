@@ -721,33 +721,31 @@ class KdumpRules(RuleHandler):
 
         if self._kdump_enabled == None:
             return []
-
-        if self._kdump_enabled == False:
+        elif self._kdump_enabled == False:
             msg = _("Kdump will be disabled on startup")
-        if self._kdump_enabled == True:
+        elif self._kdump_enabled == True:
             msg = _("Kdump will be enabled on startup")
 
         messages.append(RuleMessage(self.__class__,
                                     common.MESSAGE_TYPE_INFO, msg))
 
-        try:
-            if not report_only:
+        if not report_only:
+            try:
                 ksdata.addons.com_redhat_kdump.enabled = self._kdump_enabled
-        except AttributeError:
-            log.warning("com_redhat_kdump is not installed. "
-                        "Skipping kdump configuration")
+            except AttributeError:
+                log.warning("com_redhat_kdump is not installed. "
+                            "Skipping kdump configuration")
 
         return messages
 
     def revert_changes(self, ksdata, storage):
         """:see: RuleHander.revert_changes"""
 
-        try:
-            if ksdata.addons.com_redhat_kdump.enabled == False or \
-               self._kdump_enabled == False:
+        if self._kdump_enabled == False:
+            try:
                 ksdata.addons.com_redhat_kdump.enabled = True
-        except AttributeError:
-            log.warning("com_redhat_kdump is not installed. "
-                        "Skipping reverting kdump configuration")
+            except AttributeError:
+                log.warning("com_redhat_kdump is not installed. "
+                            "Skipping reverting kdump configuration")
 
         self._kdump_enabled = None
