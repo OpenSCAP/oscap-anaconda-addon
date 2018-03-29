@@ -80,8 +80,10 @@ BOOTLOADER_RULE_PARSER.add_option("--passwd", dest="passwd", action="store_true"
                                   default=False)
 
 KDUMP_RULE_PARSER = ModifiedOptionParser()
+KDUMP_RULE_PARSER.add_option("--enable", action="store_true",
+                             dest="kdenabled", default=None)
 KDUMP_RULE_PARSER.add_option("--disable", action="store_false",
-                             dest="enabled", default=True)
+                             dest="kdenabled", default=None)
 
 
 class RuleHandler(object):
@@ -249,8 +251,7 @@ class RuleData(RuleHandler):
         args = shlex.split(rule)
         (opts, args) = KDUMP_RULE_PARSER.parse_args(args)
 
-        if not opts.enabled:
-            self._kdump_rules.kdump_enabled()
+        self._kdump_rules.kdump_enabled(opts.kdenabled)
 
     @property
     def passwd_rules(self):
@@ -690,17 +691,25 @@ class KdumpRules(RuleHandler):
     def __init__(self):
         """Constructor setting the initial value of attributes."""
 
-        self._kdump_enabled = True
+        self._kdump_enabled = None
 
-    def kdump_enabled(self):
-        self._kdump_enabled = False
+    def kdump_enabled(self, kdenabled):
+        """Enable or Disable Kdump"""
+
+        if kdenabled == True:
+            self._kdump_enabled = True
+        if kdenabled == False:
+            self._kdump_enabled = False
 
     def __str__(self):
         """Standard method useful for debugging and testing."""
 
         ret = "kdump"
 
-        if not self._kdump_enabled:
+        if self._kdump_enabled == True:
+            ret += " --enable"
+
+        if self._kdump_enabled == False:
             ret += " --disable"
 
         return ret
@@ -710,24 +719,30 @@ class KdumpRules(RuleHandler):
 
         messages = []
 
-        if not self._kdump_enabled:
+        if self._kdump_enabled == None:
+            return []
+
+        if self._kdump_enabled == False:
             msg = _("Kdump will be disabled on startup")
+        if self._kdump_enabled == True:
+            msg = _("Kdump will be enabled on startup")
 
-            messages.append(RuleMessage(self.__class__,
-                                        common.MESSAGE_TYPE_INFO, msg))
+        messages.append(RuleMessage(self.__class__,
+                                    common.MESSAGE_TYPE_INFO, msg))
 
-            try:
+        try:
+            if not report_only:
                 ksdata.addons.com_redhat_kdump.enabled = self._kdump_enabled
-            except AttributeError:
-                log.warning("com_redhat_kdump is not installed. "
-                            "Skipping disabling kdump")
+        except AttributeError:
+            log.warning("com_redhat_kdump is not installed. "
+                        "Skipping disabling kdump configuration")
 
         return messages
 
     def revert_changes(self, ksdata, storage):
         """:see: RuleHander.revert_changes"""
 
-        if not self._kdump_enabled:
+        if self._kdump_enabled == False:
             ksdata.addons.com_redhat_kdump.enabled = True
 
-        self._kdump_enabled = True
+        self._kdump_enabled = None
