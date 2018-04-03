@@ -697,10 +697,8 @@ class KdumpRules(RuleHandler):
     def kdump_enabled(self, kdenabled):
         """Enable or Disable Kdump"""
 
-        if kdenabled == True:
-            self._kdump_enabled = True
-        if kdenabled == False:
-            self._kdump_enabled = False
+        if kdenabled is not None:
+            kdenabled = self._kdump_enabled
 
     def __str__(self):
         """Standard method useful for debugging and testing."""
