@@ -744,12 +744,8 @@ class KdumpRules(RuleHandler):
         """:see: RuleHander.revert_changes"""
 
         try:
-            if self._kdump_enabled == False and \
-               self._kdump_default_enabled == True:
-                ksdata.addons.com_redhat_kdump.enabled = True
-            elif self._kdump_enabled == True and \
-                 self._kdump_default_enabled == False:
-                ksdata.addons.com_redhat_kdump.enabled = False
+            if self._kdump_enabled is not None:
+                ksdata.addons.com_redhat_kdump.enabled = self._kdump_default_enabled
         except AttributeError:
             log.warning("com_redhat_kdump is not installed. "
                         "Skipping reverting kdump configuration")
