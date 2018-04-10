@@ -698,17 +698,17 @@ class KdumpRules(RuleHandler):
         """Enable or Disable Kdump"""
 
         if kdenabled is not None:
-            kdenabled = self._kdump_enabled
+            self._kdump_enabled = kdenabled
 
     def __str__(self):
         """Standard method useful for debugging and testing."""
 
         ret = "kdump"
 
-        if self._kdump_enabled == True:
+        if self._kdump_enabled is True:
             ret += " --enable"
 
-        if self._kdump_enabled == False:
+        if self._kdump_enabled is False:
             ret += " --disable"
 
         return ret
@@ -718,11 +718,11 @@ class KdumpRules(RuleHandler):
 
         messages = []
 
-        if self._kdump_enabled == None:
+        if self._kdump_enabled is None:
             return []
-        elif self._kdump_enabled == False:
+        elif self._kdump_enabled is False:
             msg = _("Kdump will be disabled on startup")
-        elif self._kdump_enabled == True:
+        elif self._kdump_enabled is True:
             msg = _("Kdump will be enabled on startup")
 
         messages.append(RuleMessage(self.__class__,
@@ -730,7 +730,7 @@ class KdumpRules(RuleHandler):
 
         if not report_only:
             try:
-                if self._kdump_default_enabled == None:
+                if self._kdump_default_enabled is None:
                     # Kdump addon default startup setting
                     self._kdump_default_enabled = ksdata.addons.com_redhat_kdump.enabled
                 ksdata.addons.com_redhat_kdump.enabled = self._kdump_enabled
