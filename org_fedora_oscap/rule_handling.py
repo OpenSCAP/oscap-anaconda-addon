@@ -85,6 +85,20 @@ KDUMP_RULE_PARSER.add_option("--enable", action="store_true",
 KDUMP_RULE_PARSER.add_option("--disable", action="store_false",
                              dest="kdenabled", default=None)
 
+FIREWALL_RULE_PARSER = ModifiedOptionParser()
+FIREWALL_RULE_PARSER.add_option("--enable", action="store_true",
+                                dest="fwenabled", default=None)
+FIREWALL_RULE_PARSER.add_option("--disable", action="store_false",
+                                dest="fwenabled", default=None)
+FIREWALL_RULE_PARSER.add_option("--service", dest="add_svcs", action="append",
+                                type="string")
+FIREWALL_RULE_PARSER.add_option("--port", dest="add_port", action="append",
+                                type="string")
+FIREWALL_RULE_PARSER.add_option("--trust", dest="add_trust", action="append",
+                                type="string")
+FIREWALL_RULE_PARSER.add_option("--remove-service", dest="remove_svcs",
+                                action="append", type="string")
+
 
 class RuleHandler(object):
     """Base class for the rule handlers."""
@@ -145,10 +159,11 @@ class RuleData(RuleHandler):
         self._package_rules = PackageRules()
         self._bootloader_rules = BootloaderRules()
         self._kdump_rules = KdumpRules()
+        self._firewall_rules = FirewallRules()
 
         self._rule_handlers = (self._part_rules, self._passwd_rules,
                                self._package_rules, self._bootloader_rules,
-                               self._kdump_rules,
+                               self._kdump_rules, self._firewall_rules,
                                )
 
     def __str__(self):
@@ -168,6 +183,10 @@ class RuleData(RuleHandler):
         if packages_str:
             ret += "\n" + packages_str
 
+        firewall_str = str(self._firewall_rules)
+        if firewall_str:
+            ret += "\n" + firewall_str
+
         return ret
 
     def new_rule(self, rule):
@@ -184,6 +203,7 @@ class RuleData(RuleHandler):
                    "package": self._new_package_rule,
                    "bootloader": self._new_bootloader_rule,
                    "kdump": self._new_kdump_rule,
+                   "firewall": self._new_firewall_rule,
                    }
 
         rule = rule.strip()
@@ -252,6 +272,16 @@ class RuleData(RuleHandler):
         (opts, args) = KDUMP_RULE_PARSER.parse_args(args)
 
         self._kdump_rules.kdump_enabled(opts.kdenabled)
+
+    def _new_firewall_rule(self, rule):
+        args = shlex.split(rule)
+        (opts, args) = FIREWALL_RULE_PARSER.parse_args(args)
+
+        self._firewall_rules.add_services(opts.add_svcs)
+        self._firewall_rules.remove_services(opts.remove_svcs)
+        self._firewall_rules.add_trusts(opts.add_trust)
+        self._firewall_rules.add_ports(opts.add_port)
+        self._firewall_rules.firewall_enabled(opts.fwenabled)
 
     @property
     def passwd_rules(self):
@@ -752,3 +782,258 @@ class KdumpRules(RuleHandler):
 
         self._kdump_enabled = None
         self._kdump_default_enabled = None
+
+
+class FirewallRules(RuleHandler):
+    """Simple class holding data from the rules affecting firewall configurations."""
+
+    def __init__(self):
+        """Constructor setting the initial value of attributes."""
+
+        self._add_svcs = set()
+        self._remove_svcs = set()
+        self._add_trusts = set()
+        self._add_ports = set()
+
+        self._added_svcs = set()
+        self._added_ports = set()
+        self._added_trusts = set()
+        self._removed_svcs = set()
+
+        self._firewall_enabled = None
+        self._firewall_default_enabled = None
+
+    def add_services(self, services):
+        """
+        Services that should be allowed through firewall.
+
+        :param services: services to be added
+        :type services: iterable
+
+        """
+
+        if services:
+            self._add_svcs.update(services)
+
+    def add_ports(self, ports):
+        """
+        Ports that should be allowed through firewall.
+
+        :param ports: ports to be added
+        :type ports: iterable
+
+        """
+
+        if ports:
+            self._add_ports.update(ports)
+
+    def add_trusts(self, trusts):
+        """
+        trusts that should be allowed through firewall.
+
+        :param trusts: trusts to be added
+        :type trusts: iterable
+
+        """
+
+        if trusts:
+            self._add_trusts.update(trusts)
+
+    def remove_services(self, services):
+        """
+        New services that should not be allowed through firewall.
+
+        :param services: services to be removed
+        :type services: iterable
+
+        """
+
+        if services:
+            self._remove_svcs.update(services)
+
+    def firewall_enabled(self, fwenabled):
+        """Enable or disable firewall"""
+
+        if fwenabled is not None:
+            self._firewall_enabled = fwenabled
+
+    def __str__(self):
+        """Standard method useful for debugging and testing."""
+
+        ret = "firewall"
+
+        if self._firewall_enabled is True:
+            ret += " --enable"
+
+        if self._firewall_enabled is False:
+            ret += " --disable"
+
+        adds = " ".join("--service=%s" % service
+                        for service in self._add_svcs)
+        if adds:
+            ret += " " + adds
+
+        rems = " ".join("--remove-service=%s" % service
+                        for service in self._remove_svcs)
+        if rems:
+            ret += " " + rems
+
+        ports = " ".join("--port=%s" % port
+                         for port in self._add_ports)
+        if ports:
+            ret += " " + ports
+
+        trusts = " ".join("--trust=%s" % trust
+                          for trust in self._add_trusts)
+        if trusts:
+            ret += " " + trusts
+
+        return ret
+
+    def eval_rules(self, ksdata, storage, report_only=False):
+        """:see: RuleHandler.eval_rules"""
+
+        messages = []
+
+        if self._firewall_default_enabled is None:
+            # firewall default startup setting
+            self._firewall_default_enabled = ksdata.firewall.enabled
+
+        if self._firewall_enabled is False:
+            msg = _("Firewall will be disabled on startup")
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
+            if not report_only:
+                ksdata.firewall.enabled = self._firewall_enabled
+
+        elif self._firewall_enabled is True:
+            msg = _("Firewall will be enabled on startup")
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
+            if not report_only:
+                ksdata.firewall.enabled = self._firewall_enabled
+
+        # add messages for the already added services
+        for svc in self._added_svcs:
+            msg = _("service '%s' has been added to the list of services to be "
+                    "added to the firewall" % svc)
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
+
+        # add messages for the already added ports
+        for port in self._added_ports:
+            msg = _("port '%s' has been added to the list of ports to be "
+                    "added to the firewall" % port)
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
+
+        # add messages for the already added trusts
+        for trust in self._added_trusts:
+            msg = _("trust '%s' has been added to the list of trusts to be "
+                    "added to the firewall" % trust)
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
+
+        # services, that should be added
+        services_to_add = (svc for svc in self._add_svcs
+                           if svc not in ksdata.firewall.services)
+
+        # ports, that should be added
+        ports_to_add = (ports for ports in self._add_ports
+                        if ports not in ksdata.firewall.ports)
+
+        # trusts, that should be added
+        trusts_to_add = (trust for trust in self._add_trusts
+                         if trust not in ksdata.firewall.trusts)
+
+        for svc in services_to_add:
+            # add the service unless already added
+            if not report_only:
+                self._added_svcs.add(svc)
+                ksdata.firewall.services.append(svc)
+
+            msg = _("service '%s' has been added to the list of services to be "
+                    "added to the firewall" % svc)
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
+
+        for port in ports_to_add:
+            # add the port unless already added
+            if not report_only:
+                self._added_ports.add(port)
+                ksdata.firewall.ports.append(port)
+
+            msg = _("port '%s' has been added to the list of ports to be "
+                    "added to the firewall" % port)
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
+
+        for trust in trusts_to_add:
+            # add the trust unless already added
+            if not report_only:
+                self._added_trusts.add(trust)
+                ksdata.firewall.trusts.append(trust)
+
+            msg = _("trust '%s' has been added to the list of trusts to be "
+                    "added to the firewall" % trust)
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
+
+        # now do the same for the services that should be excluded
+
+        # add messages for the already excluded services
+        for svc in self._removed_svcs:
+            msg = _("service '%s' has been added to the list of services to be "
+                    "removed from the firewall" % svc)
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
+
+        # services, that should be added
+        services_to_remove = (svc for svc in self._remove_svcs
+                              if svc not in ksdata.firewall.remove_services)
+
+        for svc in services_to_remove:
+            # exclude the service unless already excluded
+            if not report_only:
+                self._removed_svcs.add(svc)
+                ksdata.firewall.remove_services.append(svc)
+
+            msg = _("service '%s' has been added to the list of services to be "
+                    "removed from the firewall" % svc)
+            messages.append(RuleMessage(self.__class__,
+                                        common.MESSAGE_TYPE_INFO, msg))
+
+        return messages
+
+    def revert_changes(self, ksdata, storage):
+        """:see: RuleHander.revert_changes"""
+
+        if self._firewall_enabled is not None:
+            ksdata.firewall.enabled = self._firewall_default_enabled
+
+        # remove all services this handler added
+        for svc in self._added_svcs:
+            if svc in ksdata.packages.packageList:
+                ksdata.firewall.services.remove(svc)
+
+        # remove all ports this handler added
+        for port in self._added_ports:
+            if port in ksdata.firewall.ports:
+                ksdata.firewall.ports.remove(port)
+
+        # remove all trusts this handler added
+        for trust in self._added_trusts:
+            if trust in ksdata.packages.packageList:
+                ksdata.firewall.trusts.remove(trust)
+
+        # remove all services this handler excluded
+        for svc in self._removed_svcs:
+            if svc in ksdata.firewall.remove_services:
+                ksdata.firewall.remove_services.remove(svc)
+
+        self._added_svcs = set()
+        self._added_ports = set()
+        self._added_trusts = set()
+        self._removed_svcs = set()
+        self._firewall_enabled = None
+        self._firewall_default_enabled = None
