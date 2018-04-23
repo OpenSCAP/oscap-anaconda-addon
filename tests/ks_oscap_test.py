@@ -14,7 +14,7 @@ class ParsingTest(unittest.TestCase):
                      "content-url = \"https://example.com/hardening.xml\"\n",
                      "datastream-id = id_datastream_1\n",
                      "xccdf-id = id_xccdf_new\n",
-                     "xccdf-path = /usr/share/oscap/xccdf.xml",
+                     "content-path = /usr/share/oscap/testing_ds.xml",
                      "cpe-path = /usr/share/oscap/cpe.xml",
                      "tailoring-path = /usr/share/oscap/tailoring.xml",
                      "profile = \"Web Server\"\n",
@@ -27,8 +27,8 @@ class ParsingTest(unittest.TestCase):
                          "https://example.com/hardening.xml")
         self.assertEqual(self.oscap_data.datastream_id, "id_datastream_1")
         self.assertEqual(self.oscap_data.xccdf_id, "id_xccdf_new")
-        self.assertEqual(self.oscap_data.xccdf_path,
-                         "/usr/share/oscap/xccdf.xml")
+        self.assertEqual(self.oscap_data.content_path,
+                         "/usr/share/oscap/testing_ds.xml")
         self.assertEqual(self.oscap_data.cpe_path, "/usr/share/oscap/cpe.xml")
         self.assertEqual(self.oscap_data.profile_id, "Web Server")
         self.assertEqual(self.oscap_data.content_name, "hardening.xml")
@@ -64,7 +64,7 @@ class ParsingTest(unittest.TestCase):
                          "    content-url = https://example.com/hardening.xml\n"
                          "    datastream-id = id_datastream_1\n"
                          "    xccdf-id = id_xccdf_new\n"
-                         "    xccdf-path = /usr/share/oscap/xccdf.xml\n"
+                         "    content-path = /usr/share/oscap/testing_ds.xml\n"
                          "    cpe-path = /usr/share/oscap/cpe.xml\n"
                          "    tailoring-path = /usr/share/oscap/tailoring.xml\n"
                          "    profile = Web Server\n"
@@ -80,6 +80,36 @@ class ParsingTest(unittest.TestCase):
 
         str_ret2 = str(self.oscap_data)
         self.assertEqual(str_ret, str_ret2)
+
+
+class BackwardCompatibilityParsingTest(unittest.TestCase):
+    def setUp(self):
+        self.oscap_data = OSCAPdata("org_fedora_oscap")
+        for line in ["content-type = datastream\n",
+                     "content-url = \"https://example.com/hardening.xml\"\n",
+                     "datastream-id = id_datastream_1\n",
+                     "xccdf-id = id_xccdf_new\n",
+                     "xccdf-path = /usr/share/oscap/xccdf.xml",
+                     "cpe-path = /usr/share/oscap/cpe.xml",
+                     "tailoring-path = /usr/share/oscap/tailoring.xml",
+                     "profile = \"Web Server\"\n",
+                     ]:
+            self.oscap_data.handle_line(line)
+
+    def str_test(self):
+        str_ret = str(self.oscap_data)
+        self.assertEqual(str_ret,
+                         "%addon org_fedora_oscap\n"
+                         "    content-type = datastream\n"
+                         "    content-url = https://example.com/hardening.xml\n"
+                         "    datastream-id = id_datastream_1\n"
+                         "    xccdf-id = id_xccdf_new\n"
+                         "    content-path = /usr/share/oscap/xccdf.xml\n"
+                         "    cpe-path = /usr/share/oscap/cpe.xml\n"
+                         "    tailoring-path = /usr/share/oscap/tailoring.xml\n"
+                         "    profile = Web Server\n"
+                         "%end\n\n"
+                         )
 
 
 class IncompleteDataTest(unittest.TestCase):
@@ -287,12 +317,12 @@ class ArchiveHandlingTest(unittest.TestCase):
         # content paths should be returned as expected
         self.assertEqual(self.oscap_data.preinst_content_path,
                          os.path.normpath(common.INSTALLATION_CONTENT_DIR +
-                                          self.oscap_data.xccdf_path))
+                                          self.oscap_data.content_path))
 
-        # when using rpm, xccdf_path doesn't change for the post-installation
+        # when using rpm, content_path doesn't change for the post-installation
         # phase
         self.assertEqual(self.oscap_data.postinst_content_path,
-                         self.oscap_data.xccdf_path)
+                         self.oscap_data.content_path)
 
     def ds_raw_content_paths_test(self):
         for line in ["content-url = http://example.com/scap_content.xml",

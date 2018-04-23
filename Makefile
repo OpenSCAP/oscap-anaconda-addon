@@ -1,9 +1,10 @@
 NAME = oscap-anaconda-addon
 
-VERSION = 0.7
+VERSION = 0.8
 
 ADDON = org_fedora_oscap
-TESTS = tests
+TESTS = tests \
+	testing_files
 
 OSVERSION := $(shell grep -o " [0-9]\{1,\}" /etc/redhat-release | sed "s/ //g")
 ifeq ($(OSVERSION),7)

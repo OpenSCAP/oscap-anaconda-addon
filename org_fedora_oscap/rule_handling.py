@@ -46,25 +46,44 @@ def parse_csv(option, opt_str, value, parser):
             parser.values.ensure_value(option.dest, []).append(item)
 
 
-PART_RULE_PARSER = optparse.OptionParser()
+class ModifiedOptionParserException(Exception):
+    """Exception to be raised by ModifiedOptionParser."""
+    pass
+
+
+class ModifiedOptionParser(optparse.OptionParser):
+    """Overrides error behavior of OptionParser."""
+    def error(self, msg):
+        raise ModifiedOptionParserException(msg)
+
+    def exit(self, status=0, msg=None):
+        raise ModifiedOptionParserException(msg)
+
+
+PART_RULE_PARSER = ModifiedOptionParser()
 PART_RULE_PARSER.add_option("--mountoptions", dest="mount_options",
                             action="callback", callback=parse_csv, nargs=1,
                             type="string")
 
-PASSWD_RULE_PARSER = optparse.OptionParser()
+PASSWD_RULE_PARSER = ModifiedOptionParser()
 PASSWD_RULE_PARSER.add_option("--minlen", dest="minlen", action="store",
                               default=0, type="int")
 
-PACKAGE_RULE_PARSER = optparse.OptionParser()
+PACKAGE_RULE_PARSER = ModifiedOptionParser()
 PACKAGE_RULE_PARSER.add_option("--add", dest="add_pkgs", action="append",
                                type="string")
 PACKAGE_RULE_PARSER.add_option("--remove", dest="remove_pkgs", action="append",
                                type="string")
 
-BOOTLOADER_RULE_PARSER = optparse.OptionParser()
-BOOTLOADER_RULE_PARSER.add_option("--passwd", dest="passwd",
-                                  action="store_true",
+BOOTLOADER_RULE_PARSER = ModifiedOptionParser()
+BOOTLOADER_RULE_PARSER.add_option("--passwd", dest="passwd", action="store_true",
                                   default=False)
+
+KDUMP_RULE_PARSER = ModifiedOptionParser()
+KDUMP_RULE_PARSER.add_option("--enable", action="store_true",
+                             dest="kdenabled", default=None)
+KDUMP_RULE_PARSER.add_option("--disable", action="store_false",
+                             dest="kdenabled", default=None)
 
 
 class RuleHandler(object):
@@ -125,9 +144,11 @@ class RuleData(RuleHandler):
         self._passwd_rules = PasswdRules()
         self._package_rules = PackageRules()
         self._bootloader_rules = BootloaderRules()
+        self._kdump_rules = KdumpRules()
 
         self._rule_handlers = (self._part_rules, self._passwd_rules,
                                self._package_rules, self._bootloader_rules,
+                               self._kdump_rules,
                                )
 
     def __str__(self):
@@ -162,6 +183,7 @@ class RuleData(RuleHandler):
                    "passwd": self._new_passwd_rule,
                    "package": self._new_package_rule,
                    "bootloader": self._new_bootloader_rule,
+                   "kdump": self._new_kdump_rule,
                    }
 
         rule = rule.strip()
@@ -171,10 +193,8 @@ class RuleData(RuleHandler):
         first_word = rule.split(None, 1)[0]
         try:
             actions[first_word](rule)
-        except KeyError:
-            # should never happen
-            # TODO: only log error instead?
-            raise UknownRuleError("Unknown rule: '%s'" % first_word)
+        except (ModifiedOptionParserException, KeyError) as e:
+            log.warning("Unknown OSCAP Addon rule '{}': {}".format(rule, e))
 
     def eval_rules(self, ksdata, storage, report_only=False):
         """:see: RuleHandler.eval_rules"""
@@ -226,6 +246,12 @@ class RuleData(RuleHandler):
 
         if opts.passwd:
             self._bootloader_rules.require_password()
+
+    def _new_kdump_rule(self, rule):
+        args = shlex.split(rule)
+        (opts, args) = KDUMP_RULE_PARSER.parse_args(args)
+
+        self._kdump_rules.kdump_enabled(opts.kdenabled)
 
     @property
     def passwd_rules(self):
@@ -333,8 +359,10 @@ class PartRule(RuleHandler):
 
         messages = []
         if self._mount_point not in storage.mountpoints:
-            msg = _("%s must be on a separate partition or logical "
-                    "volume" % self._mount_point)
+            msg = _("{0} must be on a separate partition or logical "
+                    "volume and has to be created in the "
+                    "partitioning layout before installation can occur "
+                    "with a security profile").format(self._mount_point)
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_FATAL, msg))
 
@@ -461,6 +489,9 @@ class PasswdRules(RuleHandler):
             else:
                 ret = []
 
+        if report_only:
+            return ret
+
         # set the policy in any case (so that a weaker password is not entered)
         pw_policy = ksdata.anaconda.pwpolicy.get_policy("root")
         if pw_policy is None:
@@ -497,7 +528,7 @@ class PasswdRules(RuleHandler):
 
 class PackageRules(RuleHandler):
     """Simple class holding data from the rules affecting installed packages.
-    
+
     """
 
     def __init__(self):
@@ -654,3 +685,72 @@ class BootloaderRules(RuleHandler):
             return []
 
     # nothing to be reverted for now
+
+
+class KdumpRules(RuleHandler):
+    """Simple class holding data from the rules affecting the kdump addon."""
+
+    def __init__(self):
+        """Constructor setting the initial value of attributes."""
+
+        self._kdump_enabled = None
+        self._kdump_default_enabled = None
+
+    def kdump_enabled(self, kdenabled):
+        """Enable or Disable Kdump"""
+
+        if kdenabled is not None:
+            self._kdump_enabled = kdenabled
+
+    def __str__(self):
+        """Standard method useful for debugging and testing."""
+
+        ret = "kdump"
+
+        if self._kdump_enabled is True:
+            ret += " --enable"
+
+        if self._kdump_enabled is False:
+            ret += " --disable"
+
+        return ret
+
+    def eval_rules(self, ksdata, storage, report_only=False):
+        """:see: RuleHandler.eval_rules"""
+
+        messages = []
+
+        if self._kdump_enabled is None:
+            return []
+        elif self._kdump_enabled is False:
+            msg = _("Kdump will be disabled on startup")
+        elif self._kdump_enabled is True:
+            msg = _("Kdump will be enabled on startup")
+
+        messages.append(RuleMessage(self.__class__,
+                                    common.MESSAGE_TYPE_INFO, msg))
+
+        if not report_only:
+            try:
+                if self._kdump_default_enabled is None:
+                    # Kdump addon default startup setting
+                    self._kdump_default_enabled = ksdata.addons.com_redhat_kdump.enabled
+                ksdata.addons.com_redhat_kdump.enabled = self._kdump_enabled
+            except AttributeError:
+                log.warning("com_redhat_kdump is not installed. "
+                            "Skipping kdump configuration")
+
+        return messages
+
+    def revert_changes(self, ksdata, storage):
+        """:see: RuleHander.revert_changes"""
+
+        try:
+            if self._kdump_enabled is not None:
+                ksdata.addons.com_redhat_kdump.enabled = self._kdump_default_enabled
+        except AttributeError:
+            log.warning("com_redhat_kdump is not installed. "
+                        "Skipping reverting kdump configuration")
+
+        self._kdump_enabled = None
+        self._kdump_default_enabled = None

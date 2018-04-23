@@ -6,24 +6,24 @@
 
 toc::[]
 
-== Testing
 
-=== How to Test oscap Anaconda Addon
+== How to Test oscap Anaconda Addon
 
 Anaconda has capability to load installer updates using _"updates image"_. This image can loaded from different storages and use different formats. This page should show one working use case, not all possibilities.
 
 (https://fedoraproject.org/wiki/Anaconda/Updates#How_to_Create_an_Anaconda_Updates_Image)
 
-## What do you need to test your changes? (Summary)
+What do you need to test your changes?
+
 1. Clone repository & use required branch & change code
 2. Build image
 3. Serve image using HTTP server
 4. Load system with update image
 
-## Clone repository & use required branch
+=== Clone repository & use required branch
 You probably want to use rhel7-branch. Currently we don't support Fedora (unsupported python3, ...)
 
-## Build image
+=== Build image
 We will create cpio archive `ASCII cpio archive (SVR4 with no CRC)` packed using gzip (`gzip compressed data`).
 
 You can use the `create_update_image.sh` script in the oscap-anaconda-addon repository to create the `update.img` image.
@@ -38,7 +38,7 @@ gzip --decompress | cpio -id < REPO_PATH/update.img
 ```
 
 
-### Serve image using HTTP server
+=== Serve image using HTTP server
 You don't need public HTTP server or setup Apache.
 You can use simple python HTTP server - it serves all files in you current directory.
 ```
@@ -46,9 +46,10 @@ python -m SimpleHTTPServer
 ```
 **Setup your firewall rules correctly to make webserver port accessible from virtual machine.**
 
-## Load system with update image
+=== Load system with update image
 If you want to load your changes to anaconda, you have to setup boot options correctly.
 You have two ways how to setup it:
+
 - Manually
 - With PXE boot
 
@@ -61,3 +62,20 @@ If you use PXE boot you can pass requires parameters there. Advantage of this so
 inst.updates=http://192.168.122.1:8000/update.img
 ```
 
+== Running Unit Tests
+
+Following packages are needed to run unit tests:
+
+```
+anaconda
+openscap-python
+python-cpio
+python-mock
+python-nose
+```
+
+Run the unit tests using:
+
+```
+make unittest
+```
