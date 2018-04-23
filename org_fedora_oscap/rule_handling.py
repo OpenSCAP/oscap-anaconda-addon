@@ -1013,7 +1013,7 @@ class FirewallRules(RuleHandler):
 
         # remove all services this handler added
         for svc in self._added_svcs:
-            if svc in ksdata.packages.packageList:
+            if svc in ksdata.firewall.services:
                 ksdata.firewall.services.remove(svc)
 
         # remove all ports this handler added
@@ -1023,7 +1023,7 @@ class FirewallRules(RuleHandler):
 
         # remove all trusts this handler added
         for trust in self._added_trusts:
-            if trust in ksdata.packages.packageList:
+            if trust in ksdata.firewall.trusts:
                 ksdata.firewall.trusts.remove(trust)
 
         # remove all services this handler excluded
