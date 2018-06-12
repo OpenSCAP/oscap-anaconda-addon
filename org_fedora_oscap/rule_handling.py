@@ -25,7 +25,6 @@ Module with various classes for handling pre-installation rules.
 
 import optparse
 import shlex
-import gettext
 import logging
 from pyanaconda.pwpolicy import F22_PwPolicyData
 from org_fedora_oscap import common
@@ -34,9 +33,10 @@ from org_fedora_oscap.common import OSCAPaddonError, RuleMessage
 # everything else should be private
 __all__ = ["RuleData"]
 
-_ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
 
 log = logging.getLogger("anaconda")
+
+_ = common._
 
 
 # TODO: use set instead of list for mount options?

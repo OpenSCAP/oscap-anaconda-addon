@@ -25,7 +25,6 @@ import re
 import os
 import time
 import logging
-import gettext
 
 from pyanaconda.addons import AddonData
 from pyanaconda.core.util import getSysroot
@@ -35,12 +34,10 @@ from pyanaconda.core import util
 from pyanaconda import flags
 from pykickstart.errors import KickstartParseError, KickstartValueError
 from org_fedora_oscap import utils, common, rule_handling, data_fetch
-from org_fedora_oscap.common import SUPPORTED_ARCHIVES
+from org_fedora_oscap.common import SUPPORTED_ARCHIVES, _
 from org_fedora_oscap.content_handling import ContentCheckError
 
 log = logging.getLogger("anaconda")
-
-_ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
 
 # export OSCAPdata class to prevent Anaconda's collect method from taking
 # AddonData class instead of the OSCAPdata class
@@ -531,8 +528,8 @@ class OSCAPdata(AddonData):
             shutil.copy2(self.raw_preinst_content_path, target_content_dir)
 
             # and install it with yum
-            ret = iutil.execInSysroot("yum", ["-y", "--nogpg", "install",
-                                              self.raw_postinst_content_path])
+            ret = util.execInSysroot("yum", ["-y", "--nogpg", "install",
+                                             self.raw_postinst_content_path])
             if ret != 0:
                 raise common.ExtractionError("Failed to install content "
                                              "RPM to the target system")

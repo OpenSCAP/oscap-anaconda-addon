@@ -34,6 +34,7 @@ import re
 import logging
 
 from collections import namedtuple
+import gettext
 from functools import wraps
 from pyanaconda.core import constants
 from pyanaconda import nm
@@ -42,6 +43,18 @@ from org_fedora_oscap import utils
 from org_fedora_oscap.data_fetch import fetch_data
 
 log = logging.getLogger("anaconda")
+
+
+# mimick pyanaconda/core/i18n.py
+def _(string):
+    if string:
+        return gettext.translation("oscap-anaconda-addon", fallback=True).gettext(string)
+    else:
+        return ""
+
+
+def N_(string): return string
+
 
 # everything else should be private
 __all__ = ["run_oscap_remediate", "get_fix_rules_pre",
@@ -319,7 +332,7 @@ def extract_data(archive, out_dir, ensure_has_files=None):
         try:
             zfile = zipfile.ZipFile(archive, "r")
         except zipfile.BadZipfile as err:
-            raise ExtractionError(err.message)
+            raise ExtractionError(str(err))
 
         # generator for the paths of the files found in the archive (dirs end
         # with "/")
@@ -375,7 +388,7 @@ def _extract_tarball(archive, out_dir, ensure_has_files, alg):
     try:
         tfile = tarfile.TarFile.open(archive, mode)
     except tarfile.TarError as err:
-        raise ExtractionError(err.message)
+        raise ExtractionError(str(err))
 
     # generator for the paths of the files found in the archive
     files = set(member.path for member in tfile.getmembers()
@@ -423,7 +436,7 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
     try:
         archive = cpioarchive.CpioArchive(temp_path)
     except cpioarchive.CpioError as err:
-        raise ExtractionError(err.message)
+        raise ExtractionError(str(err))
 
     # get entries from the archive (supports only iteration over entries)
     entries = set(entry for entry in archive)

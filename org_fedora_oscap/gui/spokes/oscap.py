@@ -20,7 +20,6 @@
 
 import threading
 import logging
-import gettext
 from functools import wraps
 
 # the path to addons is in sys.path so we can import things
@@ -43,8 +42,9 @@ from pykickstart.errors import KickstartValueError
 from gi.repository import Gdk
 
 log = logging.getLogger("anaconda")
-_ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
-N_ = lambda x: x
+
+_ = common._
+N_ = common.N_
 
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
@@ -391,7 +391,7 @@ class OSCAPSpoke(NormalSpoke):
                                              common.INSTALLATION_CONTENT_DIR,
                                              [self._addon_data.content_path])
             except common.ExtractionError as err:
-                self._extraction_failed(err.message)
+                self._extraction_failed(str(err))
                 # fetching done
                 with self._fetch_flag_lock:
                     self._fetching = False
