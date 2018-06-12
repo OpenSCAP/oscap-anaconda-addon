@@ -31,7 +31,7 @@ from org_fedora_oscap import rule_handling
 from org_fedora_oscap import content_handling
 from org_fedora_oscap import utils
 from org_fedora_oscap.common import dry_run_skip
-from pyanaconda.threads import threadMgr, AnacondaThread
+from pyanaconda.threading import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
 from pyanaconda.ui.gui.utils import gtk_action_wait, really_hide, really_show

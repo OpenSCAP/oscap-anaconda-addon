@@ -28,10 +28,10 @@ import logging
 import gettext
 
 from pyanaconda.addons import AddonData
-from pyanaconda.iutil import getSysroot
+from pyanaconda.core.util import getSysroot
 from pyanaconda.progress import progressQ
 from pyanaconda import errors
-from pyanaconda import iutil
+from pyanaconda.core import util
 from pyanaconda import flags
 from pykickstart.errors import KickstartParseError, KickstartValueError
 from org_fedora_oscap import utils, common, rule_handling, data_fetch

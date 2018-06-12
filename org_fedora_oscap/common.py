@@ -35,9 +35,9 @@ import logging
 
 from collections import namedtuple
 from functools import wraps
-from pyanaconda import constants
+from pyanaconda.core import constants
 from pyanaconda import nm
-from pyanaconda.threads import threadMgr, AnacondaThread
+from pyanaconda.threading import threadMgr, AnacondaThread
 from org_fedora_oscap import utils
 from org_fedora_oscap.data_fetch import fetch_data
 

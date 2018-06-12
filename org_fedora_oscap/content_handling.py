@@ -28,7 +28,7 @@ import os.path
 
 from collections import namedtuple, OrderedDict
 from openscap_api import OSCAP
-from pyanaconda.iutil import execReadlines
+from pyanaconda.core.util import execReadlines
 try:
     from html.parser import HTMLParser
 except ImportError:
