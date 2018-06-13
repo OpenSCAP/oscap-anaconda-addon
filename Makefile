@@ -74,10 +74,11 @@ potfile:
 	$(MAKE) -C po potfile
 
 po-pull:
-	rpm -q zanata-python-client &>/dev/null || ( echo "need to run: yum install zanata-python-client"; exit 1 )
+	@which zanata > /dev/null 2>&1 || echo "You may not have the Zanata client installed, don't be surprised if the operation fails."
 	zanata pull $(ZANATA_PULL_ARGS)
 
 push-pot: potfile
+	@which zanata > /dev/null 2>&1 || echo "You may not have the Zanata client installed, don't be surprised if the operation fails."
 	zanata push $(ZANATA_PUSH_ARGS)
 
 install-po-files:
