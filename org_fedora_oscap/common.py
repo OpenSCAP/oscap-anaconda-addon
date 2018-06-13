@@ -333,8 +333,9 @@ def extract_data(archive, out_dir, ensure_has_files=None):
 
         utils.ensure_dir_exists(out_dir)
         zfile.extractall(path=out_dir)
+        result = [utils.join_paths(out_dir, info.filename) for info in zfile.filelist]
         zfile.close()
-        return [utils.join_paths(out_dir, info.filename) for info in zfile.filelist]
+        return result
     elif archive.endswith(".tar"):
         # plain tarball
         return _extract_tarball(archive, out_dir, ensure_has_files, None)
@@ -388,9 +389,10 @@ def _extract_tarball(archive, out_dir, ensure_has_files, alg):
 
     utils.ensure_dir_exists(out_dir)
     tfile.extractall(path=out_dir)
+    result = [utils.join_paths(out_dir, member.path) for member in tfile.getmembers()]
     tfile.close()
 
-    return [utils.join_paths(out_dir, member.path) for member in tfile.getmembers()]
+    return result
 
 
 def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
