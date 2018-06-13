@@ -218,7 +218,6 @@ class OSCAPdata(AddonData):
                    "datastream-id": self._parse_datastream_id,
                    "profile": self._parse_profile_id,
                    "xccdf-id": self._parse_xccdf_id,
-                   "xccdf-path": self._parse_content_path,
                    "cpe-path": self._parse_cpe_path,
                    "tailoring-path": self._parse_tailoring_path,
                    "fingerprint": self._parse_fingerprint,
