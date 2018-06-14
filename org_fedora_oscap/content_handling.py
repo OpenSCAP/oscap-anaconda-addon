@@ -368,7 +368,8 @@ class DataStreamHandler(object):
 
             id_ = OSCAP.xccdf_profile_get_id(profile)
             title = oscap_text_itr_get_text(OSCAP.xccdf_profile_get_title(profile))
-            desc = parse_HTML_from_content(oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile)))
+            desc = parse_HTML_from_content(
+                oscap_text_itr_get_text(OSCAP.xccdf_profile_get_description(profile)))
             info = ProfileInfo(id_, title, desc)
 
             profiles.append(info)
@@ -424,8 +425,10 @@ class BenchmarkHandler(object):
         self._profiles = []
 
         if default_rules_count > 0:
-            self._profiles.append(ProfileInfo("default", "Default",
-                                  "The implicit XCCDF profile. Usually, the default contains no rules."))
+            self._profiles.append(
+                ProfileInfo(
+                    "default", "Default",
+                    "The implicit XCCDF profile. Usually, the default contains no rules."))
 
         if not benchmark:
             msg = "Not a valid benchmark file: '%s'" % xccdf_file_path

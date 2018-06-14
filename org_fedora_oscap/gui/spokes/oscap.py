@@ -719,8 +719,13 @@ class OSCAPSpoke(NormalSpoke):
                                              self._addon_data.preinst_content_path,
                                              ds, xccdf,
                                              self._addon_data.preinst_tailoring_path)
-        except common.OSCAPaddonError:
-            self._set_error("Failed to get rules for the profile '%s'" % profile_id)
+        except common.OSCAPaddonError as exc:
+            log.error(
+                "Failed to get rules for the profile '{}': {}"
+                .format(profile_id, str(exc)))
+            self._set_error(
+                "Failed to get rules for the profile '{}'"
+                .format(profile_id))
             return False
 
         itr = self._profiles_store.get_iter_first()
