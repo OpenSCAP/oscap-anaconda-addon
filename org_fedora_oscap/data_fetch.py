@@ -184,7 +184,7 @@ def _curl_fetch(url, out_file, ca_certs=None):
         curl.setopt(pycurl.SSL_VERIFYPEER, 0)
 
     try:
-        with open(out_file, "w") as fobj:
+        with open(out_file, "wb") as fobj:
             curl.setopt(pycurl.WRITEDATA, fobj)
             curl.perform()
     except pycurl.error as err:

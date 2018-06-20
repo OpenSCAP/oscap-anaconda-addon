@@ -29,19 +29,34 @@ import tempfile
 import subprocess
 import zipfile
 import tarfile
+from _ast import Sub
+
 import cpioarchive
 import re
 import logging
 
 from collections import namedtuple
+import gettext
 from functools import wraps
-from pyanaconda import constants
+from pyanaconda.core import constants
 from pyanaconda import nm
-from pyanaconda.threads import threadMgr, AnacondaThread
+from pyanaconda.threading import threadMgr, AnacondaThread
 from org_fedora_oscap import utils
 from org_fedora_oscap.data_fetch import fetch_data
 
 log = logging.getLogger("anaconda")
+
+
+# mimick pyanaconda/core/i18n.py
+def _(string):
+    if string:
+        return gettext.translation("oscap-anaconda-addon", fallback=True).gettext(string)
+    else:
+        return ""
+
+
+def N_(string): return string
+
 
 # everything else should be private
 __all__ = ["run_oscap_remediate", "get_fix_rules_pre",
@@ -104,6 +119,34 @@ MESSAGE_TYPE_INFO = 2
 RuleMessage = namedtuple("RuleMessage", ["origin", "type", "text"])
 
 
+class SubprocessLauncher(object):
+    def __init__(self, args):
+        self.args = args
+        self.stdout = ""
+        self.stderr = ""
+        self.messages = []
+        self.returncode = None
+
+    def execute(self, ** kwargs):
+        try:
+            proc = subprocess.Popen(self.args, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, ** kwargs)
+        except OSError as oserr:
+            msg = "Failed to run the oscap tool: %s" % oserr
+            raise OSCAPaddonError(msg)
+
+        (stdout, stderr) = proc.communicate()
+        self.stdout = stdout.decode()
+        self.stderr = stderr.decode()
+        self.messages = re.findall(r'OpenSCAP Error:.*', self.stderr)
+
+        self.returncode = proc.returncode
+
+    def log_messages(self):
+        for message in self.messages:
+            log.warning("OSCAP addon: " + message)
+
+
 def get_fix_rules_pre(profile, fpath, ds_id="", xccdf_id="", tailoring=""):
     """
     Get fix rules for the pre-installation environment for a given profile in a
@@ -154,27 +197,14 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id="",
 
     args.append(fpath)
 
-    try:
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
-    except OSError as oserr:
-        msg = "Failed to run the oscap tool: %s" % oserr
-        raise OSCAPaddonError(msg)
-
-    (stdout, stderr) = proc.communicate()
-
-    messages = re.findall(r'OpenSCAP Error:.*', stderr)
-    if messages:
-        for message in messages:
-            log.warning("OSCAP addon: " + message)
-
-    # pylint thinks Popen has no attribute returncode
-    # pylint: disable-msg=E1101
+    proc = SubprocessLauncher(args)
+    proc.execute()
+    proc.log_messages()
     if proc.returncode != 0:
-        msg = "Failed to generate fix rules with the oscap tool: %s" % stderr
+        msg = "Failed to generate fix rules with the oscap tool: %s" % proc.stderr
         raise OSCAPaddonError(msg)
 
-    return stdout
+    return proc.stdout
 
 
 def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
@@ -235,32 +265,17 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
 
     args.append(fpath)
 
-    try:
-        proc = subprocess.Popen(args,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                preexec_fn=do_chroot)
-    except OSError as oserr:
-        msg = "Failed to run the oscap tool: %s" % oserr
-        raise OSCAPaddonError(msg)
+    proc = SubprocessLauncher(args)
+    proc.execute(preexec_fn=do_chroot)
+    proc.log_messages()
 
-    (stdout, stderr) = proc.communicate()
-
-    messages = re.findall(r'OpenSCAP Error:.*', stderr)
-    if messages:
-        for message in messages:
-            log.warning("OSCAP addon: " + message)
-
-    # save stdout?
-    # pylint thinks Popen has no attribute returncode
-    # pylint: disable-msg=E1101
     if proc.returncode not in (0, 2):
         # 0 -- success; 2 -- no error, but checks/remediation failed
         msg = "Content evaluation and remediation with the oscap tool "\
-            "failed: %s" % stderr
+            "failed: %s" % proc.stderr
         raise OSCAPaddonError(msg)
 
-    return stdout
+    return proc.stdout
 
 
 def wait_and_fetch_net_data(url, out_file, ca_certs=None):
@@ -319,7 +334,7 @@ def extract_data(archive, out_dir, ensure_has_files=None):
         try:
             zfile = zipfile.ZipFile(archive, "r")
         except zipfile.BadZipfile as err:
-            raise ExtractionError(err.message)
+            raise ExtractionError(str(err))
 
         # generator for the paths of the files found in the archive (dirs end
         # with "/")
@@ -376,7 +391,7 @@ def _extract_tarball(archive, out_dir, ensure_has_files, alg):
     try:
         tfile = tarfile.TarFile.open(archive, mode)
     except tarfile.TarError as err:
-        raise ExtractionError(err.message)
+        raise ExtractionError(str(err))
 
     # generator for the paths of the files found in the archive
     files = set(member.path for member in tfile.getmembers()
@@ -425,7 +440,7 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
     try:
         archive = cpioarchive.CpioArchive(temp_path)
     except cpioarchive.CpioError as err:
-        raise ExtractionError(err.message)
+        raise ExtractionError(str(err))
 
     # get entries from the archive (supports only iteration over entries)
     entries = set(entry for entry in archive)

@@ -42,17 +42,17 @@ class DataStreamHandlerTest(unittest.TestCase):
     def init_invalid_file_path_test(self):
         with self.assertRaises(ch.DataStreamHandlingError) as e:
             ch.DataStreamHandler("testing_ds.xml")
-        self.assertIn("Invalid file path", e.exception.message)
+        self.assertIn("Invalid file path", str(e.exception))
 
     def init_not_scap_content_test(self):
         with self.assertRaises(ch.DataStreamHandlingError) as e:
             ch.DataStreamHandler("../testing_files/testing_ks.cfg")
-        self.assertIn("not a valid SCAP content file", e.exception.message)
+        self.assertIn("not a valid SCAP content file", str(e.exception))
 
     def init_xccdf_content_test(self):
         with self.assertRaises(ch.DataStreamHandlingError) as e:
             ch.DataStreamHandler("../testing_files/xccdf.xml")
-        self.assertIn("not a data stream collection", e.exception.message)
+        self.assertIn("not a data stream collection", str(e.exception))
 
     def get_data_streams_test(self):
         self.ds_handler = ch.DataStreamHandler(self.ds_filepath)
@@ -77,7 +77,7 @@ class DataStreamHandlerTest(unittest.TestCase):
         self.ds_handler = ch.DataStreamHandler(self.ds_filepath)
         with self.assertRaises(ch.DataStreamHandlingError) as e:
             chk_ids = self.ds_handler.get_checklists("invalid.id")
-        self.assertIn("Invalid data stream id given", e.exception.message)
+        self.assertIn("Invalid data stream id given", str(e.exception))
 
     def get_profiles_test(self):
         self.ds_handler = ch.DataStreamHandler(self.ds_filepath)

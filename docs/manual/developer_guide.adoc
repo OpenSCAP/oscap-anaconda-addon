@@ -11,56 +11,93 @@ toc::[]
 
 Anaconda has capability to load installer updates using _"updates image"_. This image can loaded from different storages and use different formats. This page should show one working use case, not all possibilities.
 
-(https://fedoraproject.org/wiki/Anaconda/Updates#How_to_Create_an_Anaconda_Updates_Image)
-
 What do you need to test your changes?
 
-1. Clone repository & use required branch & change code
-2. Build image
-3. Serve image using HTTP server
-4. Load system with update image
+1. Clone addon repository & use required branch & change code.
+2. Build addon update image.
+3. Serve image using local HTTP server.
+4. Load system with update image.
+
 
 === Clone repository & use required branch
-You probably want to use rhel7-branch. Currently we don't support Fedora (unsupported python3, ...)
+
+The rhel7-branch uses Python 2 and supports RHEL7 Anaconda, whereas the `master` uses Python 3, and supports Fedora.
+
 
 === Build image
+
 We will create cpio archive `ASCII cpio archive (SVR4 with no CRC)` packed using gzip (`gzip compressed data`).
+On RHEL installation media, the OAA package and its dependencies are included, but this is not the case with Fedora.
+Therefore, the archive has to contain those dependencies.
 
 You can use the `create_update_image.sh` script in the oscap-anaconda-addon repository to create the `update.img` image.
+If some time has passed since you have created the image, you typically want to re-download fresh RPM dependencies in the process, so the image is up-to-date in all aspects.
+
+For further reading, see the https://fedoraproject.org/wiki/Anaconda/Updates#How_to_Create_an_Anaconda_Updates_Image[official docs].
 
 ```
-./create_update_image.sh
+./create_update_image.sh download_rpms
 ```
+
 If you want to see what was packed, you can extract the image.
+
 ```
-mkdir /tmp/content; cd /tmp/content
-gzip --decompress | cpio -id < REPO_PATH/update.img
+gunzip -c update.img | cpio -id
 ```
 
 
 === Serve image using HTTP server
+
 You don't need public HTTP server or setup Apache.
 You can use simple python HTTP server - it serves all files in you current directory.
+
 ```
 python -m SimpleHTTPServer
 ```
+
 **Setup your firewall rules correctly to make webserver port accessible from virtual machine.**
 
+
 === Load system with update image
+
 If you want to load your changes to anaconda, you have to setup boot options correctly.
 You have two ways how to setup it:
 
 - Manually
-- With PXE boot
+- With Network Install/PXE boot
 
 If you want to set it manually, you have to boot your machine into grub. Then you can change options (usually using "tab" key).
 
-If you use PXE boot you can pass requires parameters there. Advantage of this solution is that you will not need to change parameters during every boot.
+If you use Network Install/PXE boot you can pass requires parameters there - look for `kernel options`.
+Advantage of this solution is that you will not need to change parameters during every boot.
 
 **Required boot parameters:**
+
 ```
-inst.updates=http://192.168.122.1:8000/update.img
+inst.updates=http://gateway:8000/update.img
 ```
+
+Here, `gateway` is supposed to refer to your host machine.
+When setting the NAT network in the VM setup, `gateway` will be recognized correctly (at least on RHEL7).
+In other cases, input your IP address.
+
+Remember that you can also provide your custom-built SSG content to the insaller this way -
+you may copy your datastream to the directory that is served by the server as it contains the image, and then,
+enter `http://gateway:8000/my-custom-ds.xml` as a remote content URL.
+
+Watch the console, as the VM is supposed to download the update image, and the Python server should output the corresponding HTTP request:
+
+`<IP> - - [<date>] "GET /update.img HTTP/1.1" 200 -`
+
+200 is the OK request status.
+
+
+=== Further introspection of Anaconda
+
+After reaching the Anaconda GUI, you can switch into another VT and check out that the update went OK by examining the files on the disc.
+You can also debug Anaconda in a sophisticated way - as of 04/2018, switching to tty1 brought you to a TMUX session with windows attached to various processes.
+There is also an official https://fedoraproject.org/wiki/How_to_debug_installation_problems[how-to-debug documentation] though.
+
 
 == Running Unit Tests
 

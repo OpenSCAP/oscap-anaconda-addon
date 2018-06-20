@@ -20,7 +20,6 @@
 
 import threading
 import logging
-import gettext
 from functools import wraps
 
 # the path to addons is in sys.path so we can import things
@@ -31,11 +30,11 @@ from org_fedora_oscap import rule_handling
 from org_fedora_oscap import content_handling
 from org_fedora_oscap import utils
 from org_fedora_oscap.common import dry_run_skip
-from pyanaconda.threads import threadMgr, AnacondaThread
+from pyanaconda.threading import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
-from pyanaconda.ui.gui.utils import gtk_action_wait, really_hide, really_show
-from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action, GtkActionList
+from pyanaconda.ui.gui.utils import async_action_wait, really_hide, really_show
+from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action
 from pyanaconda.ui.categories.system import SystemCategory
 from pykickstart.errors import KickstartValueError
 
@@ -43,8 +42,9 @@ from pykickstart.errors import KickstartValueError
 from gi.repository import Gdk
 
 log = logging.getLogger("anaconda")
-_ = lambda x: gettext.ldgettext("oscap-anaconda-addon", x)
-N_ = lambda x: x
+
+_ = common._
+N_ = common.N_
 
 # export only the spoke, no helper functions, classes or constants
 __all__ = ["OSCAPSpoke"]
@@ -52,6 +52,30 @@ __all__ = ["OSCAPSpoke"]
 # pages in the main notebook
 SET_PARAMS_PAGE = 0
 GET_CONTENT_PAGE = 1
+
+
+class GtkActionList(object):
+    """Class for scheduling Gtk actions to be all run at once."""
+
+    def __init__(self):
+        self._actions = []
+
+    def add_action(self, func, *args):
+        """Add Gtk action to be run later."""
+
+        @async_action_wait
+        def gtk_action():
+            func(*args)
+
+        self._actions.append(gtk_action)
+
+    def fire(self):
+        """Run all scheduled Gtk actions."""
+
+        for action in self._actions:
+            action()
+
+        self._actions = []
 
 
 # helper functions
@@ -391,7 +415,7 @@ class OSCAPSpoke(NormalSpoke):
                                              common.INSTALLATION_CONTENT_DIR,
                                              [self._addon_data.content_path])
             except common.ExtractionError as err:
-                self._extraction_failed(err.message)
+                self._extraction_failed(str(err))
                 # fetching done
                 with self._fetch_flag_lock:
                     self._fetching = False
@@ -505,7 +529,7 @@ class OSCAPSpoke(NormalSpoke):
 
         self._ds_store.append([ds_id])
 
-    @gtk_action_wait
+    @async_action_wait
     def _update_ids_visibility(self):
         """
         Updates visibility of the combo boxes that are used to select the DS
@@ -524,7 +548,7 @@ class OSCAPSpoke(NormalSpoke):
         # not showing, hide instead
         really_hide(self._ids_box)
 
-    @gtk_action_wait
+    @async_action_wait
     def _update_xccdfs_store(self):
         """
         Clears and repopulates the store with XCCDF IDs from the currently
@@ -540,7 +564,7 @@ class OSCAPSpoke(NormalSpoke):
         for xccdf_id in self._ds_checklists[self._current_ds_id]:
             self._xccdf_store.append([xccdf_id])
 
-    @gtk_action_wait
+    @async_action_wait
     def _update_profiles_store(self):
         """
         Clears and repopulates the store with profiles from the currently
@@ -584,7 +608,7 @@ class OSCAPSpoke(NormalSpoke):
         self._message_store.append([message.type, message.text])
 
     @dry_run_skip
-    @gtk_action_wait
+    @async_action_wait
     def _update_message_store(self, report_only=False):
         """
         Updates the message store with messages from rule evaluation.
@@ -648,7 +672,7 @@ class OSCAPSpoke(NormalSpoke):
             self.__old_root_pw = None
             self.__old_root_pw_seen = None
 
-    @gtk_action_wait
+    @async_action_wait
     def _unselect_profile(self, profile_id):
         """Unselects the given profile."""
 
@@ -670,7 +694,7 @@ class OSCAPSpoke(NormalSpoke):
 
         self._active_profile = None
 
-    @gtk_action_wait
+    @async_action_wait
     def _select_profile(self, profile_id):
         """Selects the given profile."""
 
@@ -695,8 +719,13 @@ class OSCAPSpoke(NormalSpoke):
                                              self._addon_data.preinst_content_path,
                                              ds, xccdf,
                                              self._addon_data.preinst_tailoring_path)
-        except common.OSCAPaddonError:
-            self._set_error("Failed to get rules for the profile '%s'" % profile_id)
+        except common.OSCAPaddonError as exc:
+            log.error(
+                "Failed to get rules for the profile '{}': {}"
+                .format(profile_id, str(exc)))
+            self._set_error(
+                "Failed to get rules for the profile '{}'"
+                .format(profile_id))
             return False
 
         itr = self._profiles_store.get_iter_first()
@@ -715,7 +744,7 @@ class OSCAPSpoke(NormalSpoke):
 
         return True
 
-    @gtk_action_wait
+    @async_action_wait
     @dry_run_skip
     def _switch_profile(self):
         """Switches to a current selected profile.
@@ -748,7 +777,7 @@ class OSCAPSpoke(NormalSpoke):
             self._error = None
             self.clear_info()
 
-    @gtk_action_wait
+    @async_action_wait
     def _invalid_content(self):
         """Callback for informing user about provided content invalidity."""
 
@@ -756,7 +785,7 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_label.set_markup("<b>%s</b>" % msg)
         self._wrong_content(msg)
 
-    @gtk_action_wait
+    @async_action_wait
     def _invalid_url(self):
         """Callback for informing user about provided URL invalidity."""
 
@@ -764,7 +793,7 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_label.set_markup("<b>%s</b>" % msg)
         self._wrong_content(msg)
 
-    @gtk_action_wait
+    @async_action_wait
     def _data_fetch_failed(self):
         """Adapts the UI if fetching data from entered URL failed"""
 
@@ -772,7 +801,7 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_label.set_markup("<b>%s</b>" % msg)
         self._wrong_content(msg)
 
-    @gtk_action_wait
+    @async_action_wait
     def _network_problem(self):
         """Adapts the UI if network error was encountered during data fetch"""
 
@@ -781,7 +810,7 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_label.set_markup("<b>%s</b>" % msg)
         self._wrong_content(msg)
 
-    @gtk_action_wait
+    @async_action_wait
     def _integrity_check_failed(self):
         """Adapts the UI if integrity check fails"""
 
@@ -789,7 +818,7 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_label.set_markup("<b>%s</b>" % msg)
         self._wrong_content(msg)
 
-    @gtk_action_wait
+    @async_action_wait
     def _extraction_failed(self, err_msg):
         """Adapts the UI if extracting data from entered URL failed"""
 
@@ -798,7 +827,7 @@ class OSCAPSpoke(NormalSpoke):
         self._progress_label.set_markup("<b>%s</b>" % msg)
         self._wrong_content(msg)
 
-    @gtk_action_wait
+    @async_action_wait
     def _wrong_content(self, msg):
         self._addon_data.clear_all()
         really_hide(self._progress_spinner)
@@ -809,13 +838,13 @@ class OSCAPSpoke(NormalSpoke):
         self._content_handling_cls = None
         self._set_error(msg)
 
-    @gtk_action_wait
+    @async_action_wait
     def _invalid_profile_id(self):
         msg = _("Profile with ID '%s' not defined in the content. Select a different profile, please") % self._addon_data.profile_id
         self._set_error(msg)
         self._addon_data.profile_id = None
 
-    @gtk_action_wait
+    @async_action_wait
     def _switch_dry_run(self, dry_run):
         self._choose_button.set_sensitive(not dry_run)
 
@@ -836,7 +865,7 @@ class OSCAPSpoke(NormalSpoke):
             self._select_profile(self._active_profile)
             self._update_message_store()
 
-    @gtk_action_wait
+    @async_action_wait
     def refresh(self):
         """
         The refresh method that is called every time the spoke is displayed.
@@ -987,7 +1016,7 @@ class OSCAPSpoke(NormalSpoke):
                                        for row in self._message_store)
 
     @property
-    @gtk_action_wait
+    @async_action_wait
     def status(self):
         """
         The status property that is a brief string describing the state of the
