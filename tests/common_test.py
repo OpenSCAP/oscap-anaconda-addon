@@ -33,7 +33,7 @@ class OSCAPtoolRunningTest(unittest.TestCase):
         self.mock_popen = mock.Mock()
         self.mock_communicate = mock.Mock()
 
-        self.mock_communicate.return_value = ("", "")
+        self.mock_communicate.return_value = (b"", b"")
 
         self.mock_popen.communicate = self.mock_communicate
         self.mock_popen.returncode = 0
