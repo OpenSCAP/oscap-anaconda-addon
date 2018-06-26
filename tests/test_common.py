@@ -35,7 +35,7 @@ def mock_subprocess():
     mock_popen = mock.Mock()
     mock_communicate = mock.Mock()
 
-    mock_communicate.return_value = (b"", b"")
+    mock_communicate.return_value = ("", "")
 
     mock_popen.communicate = mock_communicate
     mock_popen.returncode = 0

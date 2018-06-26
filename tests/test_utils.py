@@ -142,4 +142,4 @@ def test_gen():
     assert tuple(mapped_generator) == (1, 4, 16, 25)
 
     # any better test for this?
-    assert "__next__" in dir(mapped_generator)
+    assert "next" in dir(mapped_generator)
