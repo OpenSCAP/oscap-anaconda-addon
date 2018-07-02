@@ -160,7 +160,7 @@ packages="
 
 download_rpms() {
 	mkdir -p "$rpmdir"
-	(cd "$rpmdir" && dnf download --arch x86_64,noarch --releasever "$_arg_release" $packages)
+	(cd "$rpmdir" && dnf download --arch x86_64,noarch --releasever "$_arg_releasever" $packages) || die "Failed to download RPMs for Fedora $_arg_releasever"
 }
 
 
@@ -168,21 +168,20 @@ install_rpms() {
 	test -d "$rpmdir" || return 0  # Nothing to do, no RPM dir exists
 	# Install pre-downloaded RPMs to the fake root, sudo is required
 	for pkg in "$rpmdir/"*.rpm; do
-		sudo rpm -i --nodeps --root "$tmp_root" "$pkg"
+		sudo rpm -i --nodeps --root "$tmp_root" "$pkg" || die "Failed to install dependency $pkg to $tmp_root, which is needed for the installer to be fully operational."
 	done
 }
 
 
 install_addon_from_repo() {
 	# "copy files" to new root, sudo needed because we may overwrite files installed by rpm
-	sudo make install DESTDIR="${tmp_root}" >&2
+	sudo make install DESTDIR="${tmp_root}" >&2 || die "Failed to install the addon to $tmp_root."
 }
 
 
 create_image() {
 	# create update image
-	cd "$tmp_root"
-	find -L . | cpio -oc | gzip > "$build_dir/update.img"
+	(cd "$tmp_root" && find -L . | cpio -oc | gzip > "$build_dir/update.img") || die "Failed to create the update image from the $tmp_root."
 }
 
 
