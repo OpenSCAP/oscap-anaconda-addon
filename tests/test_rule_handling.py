@@ -558,3 +558,112 @@ def test_evaluation_various_rules(rule_data, ksdata_mock, storage_mock):
 
     # four rules, all fail --> four messages
     assert len(messages) == 4
+
+
+def test_revert_mount_options_nonexistent(rule_data, ksdata_mock, storage_mock):
+    rule_data.new_rule("part /tmp --mountoptions=nodev")
+    storage_mock.mountpoints = dict()
+
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock)
+
+    # mount point doesn't exist -> one message, nothing done
+    assert len(messages) == 1
+    assert storage_mock.mountpoints == dict()
+
+    # mount point doesn't exist -> shouldn't do anything
+    rule_data.revert_changes(ksdata_mock, storage_mock)
+    assert storage_mock.mountpoints == dict()
+
+
+def test_revert_mount_options(rule_data, ksdata_mock, storage_mock):
+    rule_data.new_rule("part /tmp --mountoptions=nodev")
+    storage_mock.mountpoints = dict()
+    storage_mock.mountpoints["/tmp"] = mock.Mock()
+    storage_mock.mountpoints["/tmp"].format.options = "defaults"
+
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock)
+
+    # mount option added --> one message
+    assert len(messages) == 1
+
+    # "nodev" option should be added
+    assert storage_mock.mountpoints["/tmp"].format.options, "defaults == nodev"
+
+    rule_data.revert_changes(ksdata_mock, storage_mock)
+
+    # should be reverted to the original value
+    assert storage_mock.mountpoints["/tmp"].format.options == "defaults"
+
+    # another cycle of the same #
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock)
+
+    # mount option added --> one message
+    assert len(messages) == 1
+
+    # "nodev" option should be added
+    assert storage_mock.mountpoints["/tmp"].format.options, "defaults == nodev"
+
+    rule_data.revert_changes(ksdata_mock, storage_mock)
+
+    # should be reverted to the original value
+    assert storage_mock.mountpoints["/tmp"].format.options == "defaults"
+
+
+def test_revert_password_policy_changes(rule_data, ksdata_mock, storage_mock):
+    # FIXME: Add password policy changes to this test. It only checks
+    # password length right now outside of policy changes.
+    rule_data.new_rule("passwd --minlen=8")
+
+    ksdata_mock.rootpw.password = "aaaa"
+    ksdata_mock.rootpw.isCrypted = False
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock)
+
+    # password error --> one message
+    assert len(messages) == 1
+    assert ksdata_mock.rootpw.password == "aaaa"
+    assert ksdata_mock.rootpw.seen
+
+    rule_data.revert_changes(ksdata_mock, storage_mock)
+
+    # with long enough password this time #
+    ksdata_mock.rootpw.password = "aaaaaaaaaaaaa"
+
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock)
+
+    # long enough password
+    # entered --> no message
+    assert messages == []
+
+
+def test_revert_package_rules(rule_data, ksdata_mock, storage_mock):
+    rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables --add=vim")
+
+    ksdata_mock.packages.packageList = ["vim"]
+    ksdata_mock.packages.excludedList = []
+
+    # run twice --> nothing should be different in the second run
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock)
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock)
+
+    # one info message for each added/removed package
+    assert len(messages) == 3
+
+    rule_data.revert_changes(ksdata_mock, storage_mock)
+
+    # (only) added and excluded packages should have been removed from the
+    # list
+    assert ksdata_mock.packages.packageList == ["vim"]
+    assert ksdata_mock.packages.excludedList == []
+
+    # now do the same again #
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock)
+
+    # one info message for each added/removed package
+    assert len(messages) == 3
+
+    rule_data.revert_changes(ksdata_mock, storage_mock)
+
+    # (only) added and excluded packages should have been removed from the
+    # list
+    assert ksdata_mock.packages.packageList == ["vim"]
+    assert ksdata_mock.packages.excludedList == []
