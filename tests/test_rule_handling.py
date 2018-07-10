@@ -342,7 +342,14 @@ def test_evaluation_add_mount_options_nonexisting_part(rule_data, ksdata_mock, s
 
 
 def test_evaluation_passwd_minlen_no_passwd(rule_data, ksdata_mock, storage_mock):
-    rule_data.new_rule("passwd --minlen=8")
+    evaluation_passwd_minlen_no_passwd(rule_data, ksdata_mock, storage_mock, 8, (10, 11))
+    evaluation_passwd_minlen_no_passwd(rule_data, ksdata_mock, storage_mock, 10, (8, 11))
+    evaluation_passwd_minlen_no_passwd(rule_data, ksdata_mock, storage_mock, 11, (8, 10))
+
+
+def evaluation_passwd_minlen_no_passwd(
+        rule_data, ksdata_mock, storage_mock, min_password_length, check_against=tuple()):
+    rule_data.new_rule("passwd --minlen={0}".format(min_password_length))
 
     ksdata_mock.rootpw.password = ""
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
@@ -352,7 +359,10 @@ def test_evaluation_passwd_minlen_no_passwd(rule_data, ksdata_mock, storage_mock
     assert messages[0].type == common.MESSAGE_TYPE_WARNING
 
     # warning has to mention the length
-    assert "8" in messages[0].text
+    assert str(min_password_length) in messages[0].text
+
+    for not_wanted in check_against:
+        assert str(not_wanted) not in messages[0].text
 
 
 class passwordTestData(object):
