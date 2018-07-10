@@ -162,32 +162,51 @@ def test_evaluation_nonexisting_part_must_exist(rule_data, ksdata_mock, storage_
     assert "/" in messages[0].text
 
 
-def get_messages_for_defaults_options(
-        rule_data, ksdata_mock, storage_mock,
-        rules,
-        messages_evaluation_count=1,
-        mountpoints=("/tmp", "/"),
-        tmp_format_options="defaults",
-        report_only=False,
-        ):
-    assert len(rules) == 2, \
-        "We need rules for temp partition and root."
-    for rule in rules:
-        rule_data.new_rule(rule)
-
+def get_partition_mocks(mount_options):
     tmp_part_mock = mock.Mock()
-    tmp_part_mock.format.options = tmp_format_options
+    tmp_part_mock.format.options = mount_options["/tmp"]
     root_part_mock = mock.Mock()
-    root_part_mock.format.options = "defaults"
+    root_part_mock.format.options = mount_options["/"]
 
-    potential_mountpoints = {
+    partition_mocks = {
         "/tmp": tmp_part_mock,
         "/": root_part_mock,
     }
+    return partition_mocks
+
+
+def set_mount_options_of_actual_mount_points(
+        storage_mock, mount_options, actual_mountpoints):
     storage_mock.mountpoints = {}
-    for mountpoint, value in potential_mountpoints.items():
-        if mountpoint in mountpoints:
+    for mountpoint, value in mount_options.items():
+        if mountpoint in actual_mountpoints:
             storage_mock.mountpoints[mountpoint] = value
+
+
+def get_messages_for_partition_rules(
+        rule_data, ksdata_mock, storage_mock,
+        rules,
+        messages_evaluation_count=1,
+        actual_mountpoints=("/tmp", "/"),
+        mount_options=None,
+        report_only=False,
+        ):
+
+    assert len(rules) == 2, \
+        "We need rules for temp partition and root."
+
+    if mount_options is None:
+        mount_options = {
+            "/": "defaults",
+            "/tmp": "defaults",
+        }
+
+    for rule in rules:
+        rule_data.new_rule(rule)
+
+    mount_options = get_partition_mocks(mount_options)
+
+    set_mount_options_of_actual_mount_points(storage_mock, mount_options, actual_mountpoints)
 
     messages = []
     for _ in range(messages_evaluation_count):
@@ -204,7 +223,7 @@ def evaluation_add_mount_options(
         "part / --mountoptions=noauto",
     ]
 
-    messages = get_messages_for_defaults_options(
+    messages = get_messages_for_partition_rules(
         rule_data, ksdata_mock, storage_mock,
         rules, messages_evaluation_count)
 
@@ -243,7 +262,7 @@ def test_evaluation_add_mount_options_report_only(rule_data, ksdata_mock, storag
         "part /tmp --mountoptions=nodev",
         "part / --mountoptions=noauto",
     ]
-    messages = get_messages_for_defaults_options(
+    messages = get_messages_for_partition_rules(
         rule_data, ksdata_mock, storage_mock,
         rules, 1, report_only=True)
 
@@ -277,9 +296,13 @@ def test_evaluation_add_mount_option_prefix(rule_data, ksdata_mock, storage_mock
         "part /tmp --mountoptions=nodev",
         "part / --mountoptions=noauto",
     ]
-    messages = get_messages_for_defaults_options(
+    mount_options = {
+        "/": "defaults",
+        "/tmp": "defaults,nodevice",
+    }
+    messages = get_messages_for_partition_rules(
         rule_data, ksdata_mock, storage_mock,
-        rules, tmp_format_options="defaults,nodevice")
+        rules, mount_options=mount_options)
 
     # two mount options added (even though it is a prefix of another one)
     #   --> two info messages
@@ -296,9 +319,9 @@ def test_evaluation_add_mount_options_nonexisting_part(rule_data, ksdata_mock, s
         "part /tmp --mountoptions=nodev",
         "part / --mountoptions=noauto",
     ]
-    messages = get_messages_for_defaults_options(
+    messages = get_messages_for_partition_rules(
         rule_data, ksdata_mock, storage_mock,
-        rules, mountpoints=["/"])
+        rules, actual_mountpoints=["/"])
 
     # one mount option added, one mount point missing (mount options
     # cannot be added) --> one info, one error
