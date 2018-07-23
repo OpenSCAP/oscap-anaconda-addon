@@ -108,7 +108,7 @@ anaconda
 openscap-python
 python-cpio
 python-mock
-python-nose
+python-pytest
 ```
 
 Run the unit tests using:
