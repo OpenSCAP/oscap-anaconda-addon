@@ -31,22 +31,25 @@ We will create cpio archive `ASCII cpio archive (SVR4 with no CRC)` packed using
 You can use the `create_update_image.sh` script in the oscap-anaconda-addon repository to create the `update.img` image.
 For further reading, see the https://fedoraproject.org/wiki/Anaconda/Updates#How_to_Create_an_Anaconda_Updates_Image[official docs].
 
-```
+----
 ./create_update_image.sh
-```
+----
+
 If you want to see what was packed, you can extract the image.
-```
+----
 gunzip -c update.img | cpio -id
-```
+----
 
 
 === Serve image using HTTP server
 
 You don't need public HTTP server or setup Apache.
 You can use simple python HTTP server - it serves all files in you current directory.
-```
+
+----
 python -m SimpleHTTPServer
-```
+----
+
 **Setup your firewall rules correctly to make webserver port accessible from virtual machine.**
 
 
@@ -65,9 +68,9 @@ Advantage of this solution is that you will not need to change parameters during
 
 **Required boot parameters:**
 
-```
+----
 inst.updates=http://gateway:8000/update.img
-```
+----
 
 Here, `gateway` is supposed to refer to your host machine.
 When setting the NAT network in the VM setup, `gateway` will be recognized correctly.
@@ -93,16 +96,16 @@ There is also an official https://fedoraproject.org/wiki/How_to_debug_installati
 
 Following packages are needed to run unit tests:
 
-```
+----
 anaconda
 openscap-python
 python-cpio
 python-mock
 python-pytest
-```
+----
 
 Run the unit tests using:
 
-```
+----
 make unittest
-```
+----
