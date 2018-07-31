@@ -1,45 +1,31 @@
-%if 0%{?fedora} >= 25
-%define _py python3
-%endif
-
-%if 0%{?rhel} || 0%{?fedora} < 25
-%define _py python
-%endif
-
 Name:           oscap-anaconda-addon
-Version:        0.9
-Release:        1%{?dist}
+Version:        1.1
+Release:        2%{?dist}
 Summary:        Anaconda addon integrating OpenSCAP to the installation process
 
 License:        GPLv2+
-URL:            https://github.com/OpenSCAP/oscap-anaconda-addon.git
+URL:            https://github.com/OpenSCAP/oscap-anaconda-addon
 
 # This is a Red Hat maintained package which is specific to
 # our distribution.
 #
 # The source is thus available only from within this SRPM
 # or via direct git checkout:
-# git clone https://github.com/OpenSCAP/oscap-anaconda-addon.git
+# git clone git://git.fedorahosted.org/oscap-anaconda-addon.git
 Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      noarch
 BuildRequires:  gettext
-%if 0%{?fedora} >= 25
-BuildRequires:  %{_py}-devel
-BuildRequires:  %{_py}-mock
-BuildRequires:  %{_py}-kickstart
-%else
-BuildRequires:	%{_py}2-devel
-BuildRequires:  %{_py}2-mock
-BuildRequires:  pykickstart
-%endif
-BuildRequires:  %{_py}-nose
-BuildRequires:  openscap openscap-utils openscap-%{_py}
-BuildRequires:  %{_py}-cpio
-BuildRequires:  anaconda >= 21.48.22.99
-Requires:       anaconda >= 21.48.22.99
-Requires:       openscap openscap-utils openscap-%{_py}
-Requires:       %{_py}-cpio
+BuildRequires:  python3-devel
+BuildRequires:  python3-pycurl
+BuildRequires:  python3-mock
+BuildRequires:  python3-nose
+BuildRequires:  python3-cpio
+BuildRequires:  openscap openscap-utils openscap-python3
+BuildRequires:  anaconda >= 28.22
+Requires:       anaconda >= 28.22
+Requires:       python3-cpio
+Requires:       openscap openscap-utils openscap-python3
 
 %description
 This is an addon that integrates OpenSCAP utilities with the Anaconda installer
@@ -66,34 +52,36 @@ make install DESTDIR=%{buildroot}
 %doc COPYING ChangeLog README.md
 
 %changelog
-* Mon Nov 13 2017 Martin Preisler <mpreisle@redhat.com> - 0.8-1
-- Log password policy changes
-- Log openscap errors
-- Hide default profile if it's empty
-- Parse HTML tags in SCAP content formatting
-- Allow file:// URL for SCAP content
-- Copy tailoring file to target when applying SCAP policy
-- Catch Anaconda remediation syntax errors without causing Anaconda to crash (#1452667)
-- Fixed password rule handling
-- Minor bugfixes
+* Fri Jul 13 2018 Fedora Release Engineering <releng@fedoraproject.org> - 1.0-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_29_Mass_Rebuild
 
-* Fri Sep 08 2017 Gabriel Alford <galford@redhat.com> - 0.7-3
-- Add python3 support to .spec file and upstream code
+* Tue Jul 03 2018 Matěj Týč <matyc@redhat.com> - 1.0-1
+- Rebased to upstream version 1.0
+- Python3 support, anaconda 28 support.
 
-* Mon Feb 13 2017 Jiri Konecny <jkonecny@redhat.com> - 0.7-2
-- Fix URL which is now poiting to GitHub instead of fedorahosted
+* Fri Feb 09 2018 Igor Gnatenko <ignatenkobrain@fedoraproject.org> - 0.7-7
+- Escape macros in %%changelog
+
+* Thu Feb 08 2018 Fedora Release Engineering <releng@fedoraproject.org> - 0.7-6
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
+
+* Thu Jul 27 2017 Fedora Release Engineering <releng@fedoraproject.org> - 0.7-5
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Mass_Rebuild
+
+* Sat Feb 11 2017 Fedora Release Engineering <releng@fedoraproject.org> - 0.7-4
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
+
+* Thu Feb 04 2016 Fedora Release Engineering <releng@fedoraproject.org> - 0.7-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
+
+* Thu Jun 18 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 0.7-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
 
 * Wed Jan 07 2015 Vratislav Podzimek <vpodzime@redhat.com> - 0.7-1
 - Adapt to changes in Anaconda
-- Add *~ to EXCLUDES (#1081735)
-- Set active profile when doing refresh
-- Set fetching flag to False when content processing fails
-- Fix the message when policy is not applied
-- Change spoke's name to SECURITY POLICY
 - Define name of the spoke window
 - Set fetching flag to False when extraction error happens
 - Remove code that was pushed to the anaconda's sources
-- Update spec file from downstream
 
 * Fri Feb 28 2014 Vratislav Podzimek <vpodzime@redhat.com> - 0.6-2
 - Rebuild with building issues fixed
@@ -112,7 +100,7 @@ make install DESTDIR=%{buildroot}
 - Fix sensitivity of the URL entry and fetch button
 - Add the button allowing users to use SSG content if available
 - Fix listing python sources when creating potfile and regenerate it
-- Omit the %addon section from kickstart in dry-run mode
+- Omit the %%addon section from kickstart in dry-run mode
 - Implement the dry-run mode in the GUI (trac#2)
 - Add UI elements for content changing and dry-run mode
 - Check content_defined instead of content_url in the GUI code

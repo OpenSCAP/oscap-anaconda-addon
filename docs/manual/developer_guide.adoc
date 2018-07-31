@@ -35,15 +35,15 @@ If some time has passed since you have created the image, you typically want to 
 
 For further reading, see the https://fedoraproject.org/wiki/Anaconda/Updates#How_to_Create_an_Anaconda_Updates_Image[official docs].
 
-```
+----
 ./create_update_image.sh download_rpms
-```
+----
 
 If you want to see what was packed, you can extract the image.
 
-```
+----
 gunzip -c update.img | cpio -id
-```
+----
 
 
 === Serve image using HTTP server
@@ -51,9 +51,9 @@ gunzip -c update.img | cpio -id
 You don't need public HTTP server or setup Apache.
 You can use simple python HTTP server - it serves all files in you current directory.
 
-```
-python -m SimpleHTTPServer
-```
+----
+python3 -m http.server
+----
 
 **Setup your firewall rules correctly to make webserver port accessible from virtual machine.**
 
@@ -73,13 +73,14 @@ Advantage of this solution is that you will not need to change parameters during
 
 **Required boot parameters:**
 
-```
+----
 inst.updates=http://gateway:8000/update.img
-```
+----
 
 Here, `gateway` is supposed to refer to your host machine.
-When setting the NAT network in the VM setup, `gateway` will be recognized correctly (at least on RHEL7).
-In other cases, input your IP address.
+When setting the NAT network in the VM setup, `gateway` will be recognized correctly.
+This works if the `dnsmasq` is set up correctly, which is the case on RHEL systems, but not on Fedora.
+In other cases, input the IP address of the VM.
 
 Remember that you can also provide your custom-built SSG content to the insaller this way -
 you may copy your datastream to the directory that is served by the server as it contains the image, and then,
@@ -103,16 +104,16 @@ There is also an official https://fedoraproject.org/wiki/How_to_debug_installati
 
 Following packages are needed to run unit tests:
 
-```
+----
 anaconda
 openscap-python
 python-cpio
 python-mock
 python-pytest
-```
+----
 
 Run the unit tests using:
 
-```
+----
 make unittest
-```
+----
