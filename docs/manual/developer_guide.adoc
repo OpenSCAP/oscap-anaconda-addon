@@ -36,8 +36,15 @@ For further reading, see the https://fedoraproject.org/wiki/Anaconda/Updates#How
 ----
 
 If you want to see what was packed, you can extract the image.
+
 ----
 gunzip -c update.img | cpio -id
+----
+
+or use the `lsinitrd` command, which is part of the `dracut` package on RHEL and Fedora:
+
+----
+lsinitrd update.img
 ----
 
 
@@ -102,6 +109,7 @@ openscap-python
 python-cpio
 python-mock
 python-pytest
+python-pycurl
 ----
 
 Run the unit tests using:
