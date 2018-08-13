@@ -11,7 +11,7 @@ URL:            https://github.com/OpenSCAP/oscap-anaconda-addon
 #
 # The source is thus available only from within this SRPM
 # or via direct git checkout:
-# git clone git://git.fedorahosted.org/oscap-anaconda-addon.git
+# git clone https://src.fedoraproject.org/rpms/oscap-anaconda-addon
 Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      noarch
