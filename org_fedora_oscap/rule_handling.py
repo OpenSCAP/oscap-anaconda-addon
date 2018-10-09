@@ -26,7 +26,13 @@ Module with various classes for handling pre-installation rules.
 import optparse
 import shlex
 import logging
+
 from pyanaconda.pwpolicy import F22_PwPolicyData
+from pyanaconda.core.constants import (
+    FIREWALL_ENABLED, FIREWALL_DISABLED, FIREWALL_USE_SYSTEM_DEFAULTS)
+from pyanaconda.modules.common.constants.objects import FIREWALL, BOOTLOADER
+from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS
+
 from org_fedora_oscap import common
 from org_fedora_oscap.common import OSCAPaddonError, RuleMessage
 
@@ -496,7 +502,10 @@ class PasswdRules(RuleHandler):
             return []
 
         ret = []
-        if not ksdata.rootpw.password:
+
+        users_proxy = USERS.get_proxy()
+
+        if not users_proxy.IsRootPasswordSet:
             # root password was not set
 
             msg = _("make sure to create password with minimal length of %d "
@@ -505,12 +514,12 @@ class PasswdRules(RuleHandler):
                                common.MESSAGE_TYPE_WARNING, msg)]
         else:
             # root password set
-            if ksdata.rootpw.isCrypted:
+            if users_proxy.IsRootPasswordCrypted:
                 msg = _("cannot check root password length (password is crypted)")
                 log.warning("cannot check root password length (password is crypted)")
                 return [RuleMessage(self.__class__,
                                     common.MESSAGE_TYPE_WARNING, msg)]
-            elif len(ksdata.rootpw.password) < self._minlen:
+            elif len(users_proxy.RootPassword) < self._minlen:
                 # too short
                 msg = _("root password is too short, a longer one with at "
                         "least %d characters is required") % self._minlen
@@ -705,10 +714,13 @@ class BootloaderRules(RuleHandler):
     def eval_rules(self, ksdata, storage, report_only=False):
         """:see: RuleHandler.eval_rules"""
 
-        if self._require_password and not storage.bootloader.password:
-            # Anaconda doesn't provide a way to set bootloader password, so
-            # users cannot do much about that --> we shouldn't stop the
-            # installation, should we?
+        bootloader_proxy = STORAGE.get_proxy(BOOTLOADER)
+
+        if self._require_password and not bootloader_proxy.password_is_set:
+            # TODO: Anaconda provides a way to set bootloader password:
+            # bootloader_proxy.set_password(...)
+            # We don't support setting the bootloader password yet,
+            # but we shouldn't stop the installation, just because of that.
             return [RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING,
                                 "boot loader password not set up")]
         else:
@@ -802,8 +814,13 @@ class FirewallRules(RuleHandler):
         self._added_trusts = set()
         self._removed_svcs = set()
 
+        self._new_services_to_add = set()
+        self._new_ports_to_add = set()
+        self._new_trusts_to_add = set()
+        self._new_services_to_remove = set()
+
         self._firewall_enabled = None
-        self._firewall_default_enabled = None
+        self._firewall_default_state = None
 
     def add_services(self, services):
         """
@@ -895,25 +912,26 @@ class FirewallRules(RuleHandler):
     def eval_rules(self, ksdata, storage, report_only=False):
         """:see: RuleHandler.eval_rules"""
 
+        firewall_proxy = NETWORK.get_proxy(FIREWALL)
         messages = []
 
-        if self._firewall_default_enabled is None:
+        if self._firewall_default_state is None:
             # firewall default startup setting
-            self._firewall_default_enabled = ksdata.firewall.enabled
+            self._firewall_default_state = firewall_proxy.FirewallMode
 
         if self._firewall_enabled is False:
             msg = _("Firewall will be disabled on startup")
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
             if not report_only:
-                ksdata.firewall.enabled = self._firewall_enabled
+                firewall_proxy.SetFirewallMode(FIREWALL_DISABLED)
 
         elif self._firewall_enabled is True:
             msg = _("Firewall will be enabled on startup")
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
             if not report_only:
-                ksdata.firewall.enabled = self._firewall_enabled
+                firewall_proxy.SetFirewallMode(FIREWALL_ENABLED)
 
         # add messages for the already added services
         for svc in self._added_svcs:
@@ -937,49 +955,58 @@ class FirewallRules(RuleHandler):
                                         common.MESSAGE_TYPE_INFO, msg))
 
         # services, that should be added
-        services_to_add = (svc for svc in self._add_svcs
-                           if svc not in ksdata.firewall.services)
+        self._new_services_to_add = {
+            svc for svc in self._add_svcs
+            if svc not in firewall_proxy.EnabledServices}
 
         # ports, that should be added
-        ports_to_add = (ports for ports in self._add_ports
-                        if ports not in ksdata.firewall.ports)
+        self._new_ports_to_add = {
+            ports for ports in self._add_ports
+            if ports not in firewall_proxy.EnabledPorts}
 
         # trusts, that should be added
-        trusts_to_add = (trust for trust in self._add_trusts
-                         if trust not in ksdata.firewall.trusts)
+        self._new_trusts_to_add = {
+            trust for trust in self._add_trusts
+            if trust not in firewall_proxy.Trusts}
 
-        for svc in services_to_add:
+        for svc in self._new_services_to_add:
             # add the service unless already added
             if not report_only:
                 self._added_svcs.add(svc)
-                ksdata.firewall.services.append(svc)
 
             msg = _("service '%s' has been added to the list of services to be "
                     "added to the firewall" % svc)
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
+        if not report_only:
+            all_services = list(self._add_svcs.union(set(firewall_proxy.EnabledServices)))
+            firewall_proxy.SetEnabledServices(all_services)
 
-        for port in ports_to_add:
+        for port in self._new_ports_to_add:
             # add the port unless already added
             if not report_only:
                 self._added_ports.add(port)
-                ksdata.firewall.ports.append(port)
 
             msg = _("port '%s' has been added to the list of ports to be "
                     "added to the firewall" % port)
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
+        if not report_only:
+            all_ports = list(self._add_ports.union(set(firewall_proxy.EnabledPorts)))
+            firewall_proxy.SetEnabledPorts(all_ports)
 
-        for trust in trusts_to_add:
+        for trust in self._new_trusts_to_add:
             # add the trust unless already added
             if not report_only:
                 self._added_trusts.add(trust)
-                ksdata.firewall.trusts.append(trust)
 
             msg = _("trust '%s' has been added to the list of trusts to be "
                     "added to the firewall" % trust)
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
+        if not report_only:
+            all_trusts = list(self._add_trusts.union(set(firewall_proxy.Trusts)))
+            firewall_proxy.SetTrusts(all_trusts)
 
         # now do the same for the services that should be excluded
 
@@ -990,52 +1017,56 @@ class FirewallRules(RuleHandler):
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
 
-        # services, that should be added
-        services_to_remove = (svc for svc in self._remove_svcs
-                              if svc not in ksdata.firewall.remove_services)
+        # services, that should be excluded
+        self._new_services_to_remove = {
+            svc for svc in self._remove_svcs
+            if svc not in firewall_proxy.DisabledServices}
 
-        for svc in services_to_remove:
+        for svc in self._new_services_to_remove:
             # exclude the service unless already excluded
             if not report_only:
                 self._removed_svcs.add(svc)
-                ksdata.firewall.remove_services.append(svc)
 
             msg = _("service '%s' has been added to the list of services to be "
                     "removed from the firewall" % svc)
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
+        if not report_only:
+            all_services = list(self._remove_svcs.union(set(firewall_proxy.DisabledServices)))
+            firewall_proxy.SetDisabledServices(all_services)
 
         return messages
 
     def revert_changes(self, ksdata, storage):
         """:see: RuleHander.revert_changes"""
+        firewall_proxy = NETWORK.get_proxy(FIREWALL)
 
         if self._firewall_enabled is not None:
-            ksdata.firewall.enabled = self._firewall_default_enabled
+            firewall_proxy.SetFirewallMode(self._firewall_default_state)
 
         # remove all services this handler added
-        for svc in self._added_svcs:
-            if svc in ksdata.firewall.services:
-                ksdata.firewall.services.remove(svc)
+        all_services = firewall_proxy.EnabledServices
+        orig_services = set(all_services).difference(self._new_services_to_add)
+        firewall_proxy.SetEnabledServices(list(orig_services))
 
         # remove all ports this handler added
-        for port in self._added_ports:
-            if port in ksdata.firewall.ports:
-                ksdata.firewall.ports.remove(port)
+        all_ports = firewall_proxy.EnabledPorts
+        orig_ports = set(all_ports).difference(self._new_ports_to_add)
+        firewall_proxy.SetEnabledPorts(list(orig_ports))
 
         # remove all trusts this handler added
-        for trust in self._added_trusts:
-            if trust in ksdata.firewall.trusts:
-                ksdata.firewall.trusts.remove(trust)
+        all_trusts = firewall_proxy.Trusts
+        orig_trusts = set(all_trusts).difference(self._new_trusts_to_add)
+        firewall_proxy.SetTrusts(list(orig_trusts))
 
         # remove all services this handler excluded
-        for svc in self._removed_svcs:
-            if svc in ksdata.firewall.remove_services:
-                ksdata.firewall.remove_services.remove(svc)
+        all_services = firewall_proxy.DisabledServices
+        orig_services = set(all_services).difference(self._new_services_to_remove)
+        firewall_proxy.SetDisabledServices(list(orig_services))
 
         self._added_svcs = set()
         self._added_ports = set()
         self._added_trusts = set()
         self._removed_svcs = set()
         self._firewall_enabled = None
-        self._firewall_default_enabled = None
+        self._firewall_default_state = None
