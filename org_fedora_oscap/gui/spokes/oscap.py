@@ -179,8 +179,8 @@ class OSCAPSpoke(NormalSpoke):
     # name of the .glade file in the same directory as this source
     uiFile = "oscap.glade"
 
-    # name of the file providing help content for this spoke
-    helpFile = "SecurityPolicySpoke.xml"
+    # id of the help content for this spoke
+    help_id = "SecurityPolicySpoke"
 
     # domain of oscap-anaconda-addon translations
     translationDomain = "oscap-anaconda-addon"
