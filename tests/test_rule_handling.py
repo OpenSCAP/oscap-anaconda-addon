@@ -2,7 +2,12 @@ import pytest
 
 import mock
 
-from org_fedora_oscap import rule_handling, common
+try:
+    from org_fedora_oscap import rule_handling, common
+except ImportError as exc:
+    pytestmark = pytest.mark.skip(
+        "Unable to import modules, possibly due to bad version of Anaconda: {error}"
+        .format(error=str(exc)))
 
 
 @pytest.fixture()

@@ -5,8 +5,13 @@ import os
 from pykickstart.errors import KickstartValueError
 import pytest
 
-from org_fedora_oscap.ks.oscap import OSCAPdata
-from org_fedora_oscap import common
+try:
+    from org_fedora_oscap.ks.oscap import OSCAPdata
+    from org_fedora_oscap import common
+except ImportError as exc:
+    pytestmark = pytest.mark.skip(
+        "Unable to import modules, possibly due to bad version of Anaconda: {error}"
+        .format(error=str(exc)))
 
 
 @pytest.fixture()
