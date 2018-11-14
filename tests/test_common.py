@@ -216,3 +216,53 @@ def test_extract_ssg_rpm_ensure_filepath_not_there():
            "not found in the archive" in str(excinfo.value)
 
     shutil.rmtree(temp_path)
+
+
+rpm_tailoring_file_list = [
+    "/usr/share/xml/scap/ssg-fedora-ds-tailoring/ssg-fedora-ds.xml",
+    "/usr/share/xml/scap/ssg-fedora-ds-tailoring/tailoring-xccdf.xml",
+    ]
+
+
+def test_extract_tailoring_rpm():
+    temp_path = tempfile.mkdtemp(prefix="rpm")
+
+    extracted_files = common._extract_rpm(
+            TESTING_FILES_PATH + "/ssg-fedora-ds-tailoring-1-1.noarch.rpm",
+            temp_path)
+
+    assert len(rpm_tailoring_file_list) == len(extracted_files)
+    for rpm_file in rpm_tailoring_file_list:
+        assert temp_path + rpm_file in extracted_files
+
+    shutil.rmtree(temp_path)
+
+
+def test_extract_tailoring_rpm_ensure_filepath_there():
+    temp_path = tempfile.mkdtemp(prefix="rpm")
+
+    extracted_files = common._extract_rpm(
+            TESTING_FILES_PATH + "/ssg-fedora-ds-tailoring-1-1.noarch.rpm",
+            temp_path,
+            ["/usr/share/xml/scap/ssg-fedora-ds-tailoring/ssg-fedora-ds.xml"])
+
+    assert len(rpm_tailoring_file_list) == len(extracted_files)
+    for rpm_file in rpm_tailoring_file_list:
+        assert temp_path + rpm_file in extracted_files
+
+    shutil.rmtree(temp_path)
+
+
+def test_extract_tailoring_rpm_ensure_filename_there():
+    temp_path = tempfile.mkdtemp(prefix="rpm")
+
+    with pytest.raises(common.ExtractionError) as excinfo:
+        extracted_files = common._extract_rpm(
+                TESTING_FILES_PATH + "/ssg-fedora-ds-tailoring-1-1.noarch.rpm",
+                temp_path,
+                ["ssg-fedora-ds.xml"])
+
+    assert "File 'ssg-fedora-ds.xml' not found in the archive" \
+           in str(excinfo.value)
+
+    shutil.rmtree(temp_path)
