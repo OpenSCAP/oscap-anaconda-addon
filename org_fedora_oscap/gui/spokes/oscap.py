@@ -196,7 +196,7 @@ class OSCAPSpoke(NormalSpoke):
     title = N_("_SECURITY POLICY")
 
     # methods defined by API and helper methods #
-    def __init__(self, data, storage, payload, instclass):
+    def __init__(self, data, storage, payload):
         """
         :see: pyanaconda.ui.common.Spoke.__init__
         :param data: data object passed to every spoke to load/store data
@@ -207,12 +207,10 @@ class OSCAPSpoke(NormalSpoke):
         :type storage: blivet.Blivet
         :param payload: object storing packaging-related information
         :type payload: pyanaconda.packaging.Payload
-        :param instclass: distribution-specific information
-        :type instclass: pyanaconda.installclass.BaseInstallClass
 
         """
 
-        NormalSpoke.__init__(self, data, storage, payload, instclass)
+        NormalSpoke.__init__(self, data, storage, payload)
         self._addon_data = self.data.addons.org_fedora_oscap
         self._storage = storage
         self._ready = False
