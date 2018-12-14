@@ -117,3 +117,10 @@ Run the unit tests using:
 ----
 make unittest
 ----
+
+== Updating translations
+
+Sometimes it is neccessary to create a patch that updates translations present in the release tarball with custom translations, or translations from Zanata.
+You can use the `make-language-patch` script in the `tools` subdirectory for this task.
+You just supply the release tarball, and a filesystem path to the directory with `.po` files if you don't want to use Zanata to update the `po` directory contents and use that one.
+The resulting patch can then be applied to the release package without any additional steps needed.
