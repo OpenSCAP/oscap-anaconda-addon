@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Created by argbash-init v2.7.1
-# ARG_OPTIONAL_SINGLE([languages],[l],[Space-separated string containing languages that should be added by the patch. If not supplied, no filtering will take place.])
+# ARG_OPTIONAL_SINGLE([languages],[],[Space-separated string containing languages that should be added by the patch, e.g. "ca es en-US". If not supplied, no filtering will take place.])
 # ARG_OPTIONAL_SINGLE([tmproot],[],[The root of the script's temp directory hierarchy.],[/tmp/oaa_po_$$])
 # ARG_OPTIONAL_SINGLE([local-content],[l],[Don't pull translations from Zanata, but use this 'po' directory.])
 # ARG_POSITIONAL_SINGLE([tarball],[Path to the tarball with upstream release that contains some translations already.])
@@ -28,7 +28,7 @@ die()
 
 begins_with_short_option()
 {
-	local first_option all_short_options='llh'
+	local first_option all_short_options='lh'
 	first_option="${1:0:1}"
 	test "$all_short_options" = "${all_short_options/$first_option/}" && return 1 || return 0
 }
@@ -46,10 +46,10 @@ _arg_local_content=
 print_help()
 {
 	printf '%s\n' "Get translations from Zanata / local 'po' directory, and craft a patch against translations in the release tarball."
-	printf 'Usage: %s [-l|--languages <arg>] [--tmproot <arg>] [-l|--local-content <arg>] [-h|--help] <tarball> [<filename>]\n' "$0"
+	printf 'Usage: %s [--languages <arg>] [--tmproot <arg>] [-l|--local-content <arg>] [-h|--help] <tarball> [<filename>]\n' "$0"
 	printf '\t%s\n' "<tarball>: Path to the tarball with upstream release that contains some translations already."
 	printf '\t%s\n' "<filename>: Where to save the patch. (default: '-')"
-	printf '\t%s\n' "-l, --languages: Space-separated string containing languages that should be added by the patch. If not supplied, no filtering will take place. (no default)"
+	printf '\t%s\n' "--languages: Space-separated string containing languages that should be added by the patch, e.g. "ca es en-US". If not supplied, no filtering will take place. (no default)"
 	printf '\t%s\n' "--tmproot: The root of the script's temp directory hierarchy. (default: '/tmp/oaa_po_$$')"
 	printf '\t%s\n' "-l, --local-content: Don't pull translations from Zanata, but use this 'po' directory. (no default)"
 	printf '\t%s\n' "-h, --help: Prints help"
@@ -63,16 +63,13 @@ parse_commandline()
 	do
 		_key="$1"
 		case "$_key" in
-			-l|--languages)
+			--languages)
 				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
 				_arg_languages="$2"
 				shift
 				;;
 			--languages=*)
 				_arg_languages="${_key##--languages=}"
-				;;
-			-l*)
-				_arg_languages="${_key##-l}"
 				;;
 			--tmproot)
 				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
