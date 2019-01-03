@@ -99,7 +99,32 @@ You can also debug Anaconda in a sophisticated way - as of 04/2018, switching to
 There is also an official https://fedoraproject.org/wiki/How_to_debug_installation_problems[how-to-debug documentation] though.
 
 
-== Running Unit Tests
+== Available make commands
+
+Following commands are available to be used in make command:
+
+----
+dist        - Build the release tarball
+install     - Install the plugin into your system
+uninstall   - Uninstall the plugin from your system
+po-pull     - Pull translations from Zanata
+potfile     - Update translation template file
+push-pot    - Push translation template to Zanata
+test        - Run pylint checks and unit tests
+pylint      - Run only pylint checks
+unittest    - Run only unit tests
+----
+
+=== Translations
+
+Following packages are needed to manage translations:
+
+----
+python2-zanata-client
+intltool
+----
+
+=== Running Unit Tests
 
 Following packages are needed to run unit tests:
 
