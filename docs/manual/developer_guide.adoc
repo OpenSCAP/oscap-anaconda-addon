@@ -9,7 +9,7 @@ toc::[]
 
 == How to Test oscap Anaconda Addon
 
-Anaconda has capability to load installer updates using _"updates image"_. This image can loaded from different storages and use different formats. This page should show one working use case, not all possibilities.
+Anaconda has capability to load installer updates using _"updates image"_. This image can be loaded from different storages and use different formats. This page should show one working use case, not all possibilities.
 
 What do you need to test your changes?
 
@@ -88,7 +88,7 @@ Here, `gateway` is supposed to refers to your host machine:
 * On Fedora, you have to enter the IP address of the virtual bridge interface.
 * On RHEL, the `gateway` hostname will be recognized correctly.
 
-Remember that you can also provide your custom-built SSG content to the insaller this way -
+Remember that you can also provide your custom-built SSG content to the installer this way -
 you may copy your datastream to the directory that is served by the server as it contains the image, and then,
 enter `http://gateway:8000/my-custom-ds.xml` as a remote content URL.
 
