@@ -28,10 +28,6 @@ ZANATA_PULL_ARGS = --transdir po/
 ZANATA_PUSH_ARGS = --srcdir po/ --push-type source --force
 
 all:
-	@echo "usage: make dist"
-	@echo "       make test"
-	@echo "       make install"
-	@echo "       make uninstall"
 
 DISTNAME = $(NAME)-$(VERSION)
 ADDONDIR = /usr/share/anaconda/addons/

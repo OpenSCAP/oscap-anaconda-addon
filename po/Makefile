@@ -41,6 +41,7 @@ potfile: $(PYSRC) glade-po
 
 glade-po: $(GLADEFILES)
 	rm -rf tmp/
+	@which intltool-extract > /dev/null 2>&1 || echo "You may not have the intltool-extract installed, don't be surprised if the operation fails."
 	for f in $(GLADEFILES); do \
 		intltool-extract --type=gettext/glade -l $$f ;\
 	done
