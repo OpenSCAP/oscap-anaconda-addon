@@ -44,9 +44,8 @@ make unittest
 
 %install
 make install DESTDIR=%{buildroot}
-%find_lang %{name}
 
-%files -f %{name}.lang
+%files
 %{_datadir}/anaconda/addons/org_fedora_oscap
 
 %doc COPYING ChangeLog README.md
