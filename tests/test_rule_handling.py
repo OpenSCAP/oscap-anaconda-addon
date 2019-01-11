@@ -412,6 +412,7 @@ def test_evaluation_passwd_minlen_short_passwd(
     # doing changes --> password should not be cleared
     assert password_proxy_mock.RootPassword == "aaaa"
 
+
 @mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_passwd_minlen_short_passwd_report_only(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
@@ -474,7 +475,8 @@ def test_evaluation_passwd_minlen_good_passwd(proxy_getter, rule_data, ksdata_mo
 
 
 @mock.patch("pyanaconda.dbus.DBus.get_proxy")
-def test_evaluation_passwd_minlen_report_only_not_ignored(proxy_getter, rule_data, ksdata_mock, storage_mock):
+def test_evaluation_passwd_minlen_report_only_not_ignored(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
     password_proxy_mock = mock.MagicMock()
     proxy_getter.return_value = password_proxy_mock
     password_proxy_mock.IsRootPasswordCrypted = False
