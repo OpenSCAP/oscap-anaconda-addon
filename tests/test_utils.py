@@ -21,6 +21,7 @@
 """Module with unit tests for the common.py module"""
 
 import mock
+import os
 from collections import namedtuple
 
 import pytest
@@ -143,3 +144,14 @@ def test_gen():
 
     # any better test for this?
     assert "next" in dir(mapped_generator)
+
+
+def test_hash():
+    file_hash = '87fcda7d9e7a22412e95779e2f8e70f929106c7b27a94f5f8510553ebf4624a6'
+    hash_obj = utils.get_hashing_algorithm(file_hash)
+    assert hash_obj.name == "sha256"
+
+    filepath = os.path.join(os.path.dirname(__file__), 'data', 'file')
+    computed_hash = utils.get_file_fingerprint(filepath, hash_obj)
+
+    assert file_hash == computed_hash
