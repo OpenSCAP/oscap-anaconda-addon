@@ -9,7 +9,7 @@ toc::[]
 
 == How to Test oscap Anaconda Addon
 
-Anaconda has capability to load installer updates using _"updates image"_. This image can loaded from different storages and use different formats. This page should show one working use case, not all possibilities.
+Anaconda has capability to load installer updates using _"updates image"_. This image can be loaded from different storages and use different formats. This page should show one working use case, not all possibilities.
 
 What do you need to test your changes?
 
@@ -106,7 +106,32 @@ You can also debug Anaconda in a sophisticated way - as of 04/2018, switching to
 There is also an official https://fedoraproject.org/wiki/How_to_debug_installation_problems[how-to-debug documentation] though.
 
 
-== Running Unit Tests
+== Available make commands
+
+Following commands are available to be used in make command:
+
+----
+dist        - Build the release tarball
+install     - Install the plugin into your system
+uninstall   - Uninstall the plugin from your system
+po-pull     - Pull translations from Zanata
+potfile     - Update translation template file
+push-pot    - Push translation template to Zanata
+test        - Run pylint checks and unit tests
+pylint      - Run only pylint checks
+unittest    - Run only unit tests
+----
+
+=== Translations
+
+Following packages are needed to manage translations:
+
+----
+python2-zanata-client
+intltool
+----
+
+=== Running Unit Tests
 
 Following packages are needed to run unit tests:
 
@@ -124,3 +149,10 @@ Run the unit tests using:
 ----
 make unittest
 ----
+
+== Updating translations
+
+Sometimes it is neccessary to create a patch that updates translations present in the release tarball with custom translations, or translations from Zanata.
+You can use the `make-language-patch` script in the `tools` subdirectory for this task.
+You just supply the release tarball, and a filesystem path to the directory with `.po` files if you don't want to use Zanata to update the `po` directory contents and use that one.
+The resulting patch can then be applied to the release package without any additional steps needed.

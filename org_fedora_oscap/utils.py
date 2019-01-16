@@ -175,8 +175,8 @@ def get_file_fingerprint(fpath, hash_obj):
 
     """
 
-    with open(fpath, "r") as fobj:
-        bsize = 4*1024
+    with open(fpath, "rb") as fobj:
+        bsize = 4 * 1024
         # process file as 4 KB blocks
         buf = fobj.read(bsize)
         while buf:
