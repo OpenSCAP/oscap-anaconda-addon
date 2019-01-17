@@ -588,7 +588,7 @@ def test_evaluation_bootloader_passwd_not_set(proxy_getter, rule_data, ksdata_mo
     bootloader_proxy_mock = mock.MagicMock()
     proxy_getter.return_value = bootloader_proxy_mock
 
-    bootloader_proxy_mock.password_is_set = False
+    bootloader_proxy_mock.IsPasswordSet = False
 
     rule_data.new_rule("bootloader --passwd")
 
@@ -604,7 +604,7 @@ def test_evaluation_bootloader_passwd_set(proxy_getter, rule_data, ksdata_mock, 
     bootloader_proxy_mock = mock.MagicMock()
     proxy_getter.return_value = bootloader_proxy_mock
 
-    bootloader_proxy_mock.password_is_set = True
+    bootloader_proxy_mock.IsPasswordSet = True
 
     rule_data.new_rule("bootloader --passwd")
 
