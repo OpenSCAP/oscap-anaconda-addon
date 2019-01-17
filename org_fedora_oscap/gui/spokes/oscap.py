@@ -38,6 +38,8 @@ from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action
 from pyanaconda.ui.categories.system import SystemCategory
 from pykickstart.errors import KickstartValueError
 
+from pyanaconda.modules.common.constants.services import USERS
+
 # pylint: disable-msg=E0611
 from gi.repository import Gdk
 
@@ -650,26 +652,35 @@ class OSCAPSpoke(NormalSpoke):
 
     def _resolve_rootpw_issues(self, messages, report_only):
         """Mitigate root password issues (which are not fatal in GUI)"""
-        fatal_rootpw_msgs = [msg for msg in messages
-                             if msg.origin == rule_handling.PasswdRules and msg.type == common.MESSAGE_TYPE_FATAL]
+        fatal_rootpw_msgs = [
+            msg for msg in messages
+            if msg.origin == rule_handling.PasswdRules and msg.type == common.MESSAGE_TYPE_FATAL]
+
         if fatal_rootpw_msgs:
             for msg in fatal_rootpw_msgs:
                 # cannot just change the message type because it is a namedtuple
                 messages.remove(msg)
-                messages.append(common.RuleMessage(self.__class__,
-                                                   common.MESSAGE_TYPE_WARNING,
-                                                   msg.text))
+
+                msg = common.RuleMessage(
+                    self.__class__, common.MESSAGE_TYPE_WARNING, msg.text)
+                messages.append(msg)
+
             if not report_only:
-                self.__old_root_pw = self.data.rootpw.password
+                users_proxy = USERS.get_proxy()
+
+                self.__old_root_pw = users_proxy.RootPassword
                 self.data.rootpw.password = None
-                self.__old_root_pw_seen = self.data.rootpw.seen
+                self.__old_root_pw_seen = users_proxy.IsRootpwKickstarted
                 self.data.rootpw.seen = False
 
     def _revert_rootpw_changes(self):
         if self.__old_root_pw is not None:
-            self.data.rootpw.password = self.__old_root_pw
-            self.data.rootpw.seen = self.__old_root_pw_seen
+            users_proxy = USERS.get_proxy()
+
+            users_proxy.SetRootPassword(self.__old_root_pw)
             self.__old_root_pw = None
+
+            users_proxy.SetRootpwKickstarted(self.__old_root_pw_seen)
             self.__old_root_pw_seen = None
 
     @async_action_wait
