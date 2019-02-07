@@ -214,6 +214,8 @@ class OSCAPSpoke(NormalSpoke):
 
         NormalSpoke.__init__(self, data, storage, payload)
         self._addon_data = self.data.addons.org_fedora_oscap
+        # workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1673071
+        self.title = _(self.title)
         self._storage = storage
         self._ready = False
 
