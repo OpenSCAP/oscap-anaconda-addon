@@ -195,7 +195,7 @@ class OSCAPSpoke(NormalSpoke):
     icon = "changes-prevent-symbolic"
 
     # title of the spoke (will be displayed on the hub)
-    title = N_("_SECURITY POLICY")
+    title = N_("_Security Policy")
 
     # methods defined by API and helper methods #
     def __init__(self, data, storage, payload, instclass):
