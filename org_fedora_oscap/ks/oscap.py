@@ -27,7 +27,7 @@ import time
 import logging
 
 from pyanaconda.addons import AddonData
-from pyanaconda.core.util import getSysroot
+from pyanaconda.core.configuration.anaconda import conf
 from pyanaconda.progress import progressQ
 from pyanaconda import errors
 from pyanaconda.core import util
@@ -515,7 +515,7 @@ class OSCAPdata(AddonData):
             # selected
             return
 
-        target_content_dir = utils.join_paths(getSysroot(),
+        target_content_dir = utils.join_paths(conf.target.system_root,
                                               common.TARGET_CONTENT_DIR)
         utils.ensure_dir_exists(target_content_dir)
 
@@ -544,7 +544,7 @@ class OSCAPdata(AddonData):
         common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
                                    self.datastream_id, self.xccdf_id,
                                    self.postinst_tailoring_path,
-                                   chroot=getSysroot())
+                                   chroot=conf.target.system_root)
 
     def clear_all(self):
         """Clear all the stored values."""
