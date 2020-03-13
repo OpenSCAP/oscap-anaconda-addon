@@ -457,6 +457,8 @@ def _extract_rpm(rpm_path, root="/", ensure_has_files=None):
 
     try:
         for entry in entries:
+            if entry.size == 0:
+                continue
             dirname = os.path.dirname(entry.name.lstrip("."))
             out_dir = os.path.normpath(root + dirname)
             utils.ensure_dir_exists(out_dir)

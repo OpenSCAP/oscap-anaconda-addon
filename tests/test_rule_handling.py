@@ -113,8 +113,9 @@ def storage_mock():
     return mock.Mock()
 
 
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_existing_part_must_exist_rules(
-        rule_data, ksdata_mock, storage_mock):
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
     rules = [
         "part /tmp",
         "part /",
@@ -142,7 +143,9 @@ def test_evaluation_existing_part_must_exist_rules(
     assert root_part_mock.format.options == "defaults"
 
 
-def test_evaluation_nonexisting_part_must_exist(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_nonexisting_part_must_exist(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
     rules = [
         "part /tmp",
         "part /",
@@ -254,15 +257,21 @@ def evaluation_add_mount_options(
     assert storage_mock.mountpoints["/"].format.options == "defaults,noauto"
 
 
-def test_evaluation_add_mount_options(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_add_mount_options(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
     evaluation_add_mount_options(rule_data, ksdata_mock, storage_mock, 1)
 
 
-def test_evaluation_add_mount_options_no_duplicates(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_add_mount_options_no_duplicates(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
     evaluation_add_mount_options(rule_data, ksdata_mock, storage_mock, 2)
 
 
-def test_evaluation_add_mount_options_report_only(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_add_mount_options_report_only(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
     rules = [
         "part /tmp --mountoptions=nodev",
         "part / --mountoptions=noauto",
@@ -296,7 +305,9 @@ def test_evaluation_add_mount_options_report_only(rule_data, ksdata_mock, storag
     assert storage_mock.mountpoints["/"].format.options == "defaults"
 
 
-def test_evaluation_add_mount_option_prefix(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_add_mount_option_prefix(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
     rules = [
         "part /tmp --mountoptions=nodev",
         "part / --mountoptions=noauto",
@@ -319,7 +330,9 @@ def test_evaluation_add_mount_option_prefix(rule_data, ksdata_mock, storage_mock
     assert storage_mock.mountpoints["/tmp"].format.options == "defaults,nodevice,nodev"
 
 
-def test_evaluation_add_mount_options_nonexisting_part(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_add_mount_options_nonexisting_part(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
     rules = [
         "part /tmp --mountoptions=nodev",
         "part / --mountoptions=noauto",
@@ -346,7 +359,12 @@ def test_evaluation_add_mount_options_nonexisting_part(rule_data, ksdata_mock, s
             assert "'nodev'" not in message.text
 
 
-def test_evaluation_passwd_minlen_no_passwd(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_passwd_minlen_no_passwd(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
+    password_proxy_mock = mock.MagicMock()
+    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock.IsRootPasswordSet = False
     evaluation_passwd_minlen_no_passwd(rule_data, ksdata_mock, storage_mock, 8, (10, 11))
     evaluation_passwd_minlen_no_passwd(rule_data, ksdata_mock, storage_mock, 10, (8, 11))
     evaluation_passwd_minlen_no_passwd(rule_data, ksdata_mock, storage_mock, 11, (8, 10))
@@ -356,7 +374,6 @@ def evaluation_passwd_minlen_no_passwd(
         rule_data, ksdata_mock, storage_mock, min_password_length, check_against=tuple()):
     rule_data.new_rule("passwd --minlen={0}".format(min_password_length))
 
-    ksdata_mock.rootpw.password = ""
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
     # minimal password length required --> one warning
@@ -370,35 +387,17 @@ def evaluation_passwd_minlen_no_passwd(
         assert str(not_wanted) not in messages[0].text
 
 
-class passwordTestData(object):
-    def __init__(self, rule_data, ksdata_mock, storage_mock):
-        self.password = None
-        self.isCrypted = False
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_passwd_minlen_short_passwd(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
+    password_proxy_mock = mock.MagicMock()
+    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock.IsRootPasswordCrypted = False
+    password_proxy_mock.RootPassword = "aaaa"
 
-        self.rule_data = rule_data
-        self.ksdata_mock = ksdata_mock
-        self.storage_mock = storage_mock
+    rule_data.new_rule("passwd --minlen=8")
 
-    def set_rule(self, rule_string):
-        self.rule_data.new_rule(rule_string)
-
-    def get_messages(self, report_only=False):
-        self.ksdata_mock.rootpw.password = self.password
-        self.ksdata_mock.rootpw.isCrypted = self.isCrypted
-        return self.rule_data.eval_rules(
-            self.ksdata_mock, self.storage_mock, report_only=report_only)
-
-
-@pytest.fixture()
-def password_data(rule_data, ksdata_mock, storage_mock):
-    return passwordTestData(rule_data, ksdata_mock, storage_mock)
-
-
-def test_evaluation_passwd_minlen_short_passwd(password_data):
-    password_data.set_rule("passwd --minlen=8")
-    password_data.password = "aaaa"
-
-    messages = password_data.get_messages()
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=False)
 
     # minimal password length greater than actual length --> one warning
     assert len(messages) == 1
@@ -411,14 +410,20 @@ def test_evaluation_passwd_minlen_short_passwd(password_data):
     assert "is" in messages[0].text
 
     # doing changes --> password should not be cleared
-    assert password_data.ksdata_mock.rootpw.password == "aaaa"
+    assert password_proxy_mock.RootPassword == "aaaa"
 
 
-def test_evaluation_passwd_minlen_short_passwd_report_only(password_data):
-    password_data.set_rule("passwd --minlen=8")
-    password_data.password = "aaaa"
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_passwd_minlen_short_passwd_report_only(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
+    password_proxy_mock = mock.MagicMock()
+    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock.IsRootPasswordCrypted = False
+    password_proxy_mock.RootPassword = "aaaa"
 
-    messages = password_data.get_messages(report_only=True)
+    rule_data.new_rule("passwd --minlen=8")
+
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=True)
 
     # minimal password length greater than actual length --> one warning
     assert len(messages) == 1
@@ -427,17 +432,24 @@ def test_evaluation_passwd_minlen_short_passwd_report_only(password_data):
     # warning has to mention the length
     assert "8" in messages[0].text
 
-    # report only --> password shouldn't be cleared
-    assert password_data.ksdata_mock.rootpw.password == "aaaa"
+    # warning should mention that something is wrong with the old password
+    assert "is" in messages[0].text
+
+    # doing changes --> password should not be cleared
+    assert password_proxy_mock.RootPassword == "aaaa"
 
 
-def test_evaluation_passwd_minlen_crypted_passwd(password_data):
-    password_data.set_rule("passwd --minlen=8")
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_passwd_minlen_crypted_passwd(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
+    password_proxy_mock = mock.MagicMock()
+    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock.IsRootPasswordCrypted = True
+    password_proxy_mock.RootPassword = "aaaa"
 
-    password_data.password = "aaaa"
-    password_data.isCrypted = True
+    rule_data.new_rule("passwd --minlen=8")
 
-    messages = password_data.get_messages()
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=False)
 
     # minimal password length greater than actual length --> one warning
     assert len(messages) == 1
@@ -447,53 +459,62 @@ def test_evaluation_passwd_minlen_crypted_passwd(password_data):
     assert "cannot check" in messages[0].text
 
 
-def test_evaluation_passwd_minlen_good_passwd(password_data):
-    password_data.set_rule("passwd --minlen=8")
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_passwd_minlen_good_passwd(proxy_getter, rule_data, ksdata_mock, storage_mock):
+    password_proxy_mock = mock.MagicMock()
+    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock.IsRootPasswordCrypted = False
+    password_proxy_mock.RootPassword = "aaaaaaaaaaaaaaaaa"
 
-    password_data.password = "aaaaaaaaaaaaaaaaa"
+    rule_data.new_rule("passwd --minlen=8")
 
-    messages = password_data.get_messages()
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=False)
 
     # minimal password length less than actual length --> no warning
     assert not messages
 
 
-def test_evaluation_passwd_minlen_report_only_not_ignored(password_data):
-    password_data.set_rule("passwd --minlen=8")
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_passwd_minlen_report_only_not_ignored(
+        proxy_getter, rule_data, ksdata_mock, storage_mock):
+    password_proxy_mock = mock.MagicMock()
+    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock.IsRootPasswordCrypted = False
+    password_proxy_mock.RootPassword = "aaaaaaaaaaaaaaaaa"
 
-    password_data.password = "aaaaaaaaaaaaaaaaa"
+    rule_data.new_rule("passwd --minlen=8")
 
-    messages = password_data.get_messages()
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=False)
 
     # Mock pw_policy returned by anaconda.pwpolicy.get_policy()
     pw_policy_mock = mock.Mock()
     pw_policy_mock.minlen = 6
     pw_policy_mock.strict = False
-    password_data.ksdata_mock.anaconda.pwpolicy.get_policy.return_value = pw_policy_mock
+    ksdata_mock.anaconda.pwpolicy.get_policy.return_value = pw_policy_mock
 
     # call eval_rules with report_only=False
     # should set password minimal length to 8
-    messages = password_data.get_messages()
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=False)
 
     # Password Policy changed --> no warnings
     assert not messages
-    assert password_data.rule_data._passwd_rules._orig_minlen == 6
-    assert not password_data.rule_data._passwd_rules._orig_strict
+    assert rule_data._passwd_rules._orig_minlen == 6
+    assert not rule_data._passwd_rules._orig_strict
     assert pw_policy_mock.minlen == 8
     assert pw_policy_mock.strict
-    assert password_data.rule_data._passwd_rules._minlen == 8
+    assert rule_data._passwd_rules._minlen == 8
 
     # call of eval_rules with report_only=True
     # should not change anything
-    messages = password_data.get_messages(report_only=True)
+    messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=True)
     # Password Policy stayed the same --> no warnings
     assert not messages
 
-    assert password_data.rule_data._passwd_rules._orig_minlen == 6
-    assert not password_data.rule_data._passwd_rules._orig_strict
+    assert rule_data._passwd_rules._orig_minlen == 6
+    assert not rule_data._passwd_rules._orig_strict
     assert pw_policy_mock.minlen == 8
     assert pw_policy_mock.strict
-    assert password_data.rule_data._passwd_rules._minlen == 8
+    assert rule_data._passwd_rules._minlen == 8
 
 
 def _occurences_not_seen_in_strings(seeked, strings):
@@ -513,7 +534,8 @@ def _quoted_keywords_not_seen_in_messages(keywords, messages):
     )
 
 
-def test_evaluation_package_rules(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables --add=vim")
 
     ksdata_mock.packages.packageList = ["vim"]
@@ -536,7 +558,8 @@ def test_evaluation_package_rules(rule_data, ksdata_mock, storage_mock):
     assert set(ksdata_mock.packages.excludedList) == {"telnet"}
 
 
-def test_evaluation_package_rules_report_only(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_package_rules_report_only(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables")
 
     ksdata_mock.packages.packageList = []
@@ -560,10 +583,14 @@ def test_evaluation_package_rules_report_only(rule_data, ksdata_mock, storage_mo
     assert not ksdata_mock.packages.excludedList
 
 
-def test_evaluation_bootloader_passwd_not_set(rule_data, ksdata_mock, storage_mock):
-    rule_data.new_rule("bootloader --passwd")
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_bootloader_passwd_not_set(proxy_getter, rule_data, ksdata_mock, storage_mock):
+    bootloader_proxy_mock = mock.MagicMock()
+    proxy_getter.return_value = bootloader_proxy_mock
 
-    storage_mock.bootloader.password = None
+    bootloader_proxy_mock.IsPasswordSet = False
+
+    rule_data.new_rule("bootloader --passwd")
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
@@ -572,10 +599,14 @@ def test_evaluation_bootloader_passwd_not_set(rule_data, ksdata_mock, storage_mo
     assert messages[0].type == common.MESSAGE_TYPE_WARNING
 
 
-def test_evaluation_bootloader_passwd_set(rule_data, ksdata_mock, storage_mock):
-    rule_data.new_rule("bootloader --passwd")
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_bootloader_passwd_set(proxy_getter, rule_data, ksdata_mock, storage_mock):
+    bootloader_proxy_mock = mock.MagicMock()
+    proxy_getter.return_value = bootloader_proxy_mock
 
-    storage_mock.bootloader.password = "aaaaa"
+    bootloader_proxy_mock.IsPasswordSet = True
+
+    rule_data.new_rule("bootloader --passwd")
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
@@ -583,7 +614,8 @@ def test_evaluation_bootloader_passwd_set(rule_data, ksdata_mock, storage_mock):
     assert messages == []
 
 
-def test_evaluation_various_rules(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_evaluation_various_rules(proxy_getter, rule_data, ksdata_mock, storage_mock):
     for rule in ["part /tmp", "part /", "passwd --minlen=14",
                  "package --add=firewalld", ]:
         rule_data.new_rule(rule)
@@ -598,7 +630,8 @@ def test_evaluation_various_rules(rule_data, ksdata_mock, storage_mock):
     assert len(messages) == 4
 
 
-def test_revert_mount_options_nonexistent(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_revert_mount_options_nonexistent(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("part /tmp --mountoptions=nodev")
     storage_mock.mountpoints = dict()
 
@@ -613,7 +646,8 @@ def test_revert_mount_options_nonexistent(rule_data, ksdata_mock, storage_mock):
     assert storage_mock.mountpoints == dict()
 
 
-def test_revert_mount_options(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_revert_mount_options(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("part /tmp --mountoptions=nodev")
     storage_mock.mountpoints = dict()
     storage_mock.mountpoints["/tmp"] = mock.Mock()
@@ -647,24 +681,26 @@ def test_revert_mount_options(rule_data, ksdata_mock, storage_mock):
     assert storage_mock.mountpoints["/tmp"].format.options == "defaults"
 
 
-def test_revert_password_policy_changes(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_revert_password_policy_changes(proxy_getter, rule_data, ksdata_mock, storage_mock):
+    password_proxy_mock = mock.MagicMock()
+    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock.IsRootPasswordCrypted = False
+    password_proxy_mock.RootPassword = "aaaa"
+
     # FIXME: Add password policy changes to this test. It only checks
     # password length right now outside of policy changes.
     rule_data.new_rule("passwd --minlen=8")
 
-    ksdata_mock.rootpw.password = "aaaa"
-    ksdata_mock.rootpw.isCrypted = False
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
     # password error --> one message
     assert len(messages) == 1
-    assert ksdata_mock.rootpw.password == "aaaa"
-    assert ksdata_mock.rootpw.seen
 
     rule_data.revert_changes(ksdata_mock, storage_mock)
 
     # with long enough password this time #
-    ksdata_mock.rootpw.password = "aaaaaaaaaaaaa"
+    password_proxy_mock.RootPassword = "aaaaaaaaaaaaa"
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
@@ -673,7 +709,8 @@ def test_revert_password_policy_changes(rule_data, ksdata_mock, storage_mock):
     assert messages == []
 
 
-def test_revert_package_rules(rule_data, ksdata_mock, storage_mock):
+@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables --add=vim")
 
     ksdata_mock.packages.packageList = ["vim"]

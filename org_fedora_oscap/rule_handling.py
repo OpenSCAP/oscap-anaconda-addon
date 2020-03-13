@@ -716,9 +716,9 @@ class BootloaderRules(RuleHandler):
 
         bootloader_proxy = STORAGE.get_proxy(BOOTLOADER)
 
-        if self._require_password and not bootloader_proxy.password_is_set:
+        if self._require_password and not bootloader_proxy.IsPasswordSet:
             # TODO: Anaconda provides a way to set bootloader password:
-            # bootloader_proxy.set_password(...)
+            # bootloader_proxy.SetEncryptedPassword(...)
             # We don't support setting the bootloader password yet,
             # but we shouldn't stop the installation, just because of that.
             return [RuleMessage(self.__class__, common.MESSAGE_TYPE_WARNING,

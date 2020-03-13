@@ -22,11 +22,15 @@
 
 import os
 import mock
+import shutil
 
 import pytest
+import tempfile
 
 from org_fedora_oscap import common
 
+TESTING_FILES_PATH = os.path.join(
+    os.path.dirname(__file__), os.path.pardir, "testing_files")
 
 @pytest.fixture()
 def mock_subprocess():
@@ -143,3 +147,122 @@ def test_run_oscap_remediate_create_chroot_dir(mock_subprocess, monkeypatch):
 
     chroot_dir = "/mnt/test" + os.path.dirname(common.RESULTS_PATH)
     common.utils.ensure_dir_exists.assert_called_with(chroot_dir)
+
+
+rpm_ssg_file_list = [
+    "/usr/share/doc/scap-security-guide/Contributors.md",
+    "/usr/share/doc/scap-security-guide/LICENSE",
+    "/usr/share/doc/scap-security-guide/README.md",
+    "/usr/share/man/man8/scap-security-guide.8.gz",
+    "/usr/share/scap-security-guide/ansible",
+    "/usr/share/scap-security-guide/ansible/ssg-fedora-role-default.yml",
+    "/usr/share/scap-security-guide/ansible/ssg-fedora-role-ospp.yml",
+    "/usr/share/scap-security-guide/ansible/ssg-fedora-role-pci-dss.yml",
+    "/usr/share/scap-security-guide/ansible/ssg-fedora-role-standard.yml",
+    "/usr/share/scap-security-guide/bash",
+    "/usr/share/scap-security-guide/bash/ssg-fedora-role-default.sh",
+    "/usr/share/scap-security-guide/bash/ssg-fedora-role-ospp.sh",
+    "/usr/share/scap-security-guide/bash/ssg-fedora-role-pci-dss.sh",
+    "/usr/share/scap-security-guide/bash/ssg-fedora-role-standard.sh",
+    "/usr/share/xml/scap/ssg/content",
+    "/usr/share/xml/scap/ssg/content/ssg-fedora-cpe-dictionary.xml",
+    "/usr/share/xml/scap/ssg/content/ssg-fedora-cpe-oval.xml",
+    "/usr/share/xml/scap/ssg/content/ssg-fedora-ds.xml",
+    "/usr/share/xml/scap/ssg/content/ssg-fedora-ocil.xml",
+    "/usr/share/xml/scap/ssg/content/ssg-fedora-oval.xml",
+    "/usr/share/xml/scap/ssg/content/ssg-fedora-xccdf.xml",
+    ]
+
+
+def test_extract_ssg_rpm():
+    temp_path = tempfile.mkdtemp(prefix="rpm")
+
+    extracted_files = common._extract_rpm(
+            TESTING_FILES_PATH + "/scap-security-guide.noarch.rpm",
+            temp_path)
+
+    assert len(rpm_ssg_file_list) == len(extracted_files)
+    for rpm_file in rpm_ssg_file_list:
+        assert temp_path + rpm_file in extracted_files
+
+    shutil.rmtree(temp_path)
+
+
+def test_extract_ssg_rpm_ensure_filepath_there():
+    temp_path = tempfile.mkdtemp(prefix="rpm")
+
+    extracted_files = common._extract_rpm(
+            TESTING_FILES_PATH + "/scap-security-guide.noarch.rpm",
+            temp_path,
+            ["/usr/share/xml/scap/ssg/content/ssg-fedora-ds.xml"])
+
+    assert len(rpm_ssg_file_list) == len(extracted_files)
+    for rpm_file in rpm_ssg_file_list:
+        assert temp_path + rpm_file in extracted_files
+
+    shutil.rmtree(temp_path)
+
+
+def test_extract_ssg_rpm_ensure_filepath_not_there():
+    temp_path = tempfile.mkdtemp(prefix="rpm")
+
+    with pytest.raises(common.ExtractionError) as excinfo:
+        extracted_files = common._extract_rpm(
+                TESTING_FILES_PATH + "/scap-security-guide.noarch.rpm",
+                temp_path,
+                ["/usr/share/xml/scap/ssg/content/ssg-fedora-content.xml"])
+
+    assert "File '/usr/share/xml/scap/ssg/content/ssg-fedora-content.xml' "\
+           "not found in the archive" in str(excinfo.value)
+
+    shutil.rmtree(temp_path)
+
+
+rpm_tailoring_file_list = [
+    "/usr/share/xml/scap/ssg-fedora-ds-tailoring/ssg-fedora-ds.xml",
+    "/usr/share/xml/scap/ssg-fedora-ds-tailoring/tailoring-xccdf.xml",
+    ]
+
+
+def test_extract_tailoring_rpm():
+    temp_path = tempfile.mkdtemp(prefix="rpm")
+
+    extracted_files = common._extract_rpm(
+            TESTING_FILES_PATH + "/ssg-fedora-ds-tailoring-1-1.noarch.rpm",
+            temp_path)
+
+    assert len(rpm_tailoring_file_list) == len(extracted_files)
+    for rpm_file in rpm_tailoring_file_list:
+        assert temp_path + rpm_file in extracted_files
+
+    shutil.rmtree(temp_path)
+
+
+def test_extract_tailoring_rpm_ensure_filepath_there():
+    temp_path = tempfile.mkdtemp(prefix="rpm")
+
+    extracted_files = common._extract_rpm(
+            TESTING_FILES_PATH + "/ssg-fedora-ds-tailoring-1-1.noarch.rpm",
+            temp_path,
+            ["/usr/share/xml/scap/ssg-fedora-ds-tailoring/ssg-fedora-ds.xml"])
+
+    assert len(rpm_tailoring_file_list) == len(extracted_files)
+    for rpm_file in rpm_tailoring_file_list:
+        assert temp_path + rpm_file in extracted_files
+
+    shutil.rmtree(temp_path)
+
+
+def test_extract_tailoring_rpm_ensure_filename_there():
+    temp_path = tempfile.mkdtemp(prefix="rpm")
+
+    with pytest.raises(common.ExtractionError) as excinfo:
+        extracted_files = common._extract_rpm(
+                TESTING_FILES_PATH + "/ssg-fedora-ds-tailoring-1-1.noarch.rpm",
+                temp_path,
+                ["ssg-fedora-ds.xml"])
+
+    assert "File 'ssg-fedora-ds.xml' not found in the archive" \
+           in str(excinfo.value)
+
+    shutil.rmtree(temp_path)
