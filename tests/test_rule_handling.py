@@ -1,6 +1,9 @@
 import pytest
-
 import mock
+from collections import defaultdict
+
+from pyanaconda.modules.common.constants.objects import FIREWALL, DEVICE_TREE, BOOTLOADER
+from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS
 
 try:
     from org_fedora_oscap import rule_handling, common
@@ -113,7 +116,46 @@ def storage_mock():
     return mock.Mock()
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
+@pytest.fixture()
+def proxy_getter(monkeypatch):
+    proxies = defaultdict(mock.Mock)
+
+    def mock_get(service_name, object_path):
+        initialize = not proxies
+        proxy = proxies[(service_name, object_path)]
+
+        if initialize:
+            set_dbus_defaults()
+
+        return proxy
+
+    monkeypatch.setattr("pyanaconda.core.dbus.DBus.get_proxy", mock_get)
+    return mock_get
+
+
+def set_dbus_defaults():
+    network = NETWORK.get_proxy()
+    network.Connected.return_value = True
+
+    firewall = NETWORK.get_proxy(FIREWALL)
+    firewall.EnabledServices = []
+    firewall.DisabledServices = []
+    firewall.EnabledPorts = []
+    firewall.Trusts = []
+
+    device_tree = STORAGE.get_proxy(DEVICE_TREE)
+    device_tree.GetDeviceMountOptions.return_value = "defaults"
+    device_tree.GetMountPoints.return_value = {}
+
+    bootloader = STORAGE.get_proxy(BOOTLOADER)
+    bootloader.IsPasswordSet = False
+
+    users = USERS.get_proxy()
+    users.IsRootPasswordSet = True
+    users.IsRootPasswordCrypted = False
+    users.RootPassword = "anaconda"
+
+
 def test_evaluation_existing_part_must_exist_rules(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
     rules = [
@@ -143,7 +185,6 @@ def test_evaluation_existing_part_must_exist_rules(
     assert root_part_mock.format.options == "defaults"
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_nonexisting_part_must_exist(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
     rules = [
@@ -257,19 +298,16 @@ def evaluation_add_mount_options(
     assert storage_mock.mountpoints["/"].format.options == "defaults,noauto"
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_add_mount_options(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
     evaluation_add_mount_options(rule_data, ksdata_mock, storage_mock, 1)
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_add_mount_options_no_duplicates(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
     evaluation_add_mount_options(rule_data, ksdata_mock, storage_mock, 2)
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_add_mount_options_report_only(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
     rules = [
@@ -305,7 +343,6 @@ def test_evaluation_add_mount_options_report_only(
     assert storage_mock.mountpoints["/"].format.options == "defaults"
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_add_mount_option_prefix(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
     rules = [
@@ -330,7 +367,6 @@ def test_evaluation_add_mount_option_prefix(
     assert storage_mock.mountpoints["/tmp"].format.options == "defaults,nodevice,nodev"
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_add_mount_options_nonexisting_part(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
     rules = [
@@ -359,11 +395,9 @@ def test_evaluation_add_mount_options_nonexisting_part(
             assert "'nodev'" not in message.text
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_passwd_minlen_no_passwd(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
-    password_proxy_mock = mock.MagicMock()
-    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock = USERS.get_proxy()
     password_proxy_mock.IsRootPasswordSet = False
     evaluation_passwd_minlen_no_passwd(rule_data, ksdata_mock, storage_mock, 8, (10, 11))
     evaluation_passwd_minlen_no_passwd(rule_data, ksdata_mock, storage_mock, 10, (8, 11))
@@ -387,11 +421,9 @@ def evaluation_passwd_minlen_no_passwd(
         assert str(not_wanted) not in messages[0].text
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_passwd_minlen_short_passwd(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
-    password_proxy_mock = mock.MagicMock()
-    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock = USERS.get_proxy()
     password_proxy_mock.IsRootPasswordCrypted = False
     password_proxy_mock.RootPassword = "aaaa"
 
@@ -413,11 +445,9 @@ def test_evaluation_passwd_minlen_short_passwd(
     assert password_proxy_mock.RootPassword == "aaaa"
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_passwd_minlen_short_passwd_report_only(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
-    password_proxy_mock = mock.MagicMock()
-    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock = USERS.get_proxy()
     password_proxy_mock.IsRootPasswordCrypted = False
     password_proxy_mock.RootPassword = "aaaa"
 
@@ -439,11 +469,9 @@ def test_evaluation_passwd_minlen_short_passwd_report_only(
     assert password_proxy_mock.RootPassword == "aaaa"
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_passwd_minlen_crypted_passwd(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
-    password_proxy_mock = mock.MagicMock()
-    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock = USERS.get_proxy()
     password_proxy_mock.IsRootPasswordCrypted = True
     password_proxy_mock.RootPassword = "aaaa"
 
@@ -459,10 +487,8 @@ def test_evaluation_passwd_minlen_crypted_passwd(
     assert "cannot check" in messages[0].text
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_passwd_minlen_good_passwd(proxy_getter, rule_data, ksdata_mock, storage_mock):
-    password_proxy_mock = mock.MagicMock()
-    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock = USERS.get_proxy()
     password_proxy_mock.IsRootPasswordCrypted = False
     password_proxy_mock.RootPassword = "aaaaaaaaaaaaaaaaa"
 
@@ -474,11 +500,9 @@ def test_evaluation_passwd_minlen_good_passwd(proxy_getter, rule_data, ksdata_mo
     assert not messages
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_passwd_minlen_report_only_not_ignored(
         proxy_getter, rule_data, ksdata_mock, storage_mock):
-    password_proxy_mock = mock.MagicMock()
-    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock = USERS.get_proxy()
     password_proxy_mock.IsRootPasswordCrypted = False
     password_proxy_mock.RootPassword = "aaaaaaaaaaaaaaaaa"
 
@@ -534,7 +558,6 @@ def _quoted_keywords_not_seen_in_messages(keywords, messages):
     )
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables --add=vim")
 
@@ -558,7 +581,6 @@ def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_
     assert set(ksdata_mock.packages.excludedList) == {"telnet"}
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_package_rules_report_only(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables")
 
@@ -583,11 +605,8 @@ def test_evaluation_package_rules_report_only(proxy_getter, rule_data, ksdata_mo
     assert not ksdata_mock.packages.excludedList
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_bootloader_passwd_not_set(proxy_getter, rule_data, ksdata_mock, storage_mock):
-    bootloader_proxy_mock = mock.MagicMock()
-    proxy_getter.return_value = bootloader_proxy_mock
-
+    bootloader_proxy_mock = STORAGE.get_proxy(BOOTLOADER)
     bootloader_proxy_mock.IsPasswordSet = False
 
     rule_data.new_rule("bootloader --passwd")
@@ -599,11 +618,8 @@ def test_evaluation_bootloader_passwd_not_set(proxy_getter, rule_data, ksdata_mo
     assert messages[0].type == common.MESSAGE_TYPE_WARNING
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_bootloader_passwd_set(proxy_getter, rule_data, ksdata_mock, storage_mock):
-    bootloader_proxy_mock = mock.MagicMock()
-    proxy_getter.return_value = bootloader_proxy_mock
-
+    bootloader_proxy_mock = STORAGE.get_proxy(BOOTLOADER)
     bootloader_proxy_mock.IsPasswordSet = True
 
     rule_data.new_rule("bootloader --passwd")
@@ -614,7 +630,6 @@ def test_evaluation_bootloader_passwd_set(proxy_getter, rule_data, ksdata_mock, 
     assert messages == []
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_evaluation_various_rules(proxy_getter, rule_data, ksdata_mock, storage_mock):
     for rule in ["part /tmp", "part /", "passwd --minlen=14",
                  "package --add=firewalld", ]:
@@ -630,7 +645,6 @@ def test_evaluation_various_rules(proxy_getter, rule_data, ksdata_mock, storage_
     assert len(messages) == 4
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_revert_mount_options_nonexistent(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("part /tmp --mountoptions=nodev")
     storage_mock.mountpoints = dict()
@@ -646,7 +660,6 @@ def test_revert_mount_options_nonexistent(proxy_getter, rule_data, ksdata_mock, 
     assert storage_mock.mountpoints == dict()
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_revert_mount_options(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("part /tmp --mountoptions=nodev")
     storage_mock.mountpoints = dict()
@@ -681,10 +694,8 @@ def test_revert_mount_options(proxy_getter, rule_data, ksdata_mock, storage_mock
     assert storage_mock.mountpoints["/tmp"].format.options == "defaults"
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_revert_password_policy_changes(proxy_getter, rule_data, ksdata_mock, storage_mock):
-    password_proxy_mock = mock.MagicMock()
-    proxy_getter.return_value = password_proxy_mock
+    password_proxy_mock = USERS.get_proxy()
     password_proxy_mock.IsRootPasswordCrypted = False
     password_proxy_mock.RootPassword = "aaaa"
 
@@ -709,7 +720,6 @@ def test_revert_password_policy_changes(proxy_getter, rule_data, ksdata_mock, st
     assert messages == []
 
 
-@mock.patch("pyanaconda.dbus.DBus.get_proxy")
 def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables --add=vim")
 
