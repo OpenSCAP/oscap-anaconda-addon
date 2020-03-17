@@ -165,14 +165,11 @@ def test_evaluation_existing_part_must_exist_rules(
     for rule in rules:
         rule_data.new_rule(rule)
 
-    tmp_part_mock = mock.Mock()
-    tmp_part_mock.format.options = "defaults"
-    root_part_mock = mock.Mock()
-    root_part_mock.format.options = "defaults"
-
-    storage_mock.mountpoints = {
-        "/tmp": tmp_part_mock,
-        "/": root_part_mock,
+    device_tree_mock = STORAGE.get_proxy(DEVICE_TREE)
+    device_tree_mock.GetDeviceMountOptions.return_value = "defaults"
+    device_tree_mock.GetMountPoints.return_value = {
+        "/tmp": "/dev/sda1",
+        "/": "/dev/sda2",
     }
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
@@ -181,8 +178,10 @@ def test_evaluation_existing_part_must_exist_rules(
     assert not messages
 
     # no additional mount options specified
-    assert tmp_part_mock.format.options == "defaults"
-    assert root_part_mock.format.options == "defaults"
+    device_tree_mock.SetDeviceMountOptions.assert_has_calls([
+        mock.call("/dev/sda1", "defaults"),
+        mock.call("/dev/sda2", "defaults"),
+    ])
 
 
 def test_evaluation_nonexisting_part_must_exist(
@@ -194,11 +193,10 @@ def test_evaluation_nonexisting_part_must_exist(
     for rule in rules:
         rule_data.new_rule(rule)
 
-    tmp_part_mock = mock.Mock()
-    tmp_part_mock.format.options = "defaults"
-
-    storage_mock.mountpoints = {
-        "/tmp": tmp_part_mock,
+    device_tree_mock = STORAGE.get_proxy(DEVICE_TREE)
+    device_tree_mock.GetDeviceMountOptions.return_value = "defaults"
+    device_tree_mock.GetMountPoints.return_value = {
+        "/tmp": "/dev/sda1",
     }
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
@@ -209,27 +207,6 @@ def test_evaluation_nonexisting_part_must_exist(
 
     # error has to mention the mount point
     assert "/" in messages[0].text
-
-
-def get_partition_mocks(mount_options):
-    tmp_part_mock = mock.Mock()
-    tmp_part_mock.format.options = mount_options["/tmp"]
-    root_part_mock = mock.Mock()
-    root_part_mock.format.options = mount_options["/"]
-
-    partition_mocks = {
-        "/tmp": tmp_part_mock,
-        "/": root_part_mock,
-    }
-    return partition_mocks
-
-
-def set_mount_options_of_actual_mount_points(
-        storage_mock, mount_options, actual_mountpoints):
-    storage_mock.mountpoints = {}
-    for mountpoint, value in mount_options.items():
-        if mountpoint in actual_mountpoints:
-            storage_mock.mountpoints[mountpoint] = value
 
 
 def get_messages_for_partition_rules(
@@ -253,9 +230,32 @@ def get_messages_for_partition_rules(
     for rule in rules:
         rule_data.new_rule(rule)
 
-    mount_options = get_partition_mocks(mount_options)
+    # Map mount points to device names.
+    mount_points = {}
 
-    set_mount_options_of_actual_mount_points(storage_mock, mount_options, actual_mountpoints)
+    if "/tmp" in actual_mountpoints:
+        mount_points["/tmp"] = "/dev/sda1"
+
+    if "/" in actual_mountpoints:
+        mount_points["/"] = "/dev/sda2"
+
+    # Map device names to mount options.
+    mount_options = {
+        mount_points[mount_point]: mount_options[mount_point]
+        for mount_point in actual_mountpoints
+    }
+
+    # Mock the device tree proxy.
+    def get_device_mount_options(device_name):
+        return mount_options[device_name]
+
+    def set_device_mount_options(device_name, options):
+        mount_options[device_name] = options
+
+    device_tree_mock = STORAGE.get_proxy(DEVICE_TREE)
+    device_tree_mock.GetMountPoints.return_value = mount_points
+    device_tree_mock.GetDeviceMountOptions.side_effect = get_device_mount_options
+    device_tree_mock.SetDeviceMountOptions.side_effect = set_device_mount_options
 
     messages = []
     for _ in range(messages_evaluation_count):
@@ -294,8 +294,12 @@ def evaluation_add_mount_options(
             noauto_found = True
 
     assert all([nodev_found, noauto_found])
-    assert storage_mock.mountpoints["/tmp"].format.options == "defaults,nodev"
-    assert storage_mock.mountpoints["/"].format.options == "defaults,noauto"
+
+    device_tree_mock = STORAGE.get_proxy(DEVICE_TREE)
+    device_tree_mock.SetDeviceMountOptions.assert_has_calls([
+        mock.call("/dev/sda1", "defaults,nodev"),
+        mock.call("/dev/sda2", "defaults,noauto"),
+    ])
 
 
 def test_evaluation_add_mount_options(
@@ -339,8 +343,8 @@ def test_evaluation_add_mount_options_report_only(
     assert all([nodev_found, noauto_found])
 
     # no changes should be made
-    assert storage_mock.mountpoints["/tmp"].format.options == "defaults"
-    assert storage_mock.mountpoints["/"].format.options == "defaults"
+    device_tree_mock = STORAGE.get_proxy(DEVICE_TREE)
+    device_tree_mock.SetDeviceMountOptions.assert_not_called()
 
 
 def test_evaluation_add_mount_option_prefix(
@@ -364,7 +368,10 @@ def test_evaluation_add_mount_option_prefix(
     assert messages[1].type == common.MESSAGE_TYPE_INFO
 
     # the option should be added even though it is a prefix of another one
-    assert storage_mock.mountpoints["/tmp"].format.options == "defaults,nodevice,nodev"
+    device_tree_mock = STORAGE.get_proxy(DEVICE_TREE)
+    device_tree_mock.SetDeviceMountOptions.assert_has_calls([
+        mock.call("/dev/sda1", "defaults,nodevice,nodev"),
+    ])
 
 
 def test_evaluation_add_mount_options_nonexisting_part(
