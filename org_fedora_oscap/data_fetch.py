@@ -9,7 +9,7 @@ import os
 import os.path
 import pycurl
 
-from pyanaconda.flags import flags as ana_flags
+from pyanaconda.core.configuration.anaconda import conf
 
 from org_fedora_oscap import utils
 
@@ -178,7 +178,7 @@ def _curl_fetch(url, out_file, ca_certs=None):
         curl.setopt(pycurl.CAINFO, ca_certs)
 
     # may be turned off by flags (specified on command line, take precedence)
-    if ana_flags.noverifyssl:
+    if not conf.payload.verify_ssl:
         log.warning("Disabling SSL verification due to the noverifyssl flag")
         curl.setopt(pycurl.SSL_VERIFYHOST, 0)
         curl.setopt(pycurl.SSL_VERIFYPEER, 0)

@@ -30,7 +30,7 @@ import logging
 from pyanaconda.pwpolicy import F22_PwPolicyData
 from pyanaconda.core.constants import (
     FIREWALL_ENABLED, FIREWALL_DISABLED, FIREWALL_USE_SYSTEM_DEFAULTS)
-from pyanaconda.modules.common.constants.objects import FIREWALL, BOOTLOADER
+from pyanaconda.modules.common.constants.objects import FIREWALL, BOOTLOADER, DEVICE_TREE
 from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS
 
 from org_fedora_oscap import common
@@ -392,9 +392,11 @@ class PartRule(RuleHandler):
 
     def eval_rules(self, ksdata, storage, report_only=False):
         """:see: RuleHandler.eval_rules"""
-
+        device_tree = STORAGE.get_proxy(DEVICE_TREE)
+        mount_points = device_tree.GetMountPoints()
         messages = []
-        if self._mount_point not in storage.mountpoints:
+
+        if self._mount_point not in mount_points:
             msg = _("{0} must be on a separate partition or logical "
                     "volume and has to be created in the "
                     "partitioning layout before installation can occur "
@@ -417,11 +419,12 @@ class PartRule(RuleHandler):
                                         common.MESSAGE_TYPE_INFO, msg))
 
         # mount point to be created during installation
-        target_mount_point = storage.mountpoints[self._mount_point]
+        target_name = mount_points[self._mount_point]
+        mount_options = device_tree.GetDeviceMountOptions(target_name)
 
         # generator for the new options that should be added
         new_opts = (opt for opt in self._mount_options
-                    if opt not in target_mount_point.format.options.split(","))
+                    if opt not in mount_options.split(","))
 
         # add message for every mount option added
         for opt in new_opts:
@@ -434,8 +437,11 @@ class PartRule(RuleHandler):
 
             # add new options to the target mount point if not reporting only
             if not report_only:
-                target_mount_point.format.options += ",%s" % opt
+                mount_options += ",%s" % opt
                 self._added_mount_options.append(opt)
+
+        if new_opts and not report_only:
+            device_tree.SetDeviceMountOptions(target_name, mount_options)
 
         return messages
 
@@ -447,23 +453,26 @@ class PartRule(RuleHandler):
         :see: RuleHandler.revert_changes
 
         """
+        device_tree = STORAGE.get_proxy(DEVICE_TREE)
+        mount_points = device_tree.GetMountPoints()
 
-        if self._mount_point not in storage.mountpoints:
+        if self._mount_point not in mount_points:
             # mount point doesn't exist, nothing can be reverted
             return
 
         # mount point to be created during installation
-        target_mount_point = storage.mountpoints[self._mount_point]
+        target_name = mount_points[self._mount_point]
 
         # mount options to be defined for the created mount point
-        tgt_mount_options = target_mount_point.format.options
+        mount_options = device_tree.GetDeviceMountOptions(target_name)
 
         # generator of the options that should remain
-        result_opts = (opt for opt in tgt_mount_options.split(",")
+        result_opts = (opt for opt in mount_options.split(",")
                        if opt not in self._added_mount_options)
 
         # set the new list of options
-        target_mount_point.format.options = ",".join(result_opts)
+        mount_options = ",".join(result_opts)
+        device_tree.SetDeviceMountOptions(target_name, mount_options)
 
         # reset the remembered added mount options
         self._added_mount_options = []
