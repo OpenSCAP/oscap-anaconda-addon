@@ -116,6 +116,9 @@ def storage_mock():
     return mock.Mock()
 
 
+# monkeypatch is a predefined fixture that is used to perform per-test case changes in the test env.
+# Here, it mocks the Anaconda interface on the module level. For more info, see:
+# https://docs.pytest.org/en/latest/monkeypatch.html#monkeypatching-mocking-modules-and-environments
 @pytest.fixture()
 def proxy_getter(monkeypatch):
     proxies = defaultdict(mock.Mock)
