@@ -29,7 +29,6 @@ import tempfile
 import subprocess
 import zipfile
 import tarfile
-from _ast import Sub
 
 import cpioarchive
 import re
@@ -39,7 +38,7 @@ from collections import namedtuple
 import gettext
 from functools import wraps
 from pyanaconda.core import constants
-from pyanaconda import nm
+from pyanaconda.modules.common.constants.services import NETWORK
 from pyanaconda.threading import threadMgr, AnacondaThread
 from org_fedora_oscap import utils
 from org_fedora_oscap.data_fetch import fetch_data
@@ -295,7 +294,8 @@ def wait_and_fetch_net_data(url, out_file, ca_certs=None):
         # NM still connecting, wait for it to finish
         nm_conn_thread.join()
 
-    if not nm.nm_is_connected():
+    network_proxy = NETWORK.get_proxy()
+    if not network_proxy.Connected:
         raise OSCAPaddonNetworkError("Network connection needed to fetch data.")
 
     fetch_data_thread = AnacondaThread(name=THREAD_FETCH_DATA,

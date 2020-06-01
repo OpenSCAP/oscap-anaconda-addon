@@ -27,7 +27,7 @@ import time
 import logging
 
 from pyanaconda.addons import AddonData
-from pyanaconda.core.util import getSysroot
+from pyanaconda.core.configuration.anaconda import conf
 from pyanaconda.progress import progressQ
 from pyanaconda import errors
 from pyanaconda.core import util
@@ -390,7 +390,7 @@ class OSCAPdata(AddonData):
         for rule in rules.splitlines():
             self.rule_data.new_rule(rule)
 
-    def setup(self, storage, ksdata, instclass, payload):
+    def setup(self, storage, ksdata, payload):
         """
         The setup method that should make changes to the runtime environment
         according to the data stored in this object.
@@ -401,8 +401,6 @@ class OSCAPdata(AddonData):
         :param ksdata: data parsed from the kickstart file and set in the
                        installation process
         :type ksdata: pykickstart.base.BaseHandler instance
-        :param instclass: distribution-specific information
-        :type instclass: pyanaconda.installclass.BaseInstallClass
 
         """
 
@@ -501,7 +499,7 @@ class OSCAPdata(AddonData):
             if pkg not in ksdata.packages.packageList:
                 ksdata.packages.packageList.append(pkg)
 
-    def execute(self, storage, ksdata, instclass, users, payload):
+    def execute(self, storage, ksdata, users, payload):
         """
         The execute method that should make changes to the installed system. It
         is called only once in the post-install setup phase.
@@ -517,7 +515,7 @@ class OSCAPdata(AddonData):
             # selected
             return
 
-        target_content_dir = utils.join_paths(getSysroot(),
+        target_content_dir = utils.join_paths(conf.target.system_root,
                                               common.TARGET_CONTENT_DIR)
         utils.ensure_dir_exists(target_content_dir)
 
@@ -546,7 +544,7 @@ class OSCAPdata(AddonData):
         common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
                                    self.datastream_id, self.xccdf_id,
                                    self.postinst_tailoring_path,
-                                   chroot=getSysroot())
+                                   chroot=conf.target.system_root)
 
     def clear_all(self):
         """Clear all the stored values."""
