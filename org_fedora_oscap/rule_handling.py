@@ -40,6 +40,12 @@ from org_fedora_oscap.common import OSCAPaddonError, RuleMessage
 __all__ = ["RuleData"]
 
 
+ESSENTIAL_PACKAGES = {
+    "xorg-x11-server-common": {
+        "env": ["graphical-server-environment", "workstation-product-environment"],
+    }
+}
+
 log = logging.getLogger("anaconda")
 
 _ = common._
@@ -627,6 +633,20 @@ class PackageRules(RuleHandler):
 
         return ret
 
+    def _package_is_essential(self, package_name, ksdata_packages):
+        if package_name not in ESSENTIAL_PACKAGES:
+            return False
+        if package_name in ksdata_packages.packageList:
+            return True
+        selected_install_env = ksdata_packages.environment
+        if selected_install_env in ESSENTIAL_PACKAGES[package_name].get("env"):
+            return True
+        selected_install_groups_names = {g.name for g in ksdata_packages.groupList}
+        for g in ESSENTIAL_PACKAGES[package_name].get("groups", []):
+            if g in selected_install_groups_names:
+                return True
+        return False
+
     def eval_rules(self, ksdata, storage, report_only=False):
         """:see: RuleHandler.eval_rules"""
 
@@ -655,13 +675,21 @@ class PackageRules(RuleHandler):
                                         common.MESSAGE_TYPE_INFO, msg))
 
         # now do the same for the packages that should be excluded
-
         # add messages for the already excluded packages
         for pkg in self._removed_pkgs:
-            msg = _("package '%s' has been added to the list of excluded "
-                    "packages" % pkg)
-            messages.append(RuleMessage(self.__class__,
-                                        common.MESSAGE_TYPE_INFO, msg))
+            if self._package_is_essential(pkg, ksdata.packages):
+                msg = _(
+                    "package '{package}' has been added to the list "
+                    "of excluded packages, but it can't be removed "
+                    "from the current software selection without breaking the installation."
+                    .format(package=pkg))
+                messages.append(RuleMessage(self.__class__,
+                                            common.MESSAGE_TYPE_FATAL, msg))
+            else:
+                msg = _("package '%s' has been added to the list of excluded "
+                        "packages" % pkg)
+                messages.append(RuleMessage(self.__class__,
+                                            common.MESSAGE_TYPE_INFO, msg))
 
         # packages, that should be added
         packages_to_remove = (pkg for pkg in self._remove_pkgs
