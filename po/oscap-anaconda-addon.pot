@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-06-02 14:00+0200\n"
+"POT-Creation-Date: 2020-06-16 14:11+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../org_fedora_oscap/rule_handling.py:400
+#: ../org_fedora_oscap/rule_handling.py:406
 #, python-brace-format
 msgid ""
 "{0} must be on a separate partition or logical volume and has to be created "
@@ -26,82 +26,90 @@ msgid ""
 msgstr ""
 
 #. template for the message
-#: ../org_fedora_oscap/rule_handling.py:411
+#: ../org_fedora_oscap/rule_handling.py:417
 #, python-format
 msgid ""
 "mount option '%(mount_option)s' added for the mount point %(mount_point)s"
 msgstr ""
 
 #. root password was not set
-#: ../org_fedora_oscap/rule_handling.py:520
+#: ../org_fedora_oscap/rule_handling.py:526
 #, python-format
 msgid "make sure to create password with minimal length of %d characters"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:527
+#: ../org_fedora_oscap/rule_handling.py:533
 msgid "cannot check root password length (password is crypted)"
 msgstr ""
 
 #. too short
-#: ../org_fedora_oscap/rule_handling.py:533
+#: ../org_fedora_oscap/rule_handling.py:539
 #, python-format
 msgid ""
 "root password is too short, a longer one with at least %d characters is "
 "required"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:637
-#: ../org_fedora_oscap/rule_handling.py:652
+#: ../org_fedora_oscap/rule_handling.py:657
+#: ../org_fedora_oscap/rule_handling.py:672
 #, python-format
 msgid "package '%s' has been added to the list of to be installed packages"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:661
-#: ../org_fedora_oscap/rule_handling.py:676
+#: ../org_fedora_oscap/rule_handling.py:682
+#, python-brace-format
+msgid ""
+"package '{package}' has been added to the list of excluded packages, but it "
+"can't be removed from the current software selection without breaking the "
+"installation."
+msgstr ""
+
+#: ../org_fedora_oscap/rule_handling.py:689
+#: ../org_fedora_oscap/rule_handling.py:704
 #, python-format
 msgid "package '%s' has been added to the list of excluded packages"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:777
+#: ../org_fedora_oscap/rule_handling.py:805
 msgid "Kdump will be disabled on startup"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:779
+#: ../org_fedora_oscap/rule_handling.py:807
 msgid "Kdump will be enabled on startup"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:932
+#: ../org_fedora_oscap/rule_handling.py:960
 msgid "Firewall will be disabled on startup"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:939
+#: ../org_fedora_oscap/rule_handling.py:967
 msgid "Firewall will be enabled on startup"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:947
-#: ../org_fedora_oscap/rule_handling.py:986
+#: ../org_fedora_oscap/rule_handling.py:975
+#: ../org_fedora_oscap/rule_handling.py:1014
 #, python-format
 msgid ""
 "service '%s' has been added to the list of services to be added to the "
 "firewall"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:954
-#: ../org_fedora_oscap/rule_handling.py:999
+#: ../org_fedora_oscap/rule_handling.py:982
+#: ../org_fedora_oscap/rule_handling.py:1027
 #, python-format
 msgid ""
 "port '%s' has been added to the list of ports to be added to the firewall"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:961
-#: ../org_fedora_oscap/rule_handling.py:1012
+#: ../org_fedora_oscap/rule_handling.py:989
+#: ../org_fedora_oscap/rule_handling.py:1040
 #, python-format
 msgid ""
 "trust '%s' has been added to the list of trusts to be added to the firewall"
 msgstr ""
 
-#: ../org_fedora_oscap/rule_handling.py:1024
-#: ../org_fedora_oscap/rule_handling.py:1039
+#: ../org_fedora_oscap/rule_handling.py:1052
+#: ../org_fedora_oscap/rule_handling.py:1067
 #, python-format
 msgid ""
 "service '%s' has been added to the list of services to be removed from the "
