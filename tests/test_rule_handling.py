@@ -123,7 +123,7 @@ def storage_mock():
 def proxy_getter(monkeypatch):
     proxies = defaultdict(mock.Mock)
 
-    def mock_get(service_name, object_path):
+    def mock_get(service_name, object_path, *args, **kwargs):
         initialize = not proxies
         proxy = proxies[(service_name, object_path)]
 
