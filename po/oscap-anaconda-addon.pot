@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-06-16 14:11+0200\n"
+"POT-Creation-Date: 2020-06-17 10:54+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -231,7 +231,7 @@ msgid "Fetching content..."
 msgstr ""
 
 #: tmp/oscap.glade.h:1
-msgid "SECURITY POLICY"
+msgid "Security Policy"
 msgstr ""
 
 #: tmp/oscap.glade.h:2
