@@ -43,7 +43,10 @@ __all__ = ["RuleData"]
 ESSENTIAL_PACKAGES = {
     "xorg-x11-server-common": {
         "env": ["graphical-server-environment", "workstation-product-environment"],
-    }
+    },
+    "nfs-utils": {
+        "env": ["graphical-server-environment", "workstation-product-environment"],
+    },
 }
 
 log = logging.getLogger("anaconda")
