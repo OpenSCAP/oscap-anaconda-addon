@@ -6,6 +6,8 @@ ADDON = org_fedora_oscap
 TESTS = tests \
 	testing_files
 
+DEFAULT_INSTALL_OF_PO_FILES ?= yes
+
 OSVERSION := $(shell grep -o " [0-9]\{1,\}" /etc/redhat-release | sed "s/ //g")
 ifeq ($(OSVERSION),7)
 	PYVERSION = ""
@@ -37,7 +39,9 @@ NUM_PROCS = $$(getconf _NPROCESSORS_ONLN)
 install:
 	mkdir -p $(DESTDIR)$(ADDONDIR)
 	cp -rv $(ADDON) $(DESTDIR)$(ADDONDIR)
+ifeq ($(DEFAULT_INSTALL_OF_PO_FILES),yes)
 	$(MAKE) install-po-files
+endif
 
 uninstall:
 	rm -rfv $(DESTDIR)$(ADDONDIR)
@@ -78,7 +82,7 @@ push-pot: potfile
 	zanata push $(ZANATA_PUSH_ARGS)
 
 install-po-files:
-	$(MAKE) -C po install
+	$(MAKE) -C po install RPM_BUILD_ROOT=$(DESTDIR)
 
 test:
 	@echo "***Running pylint$(PYVERSION) checks***"

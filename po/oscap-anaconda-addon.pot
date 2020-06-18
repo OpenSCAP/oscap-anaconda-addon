@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-06-16 14:11+0200\n"
+"POT-Creation-Date: 2020-06-18 15:10+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -197,7 +197,7 @@ msgstr ""
 msgid " or enter data stream content or archive URL below:"
 msgstr ""
 
-#: ../org_fedora_oscap/gui/spokes/oscap.py:905
+#: ../org_fedora_oscap/gui/spokes/oscap.py:905 tmp/oscap.glade.h:12
 msgid ""
 "No content found. Please enter data stream content or archive URL below:"
 msgstr ""
@@ -231,7 +231,7 @@ msgid "Fetching content..."
 msgstr ""
 
 #: tmp/oscap.glade.h:1
-msgid "SECURITY POLICY"
+msgid "Security Policy"
 msgstr ""
 
 #: tmp/oscap.glade.h:2
@@ -272,11 +272,6 @@ msgstr ""
 
 #: tmp/oscap.glade.h:11
 msgid "_Use SCAP Security Guide"
-msgstr ""
-
-#: tmp/oscap.glade.h:12
-msgid ""
-"No content found. Please enter data stream content or archive URI below:"
 msgstr ""
 
 #: tmp/oscap.glade.h:13
