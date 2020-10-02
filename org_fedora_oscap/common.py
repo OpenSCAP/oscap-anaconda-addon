@@ -136,8 +136,9 @@ class SubprocessLauncher(object):
 
         (stdout, stderr) = proc.communicate()
         self.stdout = stdout.decode()
-        self.stderr = stderr.decode()
+        self.stderr = stderr.decode(errors="replace")
         self.messages = re.findall(r'OpenSCAP Error:.*', self.stderr)
+        self.messages = self.messages + re.findall(r'E: oscap:.*', self.stderr)
 
         self.returncode = proc.returncode
 

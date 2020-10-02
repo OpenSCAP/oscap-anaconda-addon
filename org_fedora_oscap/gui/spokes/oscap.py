@@ -196,6 +196,9 @@ class OSCAPSpoke(NormalSpoke):
 
     # title of the spoke (will be displayed on the hub)
     title = N_("_Security Policy")
+    # The string "SECURITY POLICY" in oscap.glade is meant to be uppercase,
+    # as it is displayed inside the spoke as the spoke label,
+    # and spoke labels are all uppercase by a convention.
 
     # methods defined by API and helper methods #
     def __init__(self, data, storage, payload):
