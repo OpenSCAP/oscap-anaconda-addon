@@ -1,4 +1,4 @@
-#
+# 
 # Copyright (C) 2013  Red Hat, Inc.
 #
 # This copyrighted material is made available to anyone wishing to use,
@@ -195,8 +195,8 @@ class OSCAPSpoke(NormalSpoke):
     icon = "changes-prevent-symbolic"
 
     # title of the spoke (will be displayed on the hub)
-    title = N_("_Security Policy")
-    # The string "SECURITY POLICY" in oscap.glade is meant to be uppercase,
+    title = N_("_Security Profile")
+    # The string "SECURITY PROFILE" in oscap.glade is meant to be uppercase,
     # as it is displayed inside the spoke as the spoke label,
     # and spoke labels are all uppercase by a convention.
 
@@ -870,7 +870,7 @@ class OSCAPSpoke(NormalSpoke):
             self._message_store.clear()
             message = common.RuleMessage(self.__class__,
                                          common.MESSAGE_TYPE_INFO,
-                                         _("Not applying security policy"))
+                                         _("Not applying security profile"))
             self._add_message(message)
 
             self._set_error(None)
