@@ -146,7 +146,7 @@ def set_ready(func):
         self._unitialized_status = None
         self._ready = True
         # pylint: disable-msg=E1101
-        hubQ.send_ready(self.__class__.__name__, True)
+        hubQ.send_ready(self.__class__.__name__)
         hubQ.send_message(self.__class__.__name__, self.status)
 
         return ret
@@ -329,7 +329,7 @@ class OSCAPSpoke(NormalSpoke):
             self._content_url_entry.grab_focus()
 
             # pylint: disable-msg=E1101
-            hubQ.send_ready(self.__class__.__name__, True)
+            hubQ.send_ready(self.__class__.__name__)
         else:
             # else fetch data
             self._fetch_data_and_initialize()
