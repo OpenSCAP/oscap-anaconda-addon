@@ -8,13 +8,6 @@ TESTS = tests \
 
 DEFAULT_INSTALL_OF_PO_FILES ?= yes
 
-OSVERSION := $(shell grep -o " [0-9]\{1,\}" /etc/redhat-release | sed "s/ //g")
-ifeq ($(OSVERSION),7)
-	PYVERSION = ""
-else
-	PYVERSION = -3
-endif
-
 FILES = $(ADDON) \
 	$(TESTS) \
 	po \
@@ -124,16 +117,18 @@ update-pot:
 install-po-files:
 	$(MAKE) -C po install RPM_BUILD_ROOT=$(DESTDIR)
 
-test:
-	@echo "***Running pylint$(PYVERSION) checks***"
-	@find . -name '*.py' -print|xargs -n1 --max-procs=$(NUM_PROCS) pylint$(PYVERSION) -E 2> /dev/null
-	@echo "[ OK ]"
-	@echo "***Running unittests checks***"
-	@PYTHONPATH=. py.test$(PYVERSION) --processes=-1 -vw tests/
+CONTAINER_NAME = oscap-anaconda-addon-ci
+container-test:
+	podman build --tag $(CONTAINER_NAME) --file tests/Dockerfile
+	podman run --volume .:/oscap-anaconda-addon:Z $(CONTAINER_NAME) make test
+
+test: runpylint unittest
 
 runpylint:
-	@find . -name '*.py' -print|xargs -n1 --max-procs=$(NUM_PROCS) pylint$(PYVERSION) -E 2> /dev/null
+	@echo "***Running pylint checks***"
+	python3 -m pylint org_fedora_oscap -E 2> /dev/null
 	@echo "[ OK ]"
 
 unittest:
-	PYTHONPATH=. py.test$(PYVERSION) -v tests/
+	@echo "***Running unittests checks***"
+	PYTHONPATH=. python3 -m pytest -v tests/

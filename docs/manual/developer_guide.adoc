@@ -150,6 +150,12 @@ Run the unit tests using:
 make unittest
 ----
 
+Or install `podman` and run the tests in a container using:
+
+----
+make container-test
+----
+
 == Updating translations
 
 Sometimes it is neccessary to create a patch that updates translations present in the release tarball with custom translations, or translations from Zanata.
