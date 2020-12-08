@@ -35,7 +35,8 @@ from pyanaconda.modules.common.constants.objects import FIREWALL, BOOTLOADER, DE
 from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS
 
 from org_fedora_oscap import common
-from org_fedora_oscap.common import OSCAPaddonError, RuleMessage, KDUMP
+from org_fedora_oscap.common import OSCAPaddonError, RuleMessage, KDUMP, get_packages_data, \
+    set_packages_data
 
 # everything else should be private
 __all__ = ["RuleData"]
@@ -637,24 +638,27 @@ class PackageRules(RuleHandler):
 
         return ret
 
-    def _package_is_essential(self, package_name, ksdata_packages):
+    def _package_is_essential(self, package_name, packages_data):
         if package_name not in ESSENTIAL_PACKAGES:
             return False
-        if package_name in ksdata_packages.packageList:
+
+        if package_name in packages_data.packages:
             return True
-        selected_install_env = ksdata_packages.environment
+
+        selected_install_env = packages_data.environment
         if selected_install_env in ESSENTIAL_PACKAGES[package_name].get("env"):
             return True
-        selected_install_groups_names = {g.name for g in ksdata_packages.groupList}
+
         for g in ESSENTIAL_PACKAGES[package_name].get("groups", []):
-            if g in selected_install_groups_names:
+            if g in packages_data.groups:
                 return True
+
         return False
 
     def eval_rules(self, ksdata, storage, report_only=False):
         """:see: RuleHandler.eval_rules"""
-
         messages = []
+        packages_data = get_packages_data()
 
         # add messages for the already added packages
         for pkg in self._added_pkgs:
@@ -665,13 +669,13 @@ class PackageRules(RuleHandler):
 
         # packages, that should be added
         packages_to_add = (pkg for pkg in self._add_pkgs
-                           if pkg not in ksdata.packages.packageList)
+                           if pkg not in packages_data.packages)
 
         for pkg in packages_to_add:
             # add the package unless already added
             if not report_only:
                 self._added_pkgs.add(pkg)
-                ksdata.packages.packageList.append(pkg)
+                packages_data.packages.append(pkg)
 
             msg = _("package '%s' has been added to the list of to be installed "
                     "packages" % pkg)
@@ -681,7 +685,7 @@ class PackageRules(RuleHandler):
         # now do the same for the packages that should be excluded
         # add messages for the already excluded packages
         for pkg in self._removed_pkgs:
-            if self._package_is_essential(pkg, ksdata.packages):
+            if self._package_is_essential(pkg, packages_data):
                 msg = _(
                     "package '{package}' has been added to the list "
                     "of excluded packages, but it can't be removed "
@@ -697,36 +701,42 @@ class PackageRules(RuleHandler):
 
         # packages, that should be added
         packages_to_remove = (pkg for pkg in self._remove_pkgs
-                              if pkg not in ksdata.packages.excludedList)
+                              if pkg not in packages_data.excluded_packages)
 
         for pkg in packages_to_remove:
             # exclude the package unless already excluded
             if not report_only:
                 self._removed_pkgs.add(pkg)
-                ksdata.packages.excludedList.append(pkg)
+                packages_data.excluded_packages.append(pkg)
 
             msg = _("package '%s' has been added to the list of excluded "
                     "packages" % pkg)
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
 
+        if not report_only:
+            set_packages_data(packages_data)
+
         return messages
 
     def revert_changes(self, ksdata, storage):
         """:see: RuleHander.revert_changes"""
+        packages_data = get_packages_data()
 
         # remove all packages this handler added
         for pkg in self._added_pkgs:
-            if pkg in ksdata.packages.packageList:
-                ksdata.packages.packageList.remove(pkg)
+            if pkg in packages_data.packages:
+                packages_data.packages.remove(pkg)
 
         # remove all packages this handler excluded
         for pkg in self._removed_pkgs:
-            if pkg in ksdata.packages.excludedList:
-                ksdata.packages.excludedList.remove(pkg)
+            if pkg in packages_data.excluded_packages:
+                packages_data.excluded_packages.remove(pkg)
 
         self._added_pkgs = set()
         self._removed_pkgs = set()
+
+        set_packages_data(packages_data)
 
 
 class BootloaderRules(RuleHandler):

@@ -2,8 +2,10 @@ import pytest
 import mock
 from collections import defaultdict
 
+from pyanaconda.core.constants import PAYLOAD_TYPE_DNF
 from pyanaconda.modules.common.constants.objects import FIREWALL, DEVICE_TREE, BOOTLOADER
-from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS, BOSS
+from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS, BOSS, PAYLOADS
+from pyanaconda.modules.common.structures.payload import PackagesConfigurationData
 
 from org_fedora_oscap.common import KDUMP
 
@@ -167,6 +169,15 @@ def set_dbus_defaults():
     users.IsRootPasswordSet = True
     users.IsRootPasswordCrypted = False
     users.RootPassword = "anaconda"
+
+    payloads = PAYLOADS.get_proxy()
+    payloads.ActivePayload = "/fake/payload/1"
+
+    dnf_payload = PAYLOADS.get_proxy("/fake/payload/1")
+    dnf_payload.Type = PAYLOAD_TYPE_DNF
+
+    packages_data = PackagesConfigurationData()
+    dnf_payload.Packages = PackagesConfigurationData.to_structure(packages_data)
 
 
 def test_evaluation_existing_part_must_exist_rules(
@@ -581,8 +592,11 @@ def _quoted_keywords_not_seen_in_messages(keywords, messages):
 def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables --add=vim")
 
-    ksdata_mock.packages.packageList = ["vim"]
-    ksdata_mock.packages.excludedList = []
+    packages_data = PackagesConfigurationData()
+    packages_data.packages = ["vim"]
+
+    dnf_payload_mock = PAYLOADS.get_proxy("/fake/payload/1")
+    dnf_payload_mock.Packages = PackagesConfigurationData.to_structure(packages_data)
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
@@ -595,17 +609,19 @@ def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_
         {"firewalld", "telnet", "iptables"},
         messages,
     )
-
     assert not not_seen
-    assert set(ksdata_mock.packages.packageList) == {"firewalld", "iptables", "vim"}
-    assert set(ksdata_mock.packages.excludedList) == {"telnet"}
+
+    packages_data = PackagesConfigurationData()
+    packages_data.packages = ["vim", "firewalld", "iptables"]
+    packages_data.excluded_packages = ["telnet"]
+
+    dnf_payload_mock.SetPackages.assert_called_once_with(
+        PackagesConfigurationData.to_structure(packages_data)
+    )
 
 
 def test_evaluation_package_rules_report_only(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables")
-
-    ksdata_mock.packages.packageList = []
-    ksdata_mock.packages.excludedList = []
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=True)
 
@@ -621,8 +637,8 @@ def test_evaluation_package_rules_report_only(proxy_getter, rule_data, ksdata_mo
     assert not not_seen
 
     # report_only --> no packages should be added or excluded
-    assert not ksdata_mock.packages.packageList
-    assert not ksdata_mock.packages.excludedList
+    dnf_payload_mock = PAYLOADS.get_proxy("/fake/payload/1")
+    dnf_payload_mock.SetPackages.assert_not_called()
 
 
 def test_evaluation_bootloader_passwd_not_set(proxy_getter, rule_data, ksdata_mock, storage_mock):
@@ -656,8 +672,6 @@ def test_evaluation_various_rules(proxy_getter, rule_data, ksdata_mock, storage_
         rule_data.new_rule(rule)
 
     storage_mock.mountpoints = dict()
-    ksdata_mock.packages.packageList = []
-    ksdata_mock.packages.excludedList = []
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
@@ -743,8 +757,16 @@ def test_revert_password_policy_changes(proxy_getter, rule_data, ksdata_mock, st
 def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables --add=vim")
 
-    ksdata_mock.packages.packageList = ["vim"]
-    ksdata_mock.packages.excludedList = []
+    packages_data = PackagesConfigurationData()
+    packages_data.packages = ["vim"]
+
+    dnf_payload_mock = PAYLOADS.get_proxy("/fake/payload/1")
+    dnf_payload_mock.Packages = PackagesConfigurationData.to_structure(packages_data)
+
+    def set_packages(structure):
+        dnf_payload_mock.Packages = structure
+
+    dnf_payload_mock.SetPackages.side_effect = set_packages
 
     # run twice --> nothing should be different in the second run
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
@@ -757,8 +779,9 @@ def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock
 
     # (only) added and excluded packages should have been removed from the
     # list
-    assert ksdata_mock.packages.packageList == ["vim"]
-    assert ksdata_mock.packages.excludedList == []
+    dnf_payload_mock.SetPackages.assert_called_with(
+        PackagesConfigurationData.to_structure(packages_data)
+    )
 
     # now do the same again #
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
@@ -770,5 +793,6 @@ def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock
 
     # (only) added and excluded packages should have been removed from the
     # list
-    assert ksdata_mock.packages.packageList == ["vim"]
-    assert ksdata_mock.packages.excludedList == []
+    dnf_payload_mock.SetPackages.assert_called_with(
+        PackagesConfigurationData.to_structure(packages_data)
+    )
