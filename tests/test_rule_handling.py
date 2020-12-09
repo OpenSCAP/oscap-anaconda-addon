@@ -3,7 +3,9 @@ import mock
 from collections import defaultdict
 
 from pyanaconda.modules.common.constants.objects import FIREWALL, DEVICE_TREE, BOOTLOADER
-from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS
+from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS, BOSS
+
+from org_fedora_oscap.common import KDUMP
 
 try:
     from org_fedora_oscap import rule_handling, common
@@ -137,6 +139,14 @@ def proxy_getter(monkeypatch):
 
 
 def set_dbus_defaults():
+    boss = BOSS.get_proxy()
+    boss.GetModules.return_value = [
+        KDUMP.service_name
+    ]
+
+    kdump = KDUMP.get_proxy()
+    kdump.KdumpEnabled = True
+
     network = NETWORK.get_proxy()
     network.Connected.return_value = True
 

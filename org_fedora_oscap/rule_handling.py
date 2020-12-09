@@ -27,6 +27,7 @@ import optparse
 import shlex
 import logging
 
+from pyanaconda.modules.common.util import is_module_available
 from pyanaconda.pwpolicy import F22_PwPolicyData
 from pyanaconda.core.constants import (
     FIREWALL_ENABLED, FIREWALL_DISABLED, FIREWALL_USE_SYSTEM_DEFAULTS)
@@ -34,7 +35,7 @@ from pyanaconda.modules.common.constants.objects import FIREWALL, BOOTLOADER, DE
 from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS
 
 from org_fedora_oscap import common
-from org_fedora_oscap.common import OSCAPaddonError, RuleMessage
+from org_fedora_oscap.common import OSCAPaddonError, RuleMessage, KDUMP
 
 # everything else should be private
 __all__ = ["RuleData"]
@@ -813,12 +814,15 @@ class KdumpRules(RuleHandler):
                                     common.MESSAGE_TYPE_INFO, msg))
 
         if not report_only:
-            try:
+            if is_module_available(KDUMP):
+                kdump_proxy = KDUMP.get_proxy()
+
                 if self._kdump_default_enabled is None:
                     # Kdump addon default startup setting
-                    self._kdump_default_enabled = ksdata.addons.com_redhat_kdump.enabled
-                ksdata.addons.com_redhat_kdump.enabled = self._kdump_enabled
-            except AttributeError:
+                    self._kdump_default_enabled = kdump_proxy.KdumpEnabled
+
+                kdump_proxy.KdumpEnabled = self._kdump_enabled
+            else:
                 log.warning("com_redhat_kdump is not installed. "
                             "Skipping kdump configuration")
 
@@ -827,10 +831,12 @@ class KdumpRules(RuleHandler):
     def revert_changes(self, ksdata, storage):
         """:see: RuleHander.revert_changes"""
 
-        try:
+        if is_module_available(KDUMP):
+            kdump_proxy = KDUMP.get_proxy()
+
             if self._kdump_enabled is not None:
-                ksdata.addons.com_redhat_kdump.enabled = self._kdump_default_enabled
-        except AttributeError:
+                kdump_proxy.KdumpEnabled = self._kdump_default_enabled
+        else:
             log.warning("com_redhat_kdump is not installed. "
                         "Skipping reverting kdump configuration")
 

@@ -37,7 +37,10 @@ import logging
 from collections import namedtuple
 import gettext
 from functools import wraps
+from dasbus.identifier import DBusServiceIdentifier
 from pyanaconda.core import constants
+from pyanaconda.core.dbus import DBus
+from pyanaconda.modules.common.constants.namespaces import ADDONS_NAMESPACE
 from pyanaconda.modules.common.constants.services import NETWORK
 from pyanaconda.threading import threadMgr, AnacondaThread
 from org_fedora_oscap import utils
@@ -87,6 +90,13 @@ SUPPORTED_ARCHIVES = (".zip", ".tar", ".tar.gz", ".tar.bz2", )
 
 # buffer size for reading and writing out data (in bytes)
 IO_BUF_SIZE = 2 * 1024 * 1024
+
+# DBus constants
+KDUMP = DBusServiceIdentifier(
+    namespace=ADDONS_NAMESPACE,
+    basename="Kdump",
+    message_bus=DBus
+)
 
 
 class OSCAPaddonError(Exception):
