@@ -312,11 +312,11 @@ def test_valid_fingerprints(blank_oscap_data):
 def test_invalid_fingerprints(blank_oscap_data):
     # invalid character
     with pytest.raises(
-            KickstartValueError, message="Unsupported or invalid fingerprint"):
+            KickstartValueError, match="Unsupported or invalid fingerprint"):
         blank_oscap_data.handle_line("fingerprint = %s?" % ("a" * 31))
 
     # invalid lengths (odd and even)
     for repetitions in (31, 41, 54, 66, 98, 124):
         with pytest.raises(
-                KickstartValueError, message="Unsupported fingerprint"):
+                KickstartValueError, match="Unsupported fingerprint"):
             blank_oscap_data.handle_line("fingerprint = %s" % ("a" * repetitions))
