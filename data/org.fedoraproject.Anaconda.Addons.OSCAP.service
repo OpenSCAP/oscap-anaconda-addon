@@ -1,0 +1,5 @@
+[D-BUS Service]
+# Start the org.fedoraproject.Anaconda.Addons.OSCAP service.
+Name=org.fedoraproject.Anaconda.Addons.OSCAP
+Exec=/usr/libexec/anaconda/start-module org_fedora_oscap.service
+User=root
