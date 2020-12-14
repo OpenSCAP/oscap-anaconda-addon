@@ -29,7 +29,10 @@ from org_fedora_oscap import data_fetch
 from org_fedora_oscap import rule_handling
 from org_fedora_oscap import content_handling
 from org_fedora_oscap import utils
-from org_fedora_oscap.common import dry_run_skip
+from org_fedora_oscap.constants import OSCAP
+from org_fedora_oscap.structures import PolicyData
+
+from pyanaconda.modules.common.constants.services import USERS
 from pyanaconda.threading import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
@@ -38,11 +41,8 @@ from pyanaconda.ui.gui.utils import set_treeview_selection, fire_gtk_action
 from pyanaconda.ui.categories.system import SystemCategory
 from pykickstart.errors import KickstartValueError
 
-from pyanaconda.modules.common.constants.services import USERS
-
 # pylint: disable-msg=E0611
 from gi.repository import Gdk
-
 log = logging.getLogger("anaconda")
 
 _ = common._
@@ -216,7 +216,6 @@ class OSCAPSpoke(NormalSpoke):
         """
 
         NormalSpoke.__init__(self, data, storage, payload)
-        self._addon_data = self.data.addons.org_fedora_oscap
         # workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1673071
         self.title = _(self.title)
         self._storage = storage
@@ -229,8 +228,16 @@ class OSCAPSpoke(NormalSpoke):
         self._content_handling_cls = None
         self._ds_checklists = None
 
-        # used for changing profiles, stored as self._addon_data.rule_data when
-        # leaving the spoke
+        # the proxy to OSCAP DBus module
+        self._oscap_module = OSCAP.get_proxy()
+
+        # the security policy data
+        self._policy_enabled = self._oscap_module.PolicyEnabled
+        self._policy_data = PolicyData.from_structure(
+            self._oscap_module.PolicyData
+        )
+
+        # used for changing profiles
         self._rule_data = None
 
         # used for storing previously set root password if we need to remove it
@@ -254,6 +261,11 @@ class OSCAPSpoke(NormalSpoke):
     def _all_anaconda_spokes_initialized(self):
         log.debug("OSCAP addon: Anaconda init_done signal triggered")
         self._anaconda_spokes_initialized.set()
+
+    @property
+    def _content_defined(self):
+        return self._policy_data.content_url \
+            or self._policy_data.content_type == "scap-security-guide"
 
     def initialize(self):
         """
@@ -314,11 +326,11 @@ class OSCAPSpoke(NormalSpoke):
         self._ssg_button = self.builder.get_object("ssgButton")
 
         # if no content was specified and SSG is available, use it
-        if not self._addon_data.content_type and common.ssg_available():
-            self._addon_data.content_type = "scap-security-guide"
-            self._addon_data.content_path = common.SSG_DIR + common.SSG_CONTENT
+        if not self._policy_data.content_type and common.ssg_available():
+            self._policy_data.content_type = "scap-security-guide"
+            self._policy_data.content_path = common.SSG_DIR + common.SSG_CONTENT
 
-        if not self._addon_data.content_defined:
+        if not self._content_defined:
             # nothing more to be done now, the spoke is ready
             self._ready = True
 
@@ -350,14 +362,15 @@ class OSCAPSpoke(NormalSpoke):
             self._fetching = True
 
         thread_name = None
-        if any(self._addon_data.content_url.startswith(net_prefix)
+        if any(self._policy_data.content_url.startswith(net_prefix)
                for net_prefix in data_fetch.NET_URL_PREFIXES):
             # need to fetch data over network
             try:
                 thread_name = common.wait_and_fetch_net_data(
-                                     self._addon_data.content_url,
-                                     self._addon_data.raw_preinst_content_path,
-                                     self._addon_data.certificates)
+                    self._policy_data.content_url,
+                    common.get_raw_preinst_content_path(self._policy_data),
+                    self._policy_data.certificates
+                )
             except common.OSCAPaddonNetworkError:
                 self._network_problem()
                 with self._fetch_flag_lock:
@@ -401,11 +414,11 @@ class OSCAPSpoke(NormalSpoke):
             # stop the spinner in any case
             fire_gtk_action(self._progress_spinner.stop)
 
-        if self._addon_data.fingerprint:
-            hash_obj = utils.get_hashing_algorithm(self._addon_data.fingerprint)
-            digest = utils.get_file_fingerprint(self._addon_data.raw_preinst_content_path,
+        if self._policy_data.fingerprint:
+            hash_obj = utils.get_hashing_algorithm(self._policy_data.fingerprint)
+            digest = utils.get_file_fingerprint(self._policy_data.raw_preinst_content_path,
                                                 hash_obj)
-            if digest != self._addon_data.fingerprint:
+            if digest != self._policy_data.fingerprint:
                 self._integrity_check_failed()
                 # fetching done
                 with self._fetch_flag_lock:
@@ -413,12 +426,14 @@ class OSCAPSpoke(NormalSpoke):
                 return
 
         # RPM is an archive at this phase
-        if self._addon_data.content_type in ("archive", "rpm"):
+        if self._policy_data.content_type in ("archive", "rpm"):
             # extract the content
             try:
-                fpaths = common.extract_data(self._addon_data.raw_preinst_content_path,
-                                             common.INSTALLATION_CONTENT_DIR,
-                                             [self._addon_data.content_path])
+                fpaths = common.extract_data(
+                    common.get_raw_preinst_content_path(self._policy_data),
+                    common.INSTALLATION_CONTENT_DIR,
+                    [self._policy_data.content_path]
+                )
             except common.ExtractionError as err:
                 self._extraction_failed(str(err))
                 # fetching done
@@ -431,20 +446,21 @@ class OSCAPSpoke(NormalSpoke):
             files = common.strip_content_dir(files)
 
             # pylint: disable-msg=E1103
-            self._addon_data.content_path = self._addon_data.content_path or files.xccdf
-            self._addon_data.cpe_path = self._addon_data.cpe_path or files.cpe
-            self._addon_data.tailoring_path = (self._addon_data.tailoring_path or
-                                               files.tailoring)
-        elif self._addon_data.content_type == "datastream":
+            self._policy_data.content_path = self._policy_data.content_path or files.xccdf
+            self._policy_data.cpe_path = self._policy_data.cpe_path or files.cpe
+            self._policy_data.tailoring_path = self._policy_data.tailoring_path or files.tailoring
+        elif self._policy_data.content_type == "datastream":
             self._content_handling_cls = content_handling.DataStreamHandler
-        elif self._addon_data.content_type == "scap-security-guide":
+        elif self._policy_data.content_type == "scap-security-guide":
             self._content_handling_cls = content_handling.BenchmarkHandler
         else:
             raise common.OSCAPaddonError("Unsupported content type")
 
         try:
-            self._content_handler = self._content_handling_cls(self._addon_data.preinst_content_path,
-                                                               self._addon_data.preinst_tailoring_path)
+            self._content_handler = self._content_handling_cls(
+                common.get_preinst_content_path(self._policy_data),
+                common.get_preinst_tailoring_path(self._policy_data)
+            )
         except content_handling.ContentHandlingError:
             self._invalid_content()
             # fetching done
@@ -465,7 +481,7 @@ class OSCAPSpoke(NormalSpoke):
         self._update_ids_visibility()
 
         # refresh UI elements
-        self.refresh()
+        self._refresh_ui()
 
         # let all initialization and configuration happen before we evaluate
         # the setup
@@ -478,14 +494,11 @@ class OSCAPSpoke(NormalSpoke):
         # try to switch to the chosen profile (if any)
         selected = self._switch_profile()
 
-        if self._addon_data.profile_id and not selected:
+        if self._policy_data.profile_id and not selected:
             # profile ID given, but it was impossible to select it -> invalid
             # profile ID given
             self._invalid_profile_id()
             return
-
-        # initialize the self._addon_data.rule_data
-        self._addon_data.rule_data = self._rule_data
 
         # update the message store with the messages
         self._update_message_store()
@@ -612,7 +625,6 @@ class OSCAPSpoke(NormalSpoke):
 
         self._message_store.append([message.type, message.text])
 
-    @dry_run_skip
     @async_action_wait
     def _update_message_store(self, report_only=False):
         """
@@ -623,6 +635,8 @@ class OSCAPSpoke(NormalSpoke):
         :type report_only: bool
 
         """
+        if not self._policy_enabled:
+            return
 
         self._message_store.clear()
 
@@ -729,10 +743,12 @@ class OSCAPSpoke(NormalSpoke):
 
         # get pre-install fix rules from the content
         try:
-            rules = common.get_fix_rules_pre(profile_id,
-                                             self._addon_data.preinst_content_path,
-                                             ds, xccdf,
-                                             self._addon_data.preinst_tailoring_path)
+            rules = common.get_fix_rules_pre(
+                profile_id,
+                common.get_preinst_content_path(self._policy_data),
+                ds, xccdf,
+                common.get_preinst_tailoring_path(self._policy_data)
+            )
         except common.OSCAPaddonError as exc:
             log.error(
                 "Failed to get rules for the profile '{}': {}"
@@ -759,13 +775,14 @@ class OSCAPSpoke(NormalSpoke):
         return True
 
     @async_action_wait
-    @dry_run_skip
     def _switch_profile(self):
         """Switches to a current selected profile.
 
         :returns: whether some profile was selected or not
 
         """
+        if not self._policy_enabled:
+            return False
 
         self._set_error(None)
         profile = self._current_profile_id
@@ -843,7 +860,7 @@ class OSCAPSpoke(NormalSpoke):
 
     @async_action_wait
     def _wrong_content(self, msg):
-        self._addon_data.clear_all()
+        self._policy_data = PolicyData()
         really_hide(self._progress_spinner)
         self._fetch_button.set_sensitive(True)
         self._content_url_entry.set_sensitive(True)
@@ -854,9 +871,13 @@ class OSCAPSpoke(NormalSpoke):
 
     @async_action_wait
     def _invalid_profile_id(self):
-        msg = _("Profile with ID '%s' not defined in the content. Select a different profile, please") % self._addon_data.profile_id
+        msg = _(
+            "Profile with ID '%s' not defined in the content. "
+            "Select a different profile, please"
+        ) % self._policy_data.profile_id
+
         self._set_error(msg)
-        self._addon_data.profile_id = None
+        self._policy_data.profile_id = ""
 
     @async_action_wait
     def _switch_dry_run(self, dry_run):
@@ -889,8 +910,18 @@ class OSCAPSpoke(NormalSpoke):
         :see: pyanaconda.ui.common.UIObject.refresh
 
         """
+        # update the security policy data
+        self._policy_enabled = self._oscap_module.PolicyEnabled
+        self._policy_data = PolicyData.from_structure(
+            self._oscap_module.PolicyData
+        )
 
-        if not self._addon_data.content_defined:
+        # update the UI elements
+        self._refresh_ui()
+
+    def _refresh_ui(self):
+        """Refresh the UI elements."""
+        if not self._content_defined:
             # hide the control buttons
             really_hide(self._control_buttons)
 
@@ -935,14 +966,14 @@ class OSCAPSpoke(NormalSpoke):
 
             self._main_notebook.set_current_page(SET_PARAMS_PAGE)
 
-        self._active_profile = self._addon_data.profile_id
+        self._active_profile = self._policy_data.profile_id
 
         self._update_ids_visibility()
 
         if self._using_ds:
-            if self._addon_data.datastream_id:
+            if self._policy_data.datastream_id:
                 set_combo_selection(self._ds_combo,
-                                    self._addon_data.datastream_id,
+                                    self._policy_data.datastream_id,
                                     unset_first=True)
             else:
                 try:
@@ -953,19 +984,17 @@ class OSCAPSpoke(NormalSpoke):
                     # no data stream available
                     pass
 
-                if self._addon_data.datastream_id and self._addon_data.xccdf_id:
+                if self._policy_data.datastream_id and self._policy_data.xccdf_id:
                     set_combo_selection(self._xccdf_combo,
-                                        self._addon_data.xccdf_id,
+                                        self._policy_data.xccdf_id,
                                         unset_first=True)
         else:
             # no combobox changes --> need to update profiles store manually
             self._update_profiles_store()
 
-        if self._addon_data.profile_id:
+        if self._policy_data.profile_id:
             set_treeview_selection(self._profiles_view,
-                                   self._addon_data.profile_id)
-
-        self._rule_data = self._addon_data.rule_data
+                                   self._policy_data.profile_id)
 
         self._update_message_store()
 
@@ -976,20 +1005,21 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        if not self._addon_data.content_defined or not self._active_profile:
+        if not self._content_defined or not self._active_profile:
             # no errors for no content or no profile
             self._set_error(None)
 
         # store currently selected values to the addon data attributes
         if self._using_ds:
-            self._addon_data.datastream_id = self._current_ds_id
-            self._addon_data.xccdf_id = self._current_xccdf_id
+            self._policy_data.datastream_id = self._current_ds_id
+            self._policy_data.xccdf_id = self._current_xccdf_id
 
-        self._addon_data.profile_id = self._active_profile
+        self._policy_data.profile_id = self._active_profile
+        self._policy_enabled = self._dry_run_switch.get_active()
 
-        self._addon_data.rule_data = self._rule_data
-
-        self._addon_data.dry_run = not self._dry_run_switch.get_active()
+        # set up the DBus module
+        self._oscap_module.PolicyData = PolicyData.to_structure(self._policy_data)
+        self._oscap_module.PolicyEnabled = self._policy_enabled
 
     def execute(self):
         """
@@ -1049,7 +1079,7 @@ class OSCAPSpoke(NormalSpoke):
             # not initialized
             return self._unitialized_status
 
-        if not self._addon_data.content_defined:
+        if not self._content_defined:
             return _("No content found")
 
         if not self._active_profile:
@@ -1089,9 +1119,10 @@ class OSCAPSpoke(NormalSpoke):
         # may take a while
         self._update_profiles_store()
 
-    @dry_run_skip
     def on_profiles_selection_changed(self, *args):
         """Handler for the profile selection change."""
+        if not self._policy_enabled:
+            return
 
         cur_profile = self._current_profile_id
         if cur_profile:
@@ -1102,9 +1133,10 @@ class OSCAPSpoke(NormalSpoke):
                 # current active profile selected
                 self._choose_button.set_sensitive(False)
 
-    @dry_run_skip
     def on_profile_clicked(self, widget, event, *args):
         """Handler for the profile being clicked on."""
+        if not self._policy_enabled:
+            return
 
         # if a profile is double-clicked, we should switch to it
         if event.type == Gdk.EventType._2BUTTON_PRESS:
@@ -1153,28 +1185,28 @@ class OSCAPSpoke(NormalSpoke):
 
         self._progress_label.set_text(_("Fetching content..."))
         self._progress_spinner.start()
-        self._addon_data.content_url = url
+        self._policy_data.content_url = url
         if url.endswith(".rpm"):
-            self._addon_data.content_type = "rpm"
+            self._policy_data.content_type = "rpm"
         elif any(url.endswith(arch_type) for arch_type in common.SUPPORTED_ARCHIVES):
-            self._addon_data.content_type = "archive"
+            self._policy_data.content_type = "archive"
         else:
-            self._addon_data.content_type = "datastream"
+            self._policy_data.content_type = "datastream"
 
         self._fetch_data_and_initialize()
 
     def on_dry_run_toggled(self, switch, *args):
         dry_run = not switch.get_active()
-        self._addon_data.dry_run = dry_run
+        self._policy_enabled = not dry_run
         self._switch_dry_run(dry_run)
 
     def on_change_content_clicked(self, *args):
         self._unselect_profile(self._active_profile)
-        self._addon_data.clear_all()
-        self.refresh()
+        self._policy_data = PolicyData()
+        self._refresh_ui()
 
     def on_use_ssg_clicked(self, *args):
-        self._addon_data.clear_all()
-        self._addon_data.content_type = "scap-security-guide"
-        self._addon_data.content_path = common.SSG_DIR + common.SSG_CONTENT
+        self._policy_data = PolicyData()
+        self._policy_data.content_type = "scap-security-guide"
+        self._policy_data.content_path = common.SSG_DIR + common.SSG_CONTENT
         self._fetch_data_and_initialize()

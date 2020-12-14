@@ -520,26 +520,6 @@ def ssg_available(root="/"):
     return os.path.exists(utils.join_paths(root, SSG_DIR + SSG_CONTENT))
 
 
-def dry_run_skip(func):
-    """
-    Decorator that makes sure the decorated function is noop in the dry-run
-    mode.
-
-    :param func: a decorated function that needs to have the first parameter an
-                 object with the _addon_data attribute referencing the OSCAP
-                 addon's ksdata
-    """
-
-    @wraps(func)
-    def decorated(self, *args, **kwargs):
-        if self._addon_data.dry_run:
-            return
-        else:
-            return func(self, *args, **kwargs)
-
-    return decorated
-
-
 def get_content_name(data):
     if data.content_type == "scap-security-guide":
         raise ValueError("Using scap-security-guide, no single content file")
