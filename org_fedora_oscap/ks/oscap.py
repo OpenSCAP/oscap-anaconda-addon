@@ -403,6 +403,8 @@ class OSCAPdata(AddonData):
         :type ksdata: pykickstart.base.BaseHandler instance
 
         """
+        # FIXME: Delete the pylint comment below if possible.
+        # pylint: disable-msg=E1101
 
         if self.dry_run or not self.profile_id:
             # nothing more to be done in the dry-run mode or if no profile is
@@ -433,6 +435,7 @@ class OSCAPdata(AddonData):
                 else:
                     # Let's sleep forever to prevent any further actions and
                     # wait for the main thread to quit the process.
+                    # pylint: disable-msg=E1101
                     progressQ.send_quit(1)
                     while True:
                         time.sleep(100000)
@@ -461,6 +464,7 @@ class OSCAPdata(AddonData):
                 else:
                     # Let's sleep forever to prevent any further actions and
                     # wait for the main thread to quit the process.
+                    # pylint: disable-msg=E1101
                     progressQ.send_quit(1)
                     while True:
                         time.sleep(100000)
@@ -486,6 +490,7 @@ class OSCAPdata(AddonData):
             else:
                 # Let's sleep forever to prevent any further actions and wait
                 # for the main thread to quit the process.
+                # pylint: disable-msg=E1101
                 progressQ.send_quit(1)
                 while True:
                     time.sleep(100000)
