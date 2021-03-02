@@ -1,0 +1,6 @@
+---
+specfile_path: "oscap-anaconda-addon.spec"
+upstream_ref: "fd6918aa"
+
+actions:
+  post-upstream-clone: "wget https://src.fedoraproject.org/rpms/oscap-anaconda-addon/raw/rawhide/f/oscap-anaconda-addon.spec -O oscap-anaconda-addon.spec"
