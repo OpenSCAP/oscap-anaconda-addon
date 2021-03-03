@@ -6,4 +6,4 @@ actions:
   post-upstream-clone:
   - wget https://src.fedoraproject.org/rpms/oscap-anaconda-addon/raw/rawhide/f/oscap-anaconda-addon.spec -O oscap-anaconda-addon.spec
   - git add oscap-anaconda-addon.spec
-  - git commit -m "apply rawhide specfile"
+  - git -c user.name=packit_integration -c user.email=noreply@fedoraproject.org commit -m "apply rawhide specfile"
