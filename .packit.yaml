@@ -1,9 +1,11 @@
 ---
 specfile_path: "oscap-anaconda-addon.spec"
-upstream_ref: "fd6918aa"
+upstream_ref: "3cb711a"
 
 actions:
   post-upstream-clone:
   - wget https://src.fedoraproject.org/rpms/oscap-anaconda-addon/raw/rawhide/f/oscap-anaconda-addon.spec -O oscap-anaconda-addon.spec
+  # Different branches of the addon use different upstream releases as their base.
+  - "sed -i 's/Version: .*/Version: 1.1.1/' oscap-anaconda-addon.spec"
   - git add oscap-anaconda-addon.spec
   - git -c user.name=packit_integration -c user.email=noreply@fedoraproject.org commit -m "apply rawhide specfile"
