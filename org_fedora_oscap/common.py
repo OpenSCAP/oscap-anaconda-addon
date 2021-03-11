@@ -30,7 +30,6 @@ import subprocess
 import zipfile
 import tarfile
 
-import cpioarchive
 import re
 import logging
 
@@ -48,6 +47,8 @@ from pyanaconda.modules.common.structures.payload import PackagesConfigurationDa
 from pyanaconda.threading import threadMgr, AnacondaThread
 
 from org_fedora_oscap import utils
+from org_fedora_oscap import cpioarchive
+
 
 log = logging.getLogger("anaconda")
 
