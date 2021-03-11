@@ -1,6 +1,6 @@
 ---
 specfile_path: "oscap-anaconda-addon.spec"
-upstream_ref: "3cb711a"
+upstream_ref: "r1.1.1"
 
 actions:
   post-upstream-clone:
