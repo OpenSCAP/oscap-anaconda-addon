@@ -13,3 +13,6 @@ actions:
   - "sed -i '23 a BuildRequires: git-core' oscap-anaconda-addon.spec"
   - "git add oscap-anaconda-addon.spec"
   - "git -c user.name=packit_integration -c user.email=noreply@fedoraproject.org commit -m 'apply rawhide specfile'"
+
+patch_generation_ignore_paths:
+- create_update_image.sh
