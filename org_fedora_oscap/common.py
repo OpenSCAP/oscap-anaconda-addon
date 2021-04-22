@@ -57,11 +57,6 @@ def _(string):
 def N_(string): return string
 
 
-# everything else should be private
-__all__ = ["run_oscap_remediate", "get_fix_rules_pre",
-           "wait_and_fetch_net_data", "extract_data", "strip_content_dir",
-           "OSCAPaddonError"]
-
 INSTALLATION_CONTENT_DIR = "/tmp/openscap_data/"
 TARGET_CONTENT_DIR = "/root/openscap_data/"
 
@@ -84,6 +79,14 @@ PRE_INSTALL_FIX_SYSTEM_ATTR = "urn:redhat:anaconda:pre"
 THREAD_FETCH_DATA = "AnaOSCAPdataFetchThread"
 
 SUPPORTED_ARCHIVES = (".zip", ".tar", ".tar.gz", ".tar.bz2", )
+
+SUPPORTED_CONTENT_TYPES = (
+    "datastream", "rpm", "archive", "scap-security-guide",
+)
+
+SUPPORTED_URL_PREFIXES = (
+    "http://", "https://", "ftp://",  # LABEL:?, hdaX:?,
+)
 
 # buffer size for reading and writing out data (in bytes)
 IO_BUF_SIZE = 2 * 1024 * 1024
@@ -517,21 +520,90 @@ def ssg_available(root="/"):
     return os.path.exists(utils.join_paths(root, SSG_DIR + SSG_CONTENT))
 
 
-def dry_run_skip(func):
-    """
-    Decorator that makes sure the decorated function is noop in the dry-run
-    mode.
+def get_content_name(data):
+    if data.content_type == "scap-security-guide":
+        raise ValueError("Using scap-security-guide, no single content file")
 
-    :param func: a decorated function that needs to have the first parameter an
-                 object with the _addon_data attribute referencing the OSCAP
-                 addon's ksdata
-    """
+    rest = "/anonymous_content"
+    for prefix in SUPPORTED_URL_PREFIXES:
+        if data.content_url.startswith(prefix):
+            rest = data.content_url[len(prefix):]
+            break
 
-    @wraps(func)
-    def decorated(self, *args, **kwargs):
-        if self._addon_data.dry_run:
-            return
-        else:
-            return func(self, *args, **kwargs)
+    parts = rest.rsplit("/", 1)
+    if len(parts) != 2:
+        raise ValueError("Unsupported url '%s'" % data.content_url)
 
-    return decorated
+    return parts[1]
+
+
+def get_raw_preinst_content_path(data):
+    """Path to the raw (unextracted, ...) pre-installation content file"""
+    if data.content_type == "scap-security-guide":
+        log.debug("Using scap-security-guide, no single content file")
+        return None
+
+    content_name = get_content_name(data)
+    return utils.join_paths(INSTALLATION_CONTENT_DIR, content_name)
+
+
+def get_preinst_content_path(data):
+    """Path to the pre-installation content file"""
+    if data.content_type == "scap-security-guide":
+        # SSG is not copied to the standard place
+        return data.content_path
+
+    if data.content_type == "datastream":
+        return utils.join_paths(
+            INSTALLATION_CONTENT_DIR,
+            get_content_name(data)
+        )
+
+    return utils.join_paths(
+        INSTALLATION_CONTENT_DIR,
+        data.content_path
+    )
+
+
+def get_postinst_content_path(data):
+    """Path to the post-installation content file"""
+    if data.content_type == "datastream":
+        return utils.join_paths(
+            TARGET_CONTENT_DIR,
+            get_content_name(data)
+        )
+
+    if data.content_type in ("rpm", "scap-security-guide"):
+        # no path magic in case of RPM (SSG is installed as an RPM)
+        return data.content_path
+
+    return utils.join_paths(
+        TARGET_CONTENT_DIR,
+        data.content_path
+    )
+
+
+def get_preinst_tailoring_path(data):
+    """Path to the pre-installation tailoring file (if any)"""
+    if not data.tailoring_path:
+        return ""
+
+    return utils.join_paths(
+        INSTALLATION_CONTENT_DIR,
+        data.tailoring_path
+    )
+
+
+def get_postinst_tailoring_path(data):
+    """Path to the post-installation tailoring file (if any)"""
+    if not data.tailoring_path:
+        return ""
+
+    if data.content_type == "rpm":
+        # no path magic in case of RPM
+        return data.tailoring_path
+
+    return utils.join_paths(
+        TARGET_CONTENT_DIR,
+        data.tailoring_path
+    )

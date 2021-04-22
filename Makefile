@@ -32,12 +32,18 @@ all:
 
 DISTNAME = $(NAME)-$(VERSION)
 ADDONDIR = /usr/share/anaconda/addons/
+SERVICEDIR = /usr/share/anaconda/dbus/services/
+CONFDIR = /usr/share/anaconda/dbus/confs/
 DISTBALL = $(DISTNAME).tar.gz
 NUM_PROCS = $$(getconf _NPROCESSORS_ONLN)
 
 install:
 	mkdir -p $(DESTDIR)$(ADDONDIR)
+	mkdir -p $(DESTDIR)$(SERVICEDIR)
+	mkdir -p $(DESTDIR)$(CONFDIR)
 	cp -rv $(ADDON) $(DESTDIR)$(ADDONDIR)
+	install -c -m 644 data/*.service $(DESTDIR)$(SERVICEDIR)
+	install -c -m 644 data/*.conf $(DESTDIR)$(CONFDIR)
 ifeq ($(DEFAULT_INSTALL_OF_PO_FILES),yes)
 	$(MAKE) install-po-files
 endif
