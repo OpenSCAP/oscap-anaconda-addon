@@ -24,9 +24,12 @@ from pyanaconda.modules.common.task import Task
 from pyanaconda.modules.common.errors.installation import NonCriticalInstallationError
 
 from org_fedora_oscap import common, data_fetch, rule_handling, utils
-from org_fedora_oscap.common import _
+from org_fedora_oscap.common import _, get_packages_data, set_packages_data
 
 log = logging.getLogger(__name__)
+
+
+REQUIRED_PACKAGES = ("openscap", "openscap-scanner",)
 
 
 class FetchContentTask(Task):
@@ -166,6 +169,20 @@ class EvaluateRulesTask(Task):
                 "There was a wrong configuration detected:\n%s\n"
                 "The installation should be aborted."
             ) % "\n".join(message.text for message in fatal_messages))
+
+        # add packages needed on the target system to the list of packages
+        # that are requested to be installed
+        packages_data = get_packages_data()
+        pkgs_to_install = list(REQUIRED_PACKAGES)
+
+        if self._policy_data.content_type == "scap-security-guide":
+            pkgs_to_install.append("scap-security-guide")
+
+        for pkg in pkgs_to_install:
+            if pkg not in packages_data.packages:
+                packages_data.packages.append(pkg)
+
+        set_packages_data(packages_data)
 
 
 class InstallContentTask(Task):
