@@ -43,7 +43,7 @@ from pyanaconda.core.dbus import DBus
 from pyanaconda.core.constants import PAYLOAD_TYPE_DNF
 from pyanaconda.modules.common.constants.namespaces import ADDONS_NAMESPACE
 from pyanaconda.modules.common.constants.services import NETWORK, PAYLOADS
-from pyanaconda.modules.common.structures.payload import PackagesConfigurationData
+from pyanaconda.modules.common.structures.payload import PackagesSelectionData
 from pyanaconda.threading import threadMgr, AnacondaThread
 from org_fedora_oscap import utils
 from org_fedora_oscap.data_fetch import fetch_data
@@ -641,7 +641,7 @@ def get_payload_proxy():
     return PAYLOADS.get_proxy(object_path)
 
 
-def get_packages_data() -> PackagesConfigurationData:
+def get_packages_data() -> PackagesSelectionData:
     """Get the DBus data with the packages configuration.
 
     :return: a packages configuration
@@ -649,14 +649,14 @@ def get_packages_data() -> PackagesConfigurationData:
     payload_proxy = get_payload_proxy()
 
     if payload_proxy.Type != PAYLOAD_TYPE_DNF:
-        return PackagesConfigurationData()
+        return PackagesSelectionData()
 
-    return PackagesConfigurationData.from_structure(
+    return PackagesSelectionData.from_structure(
         payload_proxy.Packages
     )
 
 
-def set_packages_data(data: PackagesConfigurationData):
+def set_packages_data(data: PackagesSelectionData):
     """Set the DBus data with the packages configuration.
 
     :param data: a packages configuration
@@ -668,5 +668,5 @@ def set_packages_data(data: PackagesConfigurationData):
         return
 
     return payload_proxy.SetPackages(
-        PackagesConfigurationData.to_structure(data)
+        PackagesSelectionData.to_structure(data)
     )
