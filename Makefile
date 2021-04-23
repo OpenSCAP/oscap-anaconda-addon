@@ -1,6 +1,6 @@
 NAME = oscap-anaconda-addon
 
-VERSION = 2.0.0
+VERSION = 3.0.0
 
 ADDON = org_fedora_oscap
 TESTS = tests \
