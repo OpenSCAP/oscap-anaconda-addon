@@ -131,6 +131,10 @@ class SubprocessLauncher(object):
         self.returncode = None
 
     def execute(self, ** kwargs):
+        command_string = " ".join(self.args)
+        log.info(
+            "OSCAP addon: Executing subprocess: '{command_string}'"
+            .format(command_string=command_string))
         try:
             proc = subprocess.Popen(self.args, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, ** kwargs)
@@ -299,15 +303,24 @@ def extract_data(archive, out_dir, ensure_has_files=None):
 
     """
 
+    if not ensure_has_files:
+        ensure_has_files = []
+
     # get rid of empty file paths
     ensure_has_files = [fpath for fpath in ensure_has_files if fpath]
 
+    msg = "OSCAP addon: Extracting {archive}".format(archive=archive)
+    if ensure_has_files:
+        msg += ", expecting to find {files} there.".format(files=tuple(ensure_has_files))
+    log.info(msg)
+
+    result = []
     if archive.endswith(".zip"):
         # ZIP file
         try:
             zfile = zipfile.ZipFile(archive, "r")
         except Exception as exc:
-            msg = "Error exctracting archive as a zipfile: {exc}".format(exc=str(exc))
+            msg = _(f"Error extracting archive as a zipfile: {exc}")
             raise ExtractionError(msg)
 
         # generator for the paths of the files found in the archive (dirs end
@@ -324,22 +337,24 @@ def extract_data(archive, out_dir, ensure_has_files=None):
         zfile.extractall(path=out_dir)
         result = [utils.join_paths(out_dir, info.filename) for info in zfile.filelist]
         zfile.close()
-        return result
     elif archive.endswith(".tar"):
         # plain tarball
-        return _extract_tarball(archive, out_dir, ensure_has_files, None)
+        result = _extract_tarball(archive, out_dir, ensure_has_files, None)
     elif archive.endswith(".tar.gz"):
         # gzipped tarball
-        return _extract_tarball(archive, out_dir, ensure_has_files, "gz")
+        result = _extract_tarball(archive, out_dir, ensure_has_files, "gz")
     elif archive.endswith(".tar.bz2"):
         # bzipped tarball
-        return _extract_tarball(archive, out_dir, ensure_has_files, "bz2")
+        result = _extract_tarball(archive, out_dir, ensure_has_files, "bz2")
     elif archive.endswith(".rpm"):
         # RPM
-        return _extract_rpm(archive, out_dir, ensure_has_files)
+        result = _extract_rpm(archive, out_dir, ensure_has_files)
     # elif other types of archives
     else:
         raise ExtractionError("Unsuported archive type")
+    log.info("OSCAP addon: Extracted {files} from the supplied content"
+             .format(files=result))
+    return result
 
 
 def _extract_tarball(archive, out_dir, ensure_has_files, alg):
