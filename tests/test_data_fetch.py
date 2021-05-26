@@ -6,6 +6,8 @@ import sys
 import subprocess
 import time
 
+import pytest
+
 from org_fedora_oscap import data_fetch
 
 
@@ -38,6 +40,16 @@ def test_file_retreival():
             "http://localhost:{}/{}".format(PORT, relative_filename_to_test), temp_filename)
 
     assert filecmp.cmp(relative_filename_to_test, temp_filename)
+
+
+def test_file_absent():
+    relative_filename_to_test = "i_am_not_here.file"
+
+    with serve_directory_in_separate_process(PORT):
+        with pytest.raises(data_fetch.FetchError) as exc:
+            data_fetch._curl_fetch(
+                "http://localhost:{}/{}".format(PORT, relative_filename_to_test), "/dev/null")
+            assert "error code 404" in str(exc)
 
 
 def test_supported_url():

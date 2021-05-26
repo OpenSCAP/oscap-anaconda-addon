@@ -11,6 +11,7 @@ import pycurl
 
 from pyanaconda.core.configuration.anaconda import conf
 
+from org_fedora_oscap.common import _
 from org_fedora_oscap import utils
 
 import logging
@@ -195,4 +196,10 @@ def _curl_fetch(url, out_file, ca_certs=None):
             raise CertificateValidationError(msg)
         else:
             msg = "Failed to fetch data: %s" % err
+            raise FetchError(msg)
+
+    if protocol in ("http", "https"):
+        return_code = curl.getinfo(pycurl.HTTP_CODE)
+        if 400 <= return_code < 600:
+            msg = _(f"Failed to fetch data - the request returned HTTP error code {return_code}")
             raise FetchError(msg)
