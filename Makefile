@@ -15,6 +15,8 @@ else
 	PYVERSION = -3
 endif
 
+TRANSLATIONS_DIR ?= po
+
 FILES = $(ADDON) \
 	$(TESTS) \
 	po \
@@ -87,7 +89,8 @@ potfile:
 po-pull:
 	TEMP_DIR=$$(mktemp --tmpdir -d oscap-anaconda-addon-l10n-XXXXXXXXXX) && \
 	git clone --depth 1 -b $(GIT_L10N_BRANCH) -- $(L10N_REPOSITORY) $$TEMP_DIR && \
-	cp $$TEMP_DIR/$(OAA_PARENT_BRANCH)/*.po po/ && \
+	mkdir -p $(TRANSLATIONS_DIR) && \
+	cp $$TEMP_DIR/$(OAA_PARENT_BRANCH)/*.po $(TRANSLATIONS_DIR)/ && \
 	rm -rf $$TEMP_DIR
 
 # This algorithm will make these steps:
