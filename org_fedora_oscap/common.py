@@ -479,6 +479,10 @@ def strip_content_dir(fpaths, phase="preinst"):
     return utils.keep_type_map(remove_prefix, fpaths)
 
 
+def get_ssg_path(root="/"):
+    return utils.join_paths(root, SSG_DIR + SSG_CONTENT)
+
+
 def ssg_available(root="/"):
     """
     Tries to find the SCAP Security Guide under the given root.
@@ -487,7 +491,7 @@ def ssg_available(root="/"):
 
     """
 
-    return os.path.exists(utils.join_paths(root, SSG_DIR + SSG_CONTENT))
+    return os.path.exists(get_ssg_path(root))
 
 
 def dry_run_skip(func):
