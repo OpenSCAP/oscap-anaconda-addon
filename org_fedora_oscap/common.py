@@ -63,13 +63,20 @@ INSTALLATION_CONTENT_DIR = "/tmp/openscap_data/"
 TARGET_CONTENT_DIR = "/root/openscap_data/"
 
 SSG_DIR = "/usr/share/xml/scap/ssg/content/"
-SSG_CONTENT = "ssg-rhel7-ds.xml"
-if constants.shortProductName != 'anaconda':
-    if constants.shortProductName == 'fedora':
-        SSG_CONTENT  = "ssg-fedora-ds.xml"
-    else:
-        SSG_CONTENT = "ssg-%s%s-ds.xml" % (constants.shortProductName,
-                                            constants.productVersion.strip(".")[0])
+
+# Enable patches that set the content name at package-time
+DEFAULT_SSG_CONTENT_NAME = ""
+SSG_CONTENT = DEFAULT_SSG_CONTENT_NAME
+if not SSG_CONTENT:
+    if constants.shortProductName != 'anaconda':
+        if constants.shortProductName == 'fedora':
+            SSG_CONTENT = "ssg-fedora-ds.xml"
+        else:
+            SSG_CONTENT = (
+                "ssg-{name}{version}-ds.xml"
+                .format(
+                    name=constants.shortProductName,
+                    version=constants.productVersion.strip(".")[0]))
 
 RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR,
                                 "eval_remediate_results.xml")
