@@ -306,8 +306,9 @@ def extract_data(archive, out_dir, ensure_has_files=None):
         # ZIP file
         try:
             zfile = zipfile.ZipFile(archive, "r")
-        except zipfile.BadZipfile as err:
-            raise ExtractionError(str(err))
+        except Exception as exc:
+            msg = "Error exctracting archive as a zipfile: {exc}".format(exc=str(exc))
+            raise ExtractionError(msg)
 
         # generator for the paths of the files found in the archive (dirs end
         # with "/")
