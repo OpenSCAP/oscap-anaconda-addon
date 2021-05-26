@@ -179,6 +179,8 @@ packages="
 	python3-cpio
 	python3-pycurl
 	oscap-anaconda-addon
+	xmlsec1
+	xmlsec1-openssl
 "
 
 
