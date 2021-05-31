@@ -75,6 +75,26 @@ class FetchError(DataFetchError):
     pass
 
 
+def fetch_local_data(url, out_file):
+    """
+    Function that fetches data locally.
+
+    :see: org_fedora_oscap.data_fetch.fetch_data
+    :return: the name of the thread running fetch_data
+    :rtype: str
+
+    """
+    fetch_data_thread = AnacondaThread(name=common.THREAD_FETCH_DATA,
+                                       target=fetch_data,
+                                       args=(url, out_file, None),
+                                       fatal=False)
+
+    # register and run the thread
+    threadMgr.add(fetch_data_thread)
+
+    return common.THREAD_FETCH_DATA
+
+
 def wait_and_fetch_net_data(url, out_file, ca_certs=None):
     """
     Function that waits for network connection and starts a thread that fetches

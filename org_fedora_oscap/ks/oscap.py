@@ -47,7 +47,7 @@ SUPPORTED_CONTENT_TYPES = ("datastream", "rpm", "archive",
                            "scap-security-guide",
                            )
 
-SUPPORTED_URL_PREFIXES = ("http://", "https://", "ftp://"
+SUPPORTED_URL_PREFIXES = ("http://", "https://", "ftp://", "file://"
                           # LABEL:?, hdaX:?,
                           )
 
