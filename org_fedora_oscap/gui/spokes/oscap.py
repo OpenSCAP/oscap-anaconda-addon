@@ -21,6 +21,7 @@
 import threading
 import logging
 from functools import wraps
+import pathlib
 
 # the path to addons is in sys.path so we can import things
 # from org_fedora_oscap
@@ -31,6 +32,7 @@ from org_fedora_oscap import content_handling
 from org_fedora_oscap import scap_content_handler
 from org_fedora_oscap import utils
 from org_fedora_oscap.common import dry_run_skip
+from org_fedora_oscap.model import Model
 from pyanaconda.threading import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
@@ -250,6 +252,8 @@ class OSCAPSpoke(NormalSpoke):
         self._anaconda_spokes_initialized = threading.Event()
         self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
 
+        self.model = Model(None)
+
     def _all_anaconda_spokes_initialized(self):
         log.debug("OSCAP addon: Anaconda init_done signal triggered")
         self._anaconda_spokes_initialized.set()
@@ -333,6 +337,27 @@ class OSCAPSpoke(NormalSpoke):
             # else fetch data
             self._fetch_data_and_initialize()
 
+    def _handle_error(self, exception):
+        log.error(str(exception))
+        if isinstance(exception, KickstartValueError):
+            self._invalid_url()
+        elif isinstance(exception, common.OSCAPaddonNetworkError):
+            self._network_problem()
+        elif isinstance(exception, data_fetch.DataFetchError):
+            self._data_fetch_failed()
+        elif isinstance(exception, common.ExtractionError):
+            self._extraction_failed(str(exception))
+        elif isinstance(exception, content_handling.ContentHandlingError):
+            self._invalid_content()
+        elif isinstance(exception, content_handling.ContentCheckError):
+            self._integrity_check_failed()
+        else:
+            raise exception
+
+    def _end_fetching(self, fetched_content):
+        # stop the spinner in any case
+        fire_gtk_action(self._progress_spinner.stop)
+
     def _render_selected(self, column, renderer, model, itr, user_data=None):
         if model[itr][2]:
             renderer.set_property("stock-id", "gtk-apply")
@@ -349,24 +374,10 @@ class OSCAPSpoke(NormalSpoke):
             self._fetching = True
 
         thread_name = None
-        if any(self._addon_data.content_url.startswith(net_prefix)
-               for net_prefix in data_fetch.NET_URL_PREFIXES):
-            # need to fetch data over network
-            try:
-                thread_name = data_fetch.wait_and_fetch_net_data(
-                     self._addon_data.content_url,
-                     self._addon_data.raw_preinst_content_path,
-                     self._addon_data.certificates)
-            except common.OSCAPaddonNetworkError:
-                self._network_problem()
-                with self._fetch_flag_lock:
-                    self._fetching = False
-                return
-            except KickstartValueError:
-                self._invalid_url()
-                with self._fetch_flag_lock:
-                    self._fetching = False
-                return
+        if self._addon_data.content_url and self._addon_data.content_type != "scap-security-guide":
+            self.model.CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
+            self.model.content_uri = self._addon_data.content_url
+            thread_name = self.model.fetch_content(self._addon_data.certificates, self._handle_error)
 
         # pylint: disable-msg=E1101
         hubQ.send_message(self.__class__.__name__,
@@ -388,61 +399,27 @@ class OSCAPSpoke(NormalSpoke):
         :type wait_for: str or None
 
         """
+        content_path = None
+        actually_fetched_content = wait_for is not None
 
-        try:
-            threadMgr.wait(wait_for)
-        except data_fetch.DataFetchError:
-            self._data_fetch_failed()
+        if actually_fetched_content:
+            content_path = self._addon_data.raw_preinst_content_path
+
+        content = self.model.finish_content_fetch(wait_for, self._addon_data.fingerprint, lambda msg: log.info(msg), content_path, self._end_fetching, self._handle_error)
+        if not content:
             with self._fetch_flag_lock:
                 self._fetching = False
+
             return
-        finally:
-            # stop the spinner in any case
-            fire_gtk_action(self._progress_spinner.stop)
-
-        if self._addon_data.fingerprint:
-            hash_obj = utils.get_hashing_algorithm(self._addon_data.fingerprint)
-            digest = utils.get_file_fingerprint(self._addon_data.raw_preinst_content_path,
-                                                hash_obj)
-            if digest != self._addon_data.fingerprint:
-                self._integrity_check_failed()
-                # fetching done
-                with self._fetch_flag_lock:
-                    self._fetching = False
-                return
-
-        # RPM is an archive at this phase
-        if self._addon_data.content_type in ("archive", "rpm"):
-            # extract the content
-            try:
-                fpaths = common.extract_data(self._addon_data.raw_preinst_content_path,
-                                             common.INSTALLATION_CONTENT_DIR,
-                                             [self._addon_data.content_path])
-            except common.ExtractionError as err:
-                self._extraction_failed(str(err))
-                # fetching done
-                with self._fetch_flag_lock:
-                    self._fetching = False
-                return
-
-            # and populate missing fields
-            files = content_handling.explore_content_files(fpaths)
-            files = common.strip_content_dir(files)
-
-            # pylint: disable-msg=E1103
-            self._addon_data.content_path = self._addon_data.content_path or files.xccdf
-            self._addon_data.cpe_path = self._addon_data.cpe_path or files.cpe
-            self._addon_data.tailoring_path = (self._addon_data.tailoring_path or
-                                               files.tailoring)
-        elif self._addon_data.content_type not in (
-                "datastream", "scap-security-guide"):
-            raise common.OSCAPaddonError("Unsupported content type")
 
         try:
+            preferred_content = self._addon_data.get_preferred_content(content)
+            if actually_fetched_content:
+                self._addon_data.update_with_content(content)
             self._content_handler = scap_content_handler.SCAPContentHandler(
                 self._addon_data.preinst_content_path,
                 self._addon_data.preinst_tailoring_path)
-        except scap_content_handler.SCAPContentHandlerError as e:
+        except Exception as e:
             log.warning(str(e))
             self._invalid_content()
             # fetching done
