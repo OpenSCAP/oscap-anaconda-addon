@@ -379,15 +379,7 @@ class OSCAPdata(AddonData):
                                 common.INSTALLATION_CONTENT_DIR,
                                 [self.content_path])
 
-        rules = common.get_fix_rules_pre(self.profile_id,
-                                         self.preinst_content_path,
-                                         self.datastream_id, self.xccdf_id,
-                                         self.preinst_tailoring_path)
 
-        # parse and store rules with a clean RuleData instance
-        self.rule_data = rule_handling.RuleData()
-        for rule in rules.splitlines():
-            self.rule_data.new_rule(rule)
 
     def setup(self, storage, ksdata, payload):
         """
@@ -463,6 +455,9 @@ class OSCAPdata(AddonData):
                     progressQ.send_quit(1)
                     while True:
                         time.sleep(100000)
+        self.rule_data = rule_handling.get_rule_data_from_content(
+            self.profile_id, self.preinst_content_path,
+            self.datastream_id, self.xccdf_id, self.preinst_tailoring_path)
 
         # evaluate rules, do automatic fixes and stop if something that cannot
         # be fixed automatically is wrong

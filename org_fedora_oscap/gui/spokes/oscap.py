@@ -726,10 +726,9 @@ class OSCAPSpoke(NormalSpoke):
 
         # get pre-install fix rules from the content
         try:
-            rules = common.get_fix_rules_pre(profile_id,
-                                             self._addon_data.preinst_content_path,
-                                             ds, xccdf,
-                                             self._addon_data.preinst_tailoring_path)
+            self._rule_data = rule_handling.get_rule_data_from_content(
+                profile_id, self._addon_data.preinst_content_path,
+                ds, xccdf, self._addon_data.preinst_tailoring_path)
         except common.OSCAPaddonError as exc:
             log.error(
                 "Failed to get rules for the profile '{}': {}"
@@ -744,11 +743,6 @@ class OSCAPSpoke(NormalSpoke):
             if self._profiles_store[itr][0] == profile_id:
                 self._profiles_store.set_value(itr, 2, True)
             itr = self._profiles_store.iter_next(itr)
-
-        # parse and store rules with a clean RuleData instance
-        self._rule_data = rule_handling.RuleData()
-        for rule in rules.splitlines():
-            self._rule_data.new_rule(rule)
 
         # remember the active profile
         self._active_profile = profile_id
