@@ -379,6 +379,25 @@ class OSCAPdata(AddonData):
                                 common.INSTALLATION_CONTENT_DIR,
                                 [self.content_path])
 
+    def _terminate(self, message):
+        if flags.flags.automatedInstall and not flags.flags.ksprompt:
+            # cannot have ask in a non-interactive kickstart
+            # installation
+            raise errors.CmdlineError(message)
+
+        answ = errors.errorHandler.ui.showYesNoQuestion(msg)
+        if answ == errors.ERROR_CONTINUE:
+            # prevent any futher actions here by switching to the dry
+            # run mode and let things go on
+            self.dry_run = True
+            return
+        else:
+            # Let's sleep forever to prevent any further actions and
+            # wait for the main thread to quit the process.
+            progressQ.send_quit(1)
+            while True:
+                time.sleep(100000)
+
 
 
     def setup(self, storage, ksdata, payload):
@@ -464,25 +483,11 @@ class OSCAPdata(AddonData):
         fatal_messages = [message for message in self.rule_data.eval_rules(ksdata, storage)
                           if message.type == common.MESSAGE_TYPE_FATAL]
         if any(fatal_messages):
-            msg = "Wrong configuration detected!\n"
-            msg += "\n".join(message.text for message in fatal_messages)
-            msg += "\nThe installation should be aborted. Do you wish to continue anyway?"
-            if flags.flags.automatedInstall and not flags.flags.ksprompt:
-                # cannot have ask in a non-interactive kickstart installation
-                raise errors.CmdlineError(msg)
-
-            answ = errors.errorHandler.ui.showYesNoQuestion(msg)
-            if answ == errors.ERROR_CONTINUE:
-                # prevent any futher actions here by switching to the dry
-                # run mode and let things go on
-                self.dry_run = True
-                return
-            else:
-                # Let's sleep forever to prevent any further actions and wait
-                # for the main thread to quit the process.
-                progressQ.send_quit(1)
-                while True:
-                    time.sleep(100000)
+            msg = ["Wrong configuration detected!"]
+            msg.extend(fatal_messages)
+            msg.append("The installation should be aborted. Do you wish to continue anyway?")
+            self._terminate("\n".join(msg))
+            return
 
         # add packages needed on the target system to the list of packages
         # that are requested to be installed

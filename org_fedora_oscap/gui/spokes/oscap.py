@@ -713,6 +713,8 @@ class OSCAPSpoke(NormalSpoke):
             # no profile specified, nothing to do
             return False
 
+        ds = None
+        xccdf = None
         if self._using_ds:
             ds = self._current_ds_id
             xccdf = self._current_xccdf_id
@@ -720,9 +722,6 @@ class OSCAPSpoke(NormalSpoke):
             if not all((ds, xccdf, profile_id)):
                 # something is not set -> do nothing
                 return False
-        else:
-            ds = None
-            xccdf = None
 
         # get pre-install fix rules from the content
         try:
@@ -1127,6 +1126,7 @@ class OSCAPSpoke(NormalSpoke):
         with self._fetch_flag_lock:
             if self._fetching:
                 # some other fetching/pre-processing running, give up
+                log.warn("Clicked the fetch button, although the GUI is in the fetching mode.")
                 return
 
         # prevent user from changing the URL in the meantime

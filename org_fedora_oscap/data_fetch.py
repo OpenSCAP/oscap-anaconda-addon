@@ -172,6 +172,7 @@ def fetch_data(url, out_file, ca_certs=None):
     else:
         msg = "Cannot fetch data from '%s': unknown URL format" % url
         raise UnknownURLformatError(msg)
+    log.info(f"Data fetch from {url} completed")
 
 
 def _curl_fetch(url, out_file, ca_certs=None):
