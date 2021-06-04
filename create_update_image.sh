@@ -204,8 +204,8 @@ install_addon_from_repo() {
 	else
 		install_po_files="DEFAULT_INSTALL_OF_PO_FILES=yes"
 	fi
-	# "copy files" to new root, sudo needed because we may overwrite files installed by rpm
-	sudo make install "$install_po_files" DESTDIR="${tmp_root}" >&2 || die "Failed to install the addon to $tmp_root."
+	# "copy files" to new root, sudo may be needed because we may overwrite files installed by rpm
+	$SUDO make install "$install_po_files" DESTDIR="${tmp_root}" >&2 || die "Failed to install the addon to $tmp_root."
 }
 
 
@@ -216,12 +216,16 @@ create_image() {
 
 
 cleanup() {
-	# cleanup, sudo needed because former RPM installs
-	sudo rm -rf "$tmp_root"
+	# cleanup, sudo may be needed because former RPM installs
+	$SUDO rm -rf "$tmp_root"
 }
 
-
-sudo true || die "Unable to get sudo working, bailing out."
+if test $_arg_start_with_index -gt 1; then
+	SUDO=
+else
+	SUDO=sudo
+	$SUDO true || die "Unable to get sudo working, bailing out."
+fi
 
 for (( action_index=_arg_start_with_index;  action_index < ${#actions[*]}; action_index++ )) do
 	"${actions[$action_index]}"
