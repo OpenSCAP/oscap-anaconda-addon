@@ -38,10 +38,7 @@ from collections import namedtuple
 import gettext
 from functools import wraps
 from pyanaconda.core import constants
-from pyanaconda.modules.common.constants.services import NETWORK
-from pyanaconda.threading import threadMgr, AnacondaThread
 from org_fedora_oscap import utils
-from org_fedora_oscap.data_fetch import fetch_data
 
 log = logging.getLogger("anaconda")
 
@@ -59,7 +56,7 @@ def N_(string): return string
 
 # everything else should be private
 __all__ = ["run_oscap_remediate", "get_fix_rules_pre",
-           "wait_and_fetch_net_data", "extract_data", "strip_content_dir",
+           "extract_data", "strip_content_dir",
            "OSCAPaddonError"]
 
 INSTALLATION_CONTENT_DIR = "/tmp/openscap_data/"
@@ -276,38 +273,6 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
         raise OSCAPaddonError(msg)
 
     return proc.stdout
-
-
-def wait_and_fetch_net_data(url, out_file, ca_certs=None):
-    """
-    Function that waits for network connection and starts a thread that fetches
-    data over network.
-
-    :see: org_fedora_oscap.data_fetch.fetch_data
-    :return: the name of the thread running fetch_data
-    :rtype: str
-
-    """
-
-    # get thread that tries to establish a network connection
-    nm_conn_thread = threadMgr.get(constants.THREAD_WAIT_FOR_CONNECTING_NM)
-    if nm_conn_thread:
-        # NM still connecting, wait for it to finish
-        nm_conn_thread.join()
-
-    network_proxy = NETWORK.get_proxy()
-    if not network_proxy.Connected:
-        raise OSCAPaddonNetworkError("Network connection needed to fetch data.")
-
-    fetch_data_thread = AnacondaThread(name=THREAD_FETCH_DATA,
-                                       target=fetch_data,
-                                       args=(url, out_file, ca_certs),
-                                       fatal=False)
-
-    # register and run the thread
-    threadMgr.add(fetch_data_thread)
-
-    return THREAD_FETCH_DATA
 
 
 def extract_data(archive, out_dir, ensure_has_files=None):

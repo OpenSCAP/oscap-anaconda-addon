@@ -10,7 +10,11 @@ import os.path
 import pycurl
 
 from pyanaconda.core.configuration.anaconda import conf
+from pyanaconda.core import constants
+from pyanaconda.threading import threadMgr, AnacondaThread
+from pyanaconda.modules.common.constants.services import NETWORK
 
+from org_fedora_oscap import common
 from org_fedora_oscap.common import _
 from org_fedora_oscap import utils
 
@@ -38,7 +42,7 @@ FILE_URL_RE_STR = r"(file)://(.*)"
 FILE_URL_RE = re.compile(FILE_URL_RE_STR)
 
 
-class DataFetchError(Exception):
+class DataFetchError(common.OSCAPaddonError):
     """Parent class for the exception classes defined in this module."""
 
     pass
@@ -69,6 +73,38 @@ class FetchError(DataFetchError):
     """
 
     pass
+
+
+def wait_and_fetch_net_data(url, out_file, ca_certs=None):
+    """
+    Function that waits for network connection and starts a thread that fetches
+    data over network.
+
+    :see: org_fedora_oscap.data_fetch.fetch_data
+    :return: the name of the thread running fetch_data
+    :rtype: str
+
+    """
+
+    # get thread that tries to establish a network connection
+    nm_conn_thread = threadMgr.get(constants.THREAD_WAIT_FOR_CONNECTING_NM)
+    if nm_conn_thread:
+        # NM still connecting, wait for it to finish
+        nm_conn_thread.join()
+
+    network_proxy = NETWORK.get_proxy()
+    if not network_proxy.Connected:
+        raise common.OSCAPaddonNetworkError(_("Network connection needed to fetch data."))
+
+    fetch_data_thread = AnacondaThread(name=common.THREAD_FETCH_DATA,
+                                       target=fetch_data,
+                                       args=(url, out_file, ca_certs),
+                                       fatal=False)
+
+    # register and run the thread
+    threadMgr.add(fetch_data_thread)
+
+    return common.THREAD_FETCH_DATA
 
 
 def can_fetch_from(url):
