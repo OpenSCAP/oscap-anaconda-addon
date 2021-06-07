@@ -147,8 +147,12 @@ class Model:
 
         report_callback("Analyzing content.")
         if not actually_fetched_content:
-            fpaths = [f"{common.SSG_DIR}/{common.SSG_CONTENT}"]
-            labelled_files = content_handling.identify_files(fpaths)
+            if not dest_filename:  # using scap-security-guide
+                fpaths = [f"{common.SSG_DIR}/{common.SSG_CONTENT}"]
+                labelled_files = content_handling.identify_files(fpaths)
+            else:  # Using downloaded XCCDF/OVAL/DS/tailoring
+                fpaths = glob(str(self.CONTENT_DOWNLOAD_LOCATION / "*.xml"))
+                labelled_files = content_handling.identify_files(fpaths)
         else:
             dest_filename = pathlib.Path(dest_filename)
             # RPM is an archive at this phase

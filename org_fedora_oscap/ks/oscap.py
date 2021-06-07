@@ -453,7 +453,11 @@ class OSCAPdata(AddonData):
             self.model.content_uri = self.content_url
             thread_name = self.model.fetch_content(self.certificates, self._handle_error)
 
-        content = self.model.finish_content_fetch(thread_name, self.fingerprint, lambda msg: log.info(msg), self.raw_preinst_content_path, lambda content: content, self._handle_error)
+        content_dest = None
+        if self.content_type != "scap-security-guide":
+            content_dest = self.raw_preinst_content_path
+
+        content = self.model.finish_content_fetch(thread_name, self.fingerprint, lambda msg: log.info(msg), content_dest, lambda content: content, self._handle_error)
 
         if not content:
             return
