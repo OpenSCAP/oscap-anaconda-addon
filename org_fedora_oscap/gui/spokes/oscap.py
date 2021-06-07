@@ -354,10 +354,10 @@ class OSCAPSpoke(NormalSpoke):
                for net_prefix in data_fetch.NET_URL_PREFIXES):
             # need to fetch data over network
             try:
-                thread_name = common.wait_and_fetch_net_data(
-                                     self._addon_data.content_url,
-                                     self._addon_data.raw_preinst_content_path,
-                                     self._addon_data.certificates)
+                thread_name = data_fetch.wait_and_fetch_net_data(
+                     self._addon_data.content_url,
+                     self._addon_data.raw_preinst_content_path,
+                     self._addon_data.certificates)
             except common.OSCAPaddonNetworkError:
                 self._network_problem()
                 with self._fetch_flag_lock:
