@@ -103,6 +103,8 @@ class SCAPContentHandler:
             profile_info = ProfileInfo(
                 profile_id, title.text, description_text)
             profiles.append(profile_info)
+        # if there are no profiles we would like to prevent empty profile
+        # selection list in the GUI so we create the default profile
         if len(profiles) == 0:
             default_profile = ProfileInfo(
                 "default",
