@@ -68,6 +68,26 @@ def test_xccdf():
         description="Another profile for testing purposes.")
     assert pinfo2 in profiles
 
+def test_xccdf_1_1():
+    file_path = os.path.join(TESTING_FILES_PATH, "xccdf-1.1.xml")
+    ch = SCAPContentHandler(file_path)
+
+    checklists = ch.get_data_streams_checklists()
+    assert checklists is None
+
+    profiles = ch.get_profiles()
+    assert len(profiles) == 2
+    pinfo1 = ProfileInfo(
+        id="xccdf_com.example_profile_my_profile",
+        title="My testing profile",
+        description="A profile for testing purposes.")
+    assert pinfo1 in profiles
+    pinfo2 = ProfileInfo(
+        id="xccdf_com.example_profile_my_profile2",
+        title="My testing profile2",
+        description="Another profile for testing purposes.")
+    assert pinfo2 in profiles
+
 
 def test_xccdf_get_profiles_fails():
     ch = SCAPContentHandler(XCCDF_FILEPATH)

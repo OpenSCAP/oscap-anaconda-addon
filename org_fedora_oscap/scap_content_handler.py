@@ -30,7 +30,8 @@ ProfileInfo = namedtuple("ProfileInfo", ["id", "title", "description"])
 
 ns = {
     "ds": "http://scap.nist.gov/schema/scap/source/1.2",
-    "xccdf": "http://checklists.nist.gov/xccdf/1.2",
+    "xccdf-1.1": "http://checklists.nist.gov/xccdf/1.1",
+    "xccdf-1.2": "http://checklists.nist.gov/xccdf/1.2",
     "xlink": "http://www.w3.org/1999/xlink"
 }
 
@@ -55,7 +56,7 @@ class SCAPContentHandler:
         tree = ET.parse(file_path)
         self.root = tree.getroot()
         if tailoring_file_path is not None:
-            self.tailoring = ET.parse(tailoring_file_path)
+            self.tailoring = ET.parse(tailoring_file_path).getroot()
         else:
             self.tailoring = None
         self.scap_type = self._get_scap_type(self.root)
@@ -65,9 +66,9 @@ class SCAPContentHandler:
     def _get_scap_type(self, root):
         if root.tag == f"{{{ns['ds']}}}data-stream-collection":
             return "SCAP_SOURCE_DATA_STREAM"
-        elif root.tag == f"{{{ns['xccdf']}}}Benchmark":
+        elif root.tag == f"{{{ns['xccdf-1.1']}}}Benchmark" or root.tag == f"{{{ns['xccdf-1.2']}}}Benchmark":
             return "XCCDF"
-        elif root.tag == f"{{{ns['xccdf']}}}Tailoring":
+        elif root.tag == f"{{{ns['xccdf-1.1']}}}Tailoring" or root.tag == f"{{{ns['xccdf-1.2']}}}Tailoring":
             return "TAILORING"
         else:
             msg = f"Unsupported SCAP content type {root.tag}"
@@ -99,11 +100,17 @@ class SCAPContentHandler:
     def _parse_profiles_from_xccdf(self, benchmark):
         if benchmark is None:
             return []
+        if benchmark.tag.startswith(f"{{{ns['xccdf-1.1']}}}"):
+            xccdf_ns_prefix = "xccdf-1.1"
+        elif benchmark.tag.startswith(f"{{{ns['xccdf-1.2']}}}"):
+            xccdf_ns_prefix = "xccdf-1.2"
+        else:
+            raise SCAPContentHandlerError("Unsupported XML namespace")
         profiles = []
-        for profile in benchmark.findall("xccdf:Profile", ns):
+        for profile in benchmark.findall(f"{xccdf_ns_prefix}:Profile", ns):
             profile_id = profile.get("id")
-            title = profile.find("xccdf:title", ns)
-            description = profile.find("xccdf:description", ns)
+            title = profile.find(f"{xccdf_ns_prefix}:title", ns)
+            description = profile.find(f"{xccdf_ns_prefix}:description", ns)
             if description is None:
                 description_text = ""
             else:
@@ -183,7 +190,13 @@ class SCAPContentHandler:
             if component is None:
                 msg = f"Can't find component {component_id}"
                 raise SCAPContentHandlerError(msg)
-            benchmark = component.find("xccdf:Benchmark", ns)
+            benchmark = component.find("xccdf-1.1:Benchmark", ns)
+            if benchmark is None:
+                benchmark = component.find("xccdf-1.2:Benchmark", ns)
+            if benchmark is None:
+                msg = f"The component {cref_href} doesn't contain " \
+                    "an XCCDF Benchmark."
+                raise SCAPContentHandlerError(msg)
         else:
             msg = f"Unsupported SCAP content type '{self.scap_type}'."
             raise SCAPContentHandlerError(msg)
