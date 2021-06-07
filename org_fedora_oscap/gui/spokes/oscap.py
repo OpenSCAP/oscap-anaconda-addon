@@ -446,7 +446,8 @@ class OSCAPSpoke(NormalSpoke):
             self._content_handler = scap_content_handler.SCAPContentHandler(
                 self._addon_data.preinst_content_path,
                 tailoring_path)
-        except scap_content_handler.SCAPContentHandlerError:
+        except scap_content_handler.SCAPContentHandlerError as e:
+            log.warning(str(e))
             self._invalid_content()
             # fetching done
             with self._fetch_flag_lock:
