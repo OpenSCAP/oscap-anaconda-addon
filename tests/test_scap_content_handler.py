@@ -129,11 +129,12 @@ def test_sds_get_profiles_fails():
 
 
 def test_tailoring():
-    ch = SCAPContentHandler(TAILORING_FILEPATH)
+    ch = SCAPContentHandler(DS_FILEPATH, TAILORING_FILEPATH)
     checklists = ch.get_data_streams_checklists()
-    assert checklists is None
+    assert checklists == {DS_IDS: [CHK_FIRST_ID, CHK_SECOND_ID]}
+    ch.select_checklist(DS_IDS, CHK_FIRST_ID)
     profiles = ch.get_profiles()
-    assert len(profiles) == 2
+    assert len(profiles) == 4
     pinfo1 = ProfileInfo(
         id="xccdf_com.example_profile_my_profile_tailored",
         title="My testing profile tailored",
@@ -144,6 +145,17 @@ def test_tailoring():
         title="My testing profile2 tailored",
         description="")
     assert pinfo2 in profiles
+    # it should also include the profiles of the original benchmark
+    pinfo3 = ProfileInfo(
+        id="xccdf_com.example_profile_my_profile",
+        title="My testing profile",
+        description="A profile for testing purposes.")
+    assert pinfo3 in profiles
+    pinfo4 = ProfileInfo(
+        id="xccdf_com.example_profile_my_profile2",
+        title="My testing profile2",
+        description="Another profile for testing purposes.")
+    assert pinfo4 in profiles
 
 
 def test_default_profile():

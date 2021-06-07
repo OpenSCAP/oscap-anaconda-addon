@@ -440,11 +440,12 @@ class OSCAPSpoke(NormalSpoke):
 
         try:
             if self._addon_data.preinst_tailoring_path:
-                path_to_open = self._addon_data.preinst_tailoring_path
+                tailoring_path = self._addon_data.preinst_tailoring_path
             else:
-                path_to_open = self._addon_data.preinst_content_path
+                tailoring_path = None
             self._content_handler = scap_content_handler.SCAPContentHandler(
-                path_to_open)
+                self._addon_data.preinst_content_path,
+                tailoring_path)
         except scap_content_handler.SCAPContentHandlerError:
             self._invalid_content()
             # fetching done

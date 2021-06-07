@@ -41,30 +41,36 @@ class SCAPContentHandlerError(Exception):
 
 
 class SCAPContentHandler:
-    def __init__(self, file_path):
+    def __init__(self, file_path, tailoring_file_path=None):
         """
         Constructor for the SCAPContentHandler class.
 
         :param file_path: path to an SCAP file (only SCAP source data streams,
         XCCDF files and tailoring files are supported)
         :type file_path: str
+        :param tailoring_file_path: path to the tailoring file, can be None if no tailoring exists
+        :type tailoring_file_path: str
         """
         self.file_path = file_path
         tree = ET.parse(file_path)
         self.root = tree.getroot()
-        self.scap_type = self._get_scap_type()
+        if tailoring_file_path is not None:
+            self.tailoring = ET.parse(tailoring_file_path)
+        else:
+            self.tailoring = None
+        self.scap_type = self._get_scap_type(self.root)
         self._data_stream_id = None
         self._checklist_id = None
 
-    def _get_scap_type(self):
-        if self.root.tag == f"{{{ns['ds']}}}data-stream-collection":
+    def _get_scap_type(self, root):
+        if root.tag == f"{{{ns['ds']}}}data-stream-collection":
             return "SCAP_SOURCE_DATA_STREAM"
-        elif self.root.tag == f"{{{ns['xccdf']}}}Benchmark":
+        elif root.tag == f"{{{ns['xccdf']}}}Benchmark":
             return "XCCDF"
-        elif self.root.tag == f"{{{ns['xccdf']}}}Tailoring":
+        elif root.tag == f"{{{ns['xccdf']}}}Tailoring":
             return "TAILORING"
         else:
-            msg = f"Unsupported SCAP content type {self.root.tag}"
+            msg = f"Unsupported SCAP content type {root.tag}"
             raise SCAPContentHandlerError(msg)
 
     def get_data_streams_checklists(self):
@@ -90,7 +96,9 @@ class SCAPContentHandler:
             checklists[data_stream_id] = crefs
         return checklists
 
-    def _get_profiles(self, benchmark):
+    def _parse_profiles_from_xccdf(self, benchmark):
+        if benchmark is None:
+            return []
         profiles = []
         for profile in benchmark.findall("xccdf:Profile", ns):
             profile_id = profile.get("id")
@@ -145,12 +153,8 @@ class SCAPContentHandler:
                 raise SCAPContentHandlerError(msg)
             benchmark = self.root
         elif self.scap_type == "TAILORING":
-            if (self._data_stream_id is not None
-                    or self._checklist_id is not None):
-                msg = "For tailoring files, the data_stream_id and " \
-                    "checklist_id must be both None."
-                raise SCAPContentHandlerError(msg)
-            benchmark = self.root
+            msg = "Tailoring files can't be processed separately"
+            raise SCAPContentHandlerError(msg)
         elif self.scap_type == "SCAP_SOURCE_DATA_STREAM":
             if self._data_stream_id is None or self._checklist_id is None:
                 msg = "For SCAP source data streams, data_stream_id and " \
@@ -183,4 +187,6 @@ class SCAPContentHandler:
         else:
             msg = f"Unsupported SCAP content type '{self.scap_type}'."
             raise SCAPContentHandlerError(msg)
-        return self._get_profiles(benchmark)
+        benchmark_profiles = self._parse_profiles_from_xccdf(benchmark)
+        tailoring_profiles = self._parse_profiles_from_xccdf(self.tailoring)
+        return benchmark_profiles + tailoring_profiles
