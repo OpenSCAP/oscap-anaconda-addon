@@ -68,9 +68,11 @@ class SCAPContentHandler:
     def _get_scap_type(self, root):
         if root.tag == f"{{{ns['ds']}}}data-stream-collection":
             return "SCAP_SOURCE_DATA_STREAM"
-        elif root.tag == f"{{{ns['xccdf-1.1']}}}Benchmark" or root.tag == f"{{{ns['xccdf-1.2']}}}Benchmark":
+        elif (root.tag == f"{{{ns['xccdf-1.1']}}}Benchmark" or
+                root.tag == f"{{{ns['xccdf-1.2']}}}Benchmark"):
             return "XCCDF"
-        elif root.tag == f"{{{ns['xccdf-1.1']}}}Tailoring" or root.tag == f"{{{ns['xccdf-1.2']}}}Tailoring":
+        elif (root.tag == f"{{{ns['xccdf-1.1']}}}Tailoring" or
+                root.tag == f"{{{ns['xccdf-1.2']}}}Tailoring"):
             return "TAILORING"
         else:
             msg = f"Unsupported SCAP content type {root.tag}"
