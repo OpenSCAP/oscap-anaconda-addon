@@ -589,7 +589,11 @@ class OSCAPSpoke(NormalSpoke):
             return
 
         self._profiles_store.clear()
-        profiles = self._content_handler.get_profiles()
+        try:
+            profiles = self._content_handler.get_profiles()
+        except scap_content_handler.SCAPContentHandlerError as e:
+            log.warning(str(e))
+            self._invalid_content()
 
         for profile in profiles:
             profile_markup = '<span weight="bold">%s</span>\n%s' \
