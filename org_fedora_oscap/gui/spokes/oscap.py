@@ -377,7 +377,7 @@ class OSCAPSpoke(NormalSpoke):
         if self._addon_data.content_url and self._addon_data.content_type != "scap-security-guide":
             self.model.CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
             self.model.content_uri = self._addon_data.content_url
-            thread_name = self.model.fetch_content(self._addon_data.certificates, self._handle_error)
+            thread_name = self.model.fetch_content(self._handle_error, self._addon_data.certificates)
 
         # pylint: disable-msg=E1101
         hubQ.send_message(self.__class__.__name__,
@@ -399,13 +399,18 @@ class OSCAPSpoke(NormalSpoke):
         :type wait_for: str or None
 
         """
+        def update_progress_label(msg):
+            fire_gtk_action(self._progress_label.set_text(msg))
+
         content_path = None
         actually_fetched_content = wait_for is not None
 
         if actually_fetched_content:
             content_path = self._addon_data.raw_preinst_content_path
 
-        content = self.model.finish_content_fetch(wait_for, self._addon_data.fingerprint, lambda msg: log.info(msg), content_path, self._end_fetching, self._handle_error)
+        content = self.model.finish_content_fetch(
+            wait_for, self._addon_data.fingerprint, update_progress_label,
+            content_path, self._handle_error)
         if not content:
             with self._fetch_flag_lock:
                 self._fetching = False

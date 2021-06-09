@@ -12,6 +12,8 @@ from org_fedora_oscap import data_fetch, utils
 from org_fedora_oscap import common
 from org_fedora_oscap import content_handling
 
+from org_fedora_oscap.common import _
+
 log = logging.getLogger("anaconda")
 
 
@@ -23,6 +25,7 @@ def is_network(scheme):
 
 class Model:
     CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR) / "content-download"
+    DEFAULT_CONTENT = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
 
     def __init__(self, policy_data):
         self.content_uri_scheme = ""
@@ -52,12 +55,23 @@ class Model:
         self.content_uri_path = path
         self.content_uri_scheme = scheme
 
-    def fetch_content(self, cert, what_if_fail):
+    def fetch_content(self, what_if_fail, cert=""):
+        """
+        Initiate fetch of the content into an appropriate directory
+
+        Args:
+            what_if_fail: Callback accepting exception as an argument that
+                should handle them in the calling layer.
+            cert: HTTPS certificates
+        """
         shutil.rmtree(self.CONTENT_DOWNLOAD_LOCATION, ignore_errors=True)
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
-        return self.fetch_files(self.content_uri_scheme, self.content_uri_path, self.CONTENT_DOWNLOAD_LOCATION, cert, what_if_fail)
+        fetching_thread_name = self._fetch_files(
+            self.content_uri_scheme, self.content_uri_path,
+            self.CONTENT_DOWNLOAD_LOCATION, cert, what_if_fail)
+        return fetching_thread_name
 
-    def fetch_files(self, scheme, path, destdir, cert, what_if_fail):
+    def _fetch_files(self, scheme, path, destdir, cert, what_if_fail):
         with self.activity_lock:
             if self.now_fetching_or_processing:
                 msg = "Strange, it seems that we are already fetching something."
@@ -65,19 +79,19 @@ class Model:
                 return
             self.now_fetching_or_processing = True
 
-        thread_name = None
+        fetching_thread_name = None
         try:
-            thread_name = self._start_actual_fetch(scheme, path, destdir, cert)
+            fetching_thread_name = self._start_actual_fetch(scheme, path, destdir, cert)
         except Exception as exc:
             with self.activity_lock:
                 self.now_fetching_or_processing = False
             what_if_fail(exc)
 
         # We are not finished yet with the fetch
-        return thread_name
+        return fetching_thread_name
 
     def _start_actual_fetch(self, scheme, path, destdir, cert):
-        thread_name = None
+        fetching_thread_name = None
         url = scheme + "://" + path
 
         if "/" not in path:
@@ -91,34 +105,47 @@ class Model:
         dest = destdir / basename
 
         if is_network(scheme):
-            thread_name = data_fetch.wait_and_fetch_net_data(
+            fetching_thread_name = data_fetch.wait_and_fetch_net_data(
                 url,
                 dest,
                 cert
             )
         else:  # invalid schemes are handled down the road
-            thread_name = data_fetch.fetch_local_data(
+            fetching_thread_name = data_fetch.fetch_local_data(
                 url,
                 dest,
             )
-        return thread_name
+        return fetching_thread_name
 
-    def finish_content_fetch(self, thread_name, fingerprint, report_callback, dest_filename, after_fetch, what_if_fail):
+    def finish_content_fetch(self, fetching_thread_name, fingerprint, report_callback, dest_filename,
+                             what_if_fail):
         """
+        Finish any ongoing fetch and analyze what has been fetched.
+
+        After the fetch is completed, it analyzes verifies fetched content if applicable,
+        analyzes it and compiles into an instance of ObtainedContent.
+
         Args:
-            what_if_fail: Callback accepting exception.
-            after_fetch: Callback accepting the content class.
+            fetching_thread_name: Name of the fetching thread
+                or None if we are only after the analysis
+            fingerprint: A checksum for downloaded file verification
+            report_callback: Means for the method to send user-relevant messages outside
+            dest_filename: The target of the fetch operation. Can be falsy -
+                in this case there is no content filename defined
+            what_if_fail: Callback accepting exception as an argument
+                that should handle them in the calling layer.
+
+        Returns:
+            Instance of ObtainedContent if everything went well, or None.
         """
         try:
-            content = self._finish_actual_fetch(thread_name, fingerprint, report_callback, dest_filename)
+            content = self._finish_actual_fetch(fetching_thread_name, fingerprint, report_callback, dest_filename)
         except Exception as exc:
             what_if_fail(exc)
             content = None
         finally:
             with self.activity_lock:
                 self.now_fetching_or_processing = False
-
-        after_fetch(content)
 
         return content
 
@@ -131,35 +158,47 @@ class Model:
                                             hash_obj)
         if digest != fingerprint:
             log.error(
-                "File {dest_filename} failed integrity check - assumed a "
-                "{hash_obj.name} hash and '{fingerprint}', got '{digest}'"
+                f"File {dest_filename} failed integrity check - assumed a "
+                f"{hash_obj.name} hash and '{fingerprint}', got '{digest}'"
             )
-            msg = f"Integrity check of the content failed - {hash_obj.name} hash didn't match"
+            msg = _(f"Integrity check of the content failed - {hash_obj.name} hash didn't match")
             raise content_handling.ContentCheckError(msg)
 
     def _finish_actual_fetch(self, wait_for, fingerprint, report_callback, dest_filename):
         threadMgr.wait(wait_for)
         actually_fetched_content = wait_for is not None
 
-        self._verify_fingerprint(dest_filename, fingerprint)
+        if fingerprint and dest_filename:
+            self._verify_fingerprint(dest_filename, fingerprint)
 
-        content = ObtainedContent(self.CONTENT_DOWNLOAD_LOCATION)
+        fpaths = self._gather_available_files(actually_fetched_content, dest_filename)
 
-        report_callback("Analyzing content.")
+        structured_content = ObtainedContent(self.CONTENT_DOWNLOAD_LOCATION)
+        content_type = self.get_content_type(str(dest_filename))
+        if content_type in ("archive", "rpm"):
+            structured_content.add_content_archive(dest_filename)
+
+        labelled_files = content_handling.identify_files(fpaths)
+        for fname, label in labelled_files.items():
+            structured_content.add_file(fname, label)
+
+        if fingerprint and dest_filename:
+            structured_content.record_verification(dest_filename)
+
+        return structured_content
+
+    def _gather_available_files(self, actually_fetched_content, dest_filename):
+        fpaths = []
         if not actually_fetched_content:
             if not dest_filename:  # using scap-security-guide
-                fpaths = [f"{common.SSG_DIR}/{common.SSG_CONTENT}"]
-                labelled_files = content_handling.identify_files(fpaths)
+                fpaths = [self.DEFAULT_CONTENT]
             else:  # Using downloaded XCCDF/OVAL/DS/tailoring
                 fpaths = glob(str(self.CONTENT_DOWNLOAD_LOCATION / "*.xml"))
-                labelled_files = content_handling.identify_files(fpaths)
         else:
             dest_filename = pathlib.Path(dest_filename)
             # RPM is an archive at this phase
             content_type = self.get_content_type(str(dest_filename))
             if content_type in ("archive", "rpm"):
-                # extract the content
-                content.add_content_archive(dest_filename)
                 try:
                     fpaths = common.extract_data(
                         str(dest_filename),
@@ -170,24 +209,20 @@ class Model:
                     log.error(msg)
                     raise err
 
-                # and populate missing fields
-                labelled_files = content_handling.identify_files(fpaths)
-
             elif content_type == "file":
-                labelled_files = content_handling.identify_files([str(dest_filename)])
+                fpaths = [str(dest_filename)]
             else:
                 raise common.OSCAPaddonError("Unsupported content type")
-
-        for f, l in labelled_files.items():
-            content.add_file(f, l)
-
-        if fingerprint:
-            content.record_verification(dest_filename)
-
-        return content
+        return fpaths
 
 
 class ObtainedContent:
+    """
+    This class aims to assist the gathered files discovery -
+    the addon can downloaded files directly, or they can be extracted for an archive.
+    The class enables user to quickly understand what is available,
+    and whether the current set of contents is usable for further processing.
+    """
     def __init__(self, root):
         self.labelled_files = dict()
         self.datastream = ""
@@ -199,10 +234,17 @@ class ObtainedContent:
         self.root = pathlib.Path(root)
 
     def record_verification(self, path):
+        """
+        Declare a file as verified (typically by means of a checksum)
+        """
+        path = pathlib.Path(path)
         assert path in self.labelled_files
         self.verified = path
 
     def add_content_archive(self, fname):
+        """
+        If files come from an archive, record this information using this function.
+        """
         path = pathlib.Path(fname)
         self.labelled_files[path] = None
         self.archive = path
@@ -244,9 +286,9 @@ class ObtainedContent:
 
     def find_expected_usable_content(self, relative_expected_content_path):
         content_path = self.root / relative_expected_content_path
-        elligible_main_content = (self._datastream_content(), self._xccdf_content())
+        eligible_main_content = (self._datastream_content(), self._xccdf_content())
 
-        if content_path in elligible_main_content:
+        if content_path in eligible_main_content:
             return content_path
         else:
             if not content_path.exists():
@@ -258,13 +300,12 @@ class ObtainedContent:
             raise content_handling.ContentHandlingError(msg)
 
     def select_main_usable_content(self):
-        elligible_main_content = (self._datastream_content(), self._xccdf_content())
-        if not any(elligible_main_content):
+        if self._datastream_content():
+            return self._datastream_content()
+        elif self._xccdf_content():
+            return self._xccdf_content()
+        else:
             msg = (
                 "Couldn't find a valid datastream or a valid XCCDF-OVAL file tuple "
                 "among the available content")
             raise content_handling.ContentHandlingError(msg)
-        if elligible_main_content[0]:
-            return elligible_main_content[0]
-        else:
-            return elligible_main_content[1]
