@@ -20,6 +20,7 @@
 
 from collections import namedtuple
 import os
+import re
 import xml.etree.ElementTree as ET
 
 from org_fedora_oscap.content_handling import parse_HTML_from_content
@@ -101,12 +102,20 @@ class SCAPContentHandler:
     def _parse_profiles_from_xccdf(self, benchmark):
         if benchmark is None:
             return []
-        if benchmark.tag.startswith(f"{{{ns['xccdf-1.1']}}}"):
-            xccdf_ns_prefix = "xccdf-1.1"
-        elif benchmark.tag.startswith(f"{{{ns['xccdf-1.2']}}}"):
-            xccdf_ns_prefix = "xccdf-1.2"
+
+        # Find out the namespace of the benchmark element
+        match = re.match(r"^\{([^}]+)\}", benchmark.tag)
+        if match is None:
+            raise SCAPContentHandlerError("The document has no namespace.")
+        root_element_ns = match.groups()[0]
+        for prefix, uri in ns.items():
+            if uri == root_element_ns:
+                xccdf_ns_prefix = prefix
+                break
         else:
-            raise SCAPContentHandlerError("Unsupported XML namespace")
+            raise SCAPContentHandlerError(
+                f"Unsupported XML namespace {root_element_ns}")
+
         profiles = []
         for profile in benchmark.findall(f"{xccdf_ns_prefix}:Profile", ns):
             profile_id = profile.get("id")
