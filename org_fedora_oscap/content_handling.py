@@ -34,6 +34,9 @@ try:
 except ImportError:
     from HTMLParser import HTMLParser
 
+import logging
+log = logging.getLogger("anaconda")
+
 
 class ContentHandlingError(Exception):
     """Exception class for errors related to SCAP content handling."""
@@ -149,15 +152,20 @@ def explore_content_files(fpaths):
     """
 
     def get_doc_type(file_path):
+        content_type = "unknown"
         try:
             for line in execReadlines("oscap", ["info", file_path]):
                 if line.startswith("Document type:"):
                     _prefix, _sep, type_info = line.partition(":")
-                    return type_info.strip()
+                    content_type = type_info.strip()
+                    break
         except OSError:
             # 'oscap info' exitted with a non-zero exit code -> unknown doc
             # type
-            return None
+            pass
+        log.info("OSCAP addon: Identified {file_path} as {content_type}"
+                 .format(file_path=file_path, content_type=content_type))
+        return content_type
 
     xccdf_file = ""
     cpe_file = ""

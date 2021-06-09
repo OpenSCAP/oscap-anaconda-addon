@@ -96,6 +96,7 @@ def wait_and_fetch_net_data(url, out_file, ca_certs=None):
     if not network_proxy.Connected:
         raise common.OSCAPaddonNetworkError(_("Network connection needed to fetch data."))
 
+    log.info(f"Fetching data from {url}")
     fetch_data_thread = AnacondaThread(name=common.THREAD_FETCH_DATA,
                                        target=fetch_data,
                                        args=(url, out_file, ca_certs),
