@@ -212,10 +212,10 @@ class SCAPContentHandler:
                 "checklist_id must be both different than None"
             raise SCAPContentHandlerError(msg)
 
-        if self.scap_type == "XCCDF":
-            benchmark = self.root
-        elif self.scap_type == "SCAP_SOURCE_DATA_STREAM":
+        if self.scap_type == "SCAP_SOURCE_DATA_STREAM":
             benchmark = self._find_benchmark_in_source_data_stream()
+        else:
+            benchmark = self.root
         benchmark_profiles = self._parse_profiles_from_xccdf(benchmark)
         tailoring_profiles = self._parse_profiles_from_xccdf(self.tailoring)
         return benchmark_profiles + tailoring_profiles
