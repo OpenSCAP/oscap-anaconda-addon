@@ -35,7 +35,6 @@ from pyanaconda import flags
 from pykickstart.errors import KickstartParseError, KickstartValueError
 from org_fedora_oscap import utils, common, rule_handling, data_fetch
 from org_fedora_oscap.common import SUPPORTED_ARCHIVES, _
-from org_fedora_oscap.content_handling import ContentCheckError
 
 log = logging.getLogger("anaconda")
 
