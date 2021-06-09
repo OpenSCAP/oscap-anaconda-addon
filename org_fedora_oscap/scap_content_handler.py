@@ -49,16 +49,17 @@ class SCAPContentHandler:
         :param file_path: path to an SCAP file (only SCAP source data streams,
         XCCDF files and tailoring files are supported)
         :type file_path: str
-        :param tailoring_file_path: path to the tailoring file, can be None if no tailoring exists
+        :param tailoring_file_path: path to the tailoring file, can be None if
+            no tailoring exists
         :type tailoring_file_path: str
         """
         self.file_path = file_path
         tree = ET.parse(file_path)
         self.root = tree.getroot()
-        if tailoring_file_path is not None:
-            self.tailoring = ET.parse(tailoring_file_path).getroot()
-        else:
+        if not tailoring_file_path:
             self.tailoring = None
+        else:
+            self.tailoring = ET.parse(tailoring_file_path).getroot()
         self.scap_type = self._get_scap_type(self.root)
         self._data_stream_id = None
         self._checklist_id = None

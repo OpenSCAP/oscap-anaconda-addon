@@ -439,13 +439,9 @@ class OSCAPSpoke(NormalSpoke):
             raise common.OSCAPaddonError("Unsupported content type")
 
         try:
-            if self._addon_data.preinst_tailoring_path:
-                tailoring_path = self._addon_data.preinst_tailoring_path
-            else:
-                tailoring_path = None
             self._content_handler = scap_content_handler.SCAPContentHandler(
                 self._addon_data.preinst_content_path,
-                tailoring_path)
+                self._addon_data.preinst_tailoring_path)
         except scap_content_handler.SCAPContentHandlerError as e:
             log.warning(str(e))
             self._invalid_content()
