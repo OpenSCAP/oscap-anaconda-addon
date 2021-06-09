@@ -155,6 +155,39 @@ class SCAPContentHandler:
         self._data_stream_id = data_stream_id
         self._checklist_id = checklist_id
 
+    def _find_benchmark_in_source_data_stream(self):
+        cref_xpath = f"ds:data-stream[@id='{self._data_stream_id}']/" \
+            f"ds:checklists/ds:component-ref[@id='{self._checklist_id}']"
+        cref = self.root.find(cref_xpath, ns)
+        if cref is None:
+            msg = f"Can't find ds:component-ref " \
+                f"with id='{self._checklist_id}' " \
+                f"in ds:datastream with id='{self._data_stream_id}'"
+            raise SCAPContentHandlerError(msg)
+        cref_href = cref.get(f"{{{ns['xlink']}}}href")
+        if cref_href is None:
+            msg = f"The ds:component-ref with id='{self._checklist_id} '" \
+                f"in ds:datastream with id='{self._data_stream_id}' " \
+                f"doesn't have a xlink:href attribute."
+            raise SCAPContentHandlerError(msg)
+        if not cref_href.startswith("#"):
+            msg = f"The component {cref_href} isn't local."
+            raise SCAPContentHandlerError(msg)
+        component_id = cref_href[1:]
+        component = self.root.find(
+            f"ds:component[@id='{component_id}']", ns)
+        if component is None:
+            msg = f"Can't find component {component_id}"
+            raise SCAPContentHandlerError(msg)
+        benchmark = component.find("xccdf-1.1:Benchmark", ns)
+        if benchmark is None:
+            benchmark = component.find("xccdf-1.2:Benchmark", ns)
+        if benchmark is None:
+            msg = f"The component {cref_href} doesn't contain an XCCDF " \
+                "Benchmark."
+            raise SCAPContentHandlerError(msg)
+        return benchmark
+
     def get_profiles(self):
         """
         Method to get a list of profiles defined in the currently selected
@@ -164,54 +197,25 @@ class SCAPContentHandler:
         :rtype: list of ProfileInfo instances
 
         """
-        if self.scap_type == "XCCDF":
-            if (self._data_stream_id is not None or
-                    self._checklist_id is not None):
-                msg = "For XCCDF documents, the data_stream_id and " \
-                    "checklist_id must be both None."
-                raise SCAPContentHandlerError(msg)
-            benchmark = self.root
-        elif self.scap_type == "TAILORING":
-            msg = "Tailoring files can't be processed separately"
-            raise SCAPContentHandlerError(msg)
-        elif self.scap_type == "SCAP_SOURCE_DATA_STREAM":
-            if self._data_stream_id is None or self._checklist_id is None:
-                msg = "For SCAP source data streams, data_stream_id and " \
-                    "checklist_id must be both different than None"
-                raise SCAPContentHandlerError(msg)
-            cref_xpath = f"ds:data-stream[@id='{self._data_stream_id}']/" \
-                f"ds:checklists/ds:component-ref[@id='{self._checklist_id}']"
-            cref = self.root.find(cref_xpath, ns)
-            if cref is None:
-                msg = f"Can't find ds:component-ref " \
-                    f"with id='{self._checklist_id}' " \
-                    f"in ds:datastream with id='{self._data_stream_id}'"
-                raise SCAPContentHandlerError(msg)
-            cref_href = cref.get(f"{{{ns['xlink']}}}href")
-            if cref_href is None:
-                msg = f"The ds:component-ref with id='{self._checklist_id} '" \
-                    f"in ds:datastream with id='{self._data_stream_id}' " \
-                    f"doesn't have a xlink:href attribute."
-                raise SCAPContentHandlerError(msg)
-            if not cref_href.startswith("#"):
-                msg = f"The component {cref_href} isn't local."
-                raise SCAPContentHandlerError(msg)
-            component_id = cref_href[1:]
-            component = self.root.find(
-                f"ds:component[@id='{component_id}']", ns)
-            if component is None:
-                msg = f"Can't find component {component_id}"
-                raise SCAPContentHandlerError(msg)
-            benchmark = component.find("xccdf-1.1:Benchmark", ns)
-            if benchmark is None:
-                benchmark = component.find("xccdf-1.2:Benchmark", ns)
-            if benchmark is None:
-                msg = f"The component {cref_href} doesn't contain " \
-                    "an XCCDF Benchmark."
-                raise SCAPContentHandlerError(msg)
-        else:
+        if self.scap_type not in ("XCCDF", "SCAP_SOURCE_DATA_STREAM"):
             msg = f"Unsupported SCAP content type '{self.scap_type}'."
             raise SCAPContentHandlerError(msg)
+        if self.scap_type == "XCCDF" and (
+                self._data_stream_id is not None or
+                self._checklist_id is not None):
+            msg = "For XCCDF documents, the data_stream_id and checklist_id " \
+                "must be both None."
+            raise SCAPContentHandlerError(msg)
+        if self.scap_type == "SCAP_SOURCE_DATA_STREAM" and (
+                self._data_stream_id is None or self._checklist_id is None):
+            msg = "For SCAP source data streams, data_stream_id and " \
+                "checklist_id must be both different than None"
+            raise SCAPContentHandlerError(msg)
+
+        if self.scap_type == "XCCDF":
+            benchmark = self.root
+        elif self.scap_type == "SCAP_SOURCE_DATA_STREAM":
+            benchmark = self._find_benchmark_in_source_data_stream()
         benchmark_profiles = self._parse_profiles_from_xccdf(benchmark)
         tailoring_profiles = self._parse_profiles_from_xccdf(self.tailoring)
         return benchmark_profiles + tailoring_profiles
