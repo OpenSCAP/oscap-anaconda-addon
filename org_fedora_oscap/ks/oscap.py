@@ -374,12 +374,14 @@ class OSCAPdata(AddonData):
                                 self.tailoring_path)
 
     def _terminate(self, message):
+        message += "\n" + _("The installation should be aborted.")
+        message += " " + _("Do you wish to continue anyway?")
         if flags.flags.automatedInstall and not flags.flags.ksprompt:
             # cannot have ask in a non-interactive kickstart
             # installation
             raise errors.CmdlineError(message)
 
-        answ = errors.errorHandler.ui.showYesNoQuestion(msg)
+        answ = errors.errorHandler.ui.showYesNoQuestion(message)
         if answ == errors.ERROR_CONTINUE:
             # prevent any futher actions here by switching to the dry
             # run mode and let things go on
@@ -396,14 +398,12 @@ class OSCAPdata(AddonData):
         log.error("Failed to fetch and initialize SCAP content!")
 
         if isinstance(exception, ContentCheckError):
-            msg = _("The integrity check of the security content failed.\n" +
-                    "The installation should be aborted. Do you wish to continue anyway?")
+            msg = _("The integrity check of the security content failed.")
             self._terminate(msg)
         elif (isinstance(exception, common.OSCAPaddonError)
             or isinstance(exception, data_fetch.DataFetchError)):
             msg = _("There was an error fetching and loading the security content:\n" +
-                    "%s\n" +
-                    "The installation should be aborted. Do you wish to continue anyway?") % str(exception)
+                    f"{str(exception)}")
             self._terminate(msg)
 
         else:
@@ -462,7 +462,6 @@ class OSCAPdata(AddonData):
         if any(fatal_messages):
             msg = ["Wrong configuration detected!"]
             msg.extend(fatal_messages)
-            msg.append("The installation should be aborted. Do you wish to continue anyway?")
             self._terminate("\n".join(msg))
             return
 
