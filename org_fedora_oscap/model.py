@@ -27,7 +27,7 @@ class Model:
     CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR) / "content-download"
     DEFAULT_CONTENT = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
 
-    def __init__(self, policy_data):
+    def __init__(self, addon_data):
         self.content_uri_scheme = ""
         self.content_uri_path = ""
         self.fetched_content = ""
@@ -36,6 +36,8 @@ class Model:
         self.now_fetching_or_processing = False
 
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
+
+        self._addon_data = addon_data
 
     def get_content_type(self, url):
         if url.endswith(".rpm"):
@@ -214,6 +216,37 @@ class Model:
             else:
                 raise common.OSCAPaddonError("Unsupported content type")
         return fpaths
+
+    def use_downloaded_content(self, content):
+        preferred_content = self.get_preferred_content(content)
+
+        # We know that we have ended up with a datastream-like content,
+        # but if we can't convert an archive to a datastream.
+        # self._addon_data.content_type = "datastream"
+        self._addon_data.content_path = str(preferred_content.relative_to(content.root))
+
+        preferred_tailoring = self.get_preferred_tailoring(content)
+        if content.tailoring:
+            self._addon_data.tailoring_path = str(preferred_tailoring.relative_to(content.root))
+
+    def use_system_content(self, content=None):
+        self._addon_data.clear_all()
+        self._addon_data.content_type = "scap-security-guide"
+        self._addon_data.content_path = common.get_ssg_path()
+
+    def get_preferred_content(self, content):
+        if self._addon_data.content_path:
+            preferred_content = content.find_expected_usable_content(self._addon_data.content_path)
+        else:
+            preferred_content = content.select_main_usable_content()
+        return preferred_content
+
+    def get_preferred_tailoring(self, content):
+        if self._addon_data.tailoring_path:
+            if self._addon_data.tailoring_path != str(content.tailoring.relative_to(content.root)):
+                msg = f"Expected a tailoring {self.tailoring_path}, but it couldn't be found"
+                raise content_handling.ContentHandlingError(msg)
+        return content.tailoring
 
 
 class ObtainedContent:

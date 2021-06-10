@@ -373,25 +373,6 @@ class OSCAPdata(AddonData):
         return utils.join_paths(common.TARGET_CONTENT_DIR,
                                 self.tailoring_path)
 
-    def get_preferred_content(self, content):
-        if self.content_path:
-            preferred_content = content.find_expected_usable_content(self.content_path)
-        else:
-            preferred_content = content.select_main_usable_content()
-
-        if self.tailoring_path:
-            if self.tailoring_path != str(content.tailoring.relative_to(content.root)):
-                msg = f"Expected a tailoring {self.tailoring_path}, but it couldn't be found"
-                raise content_handling.ContentHandlingError(msg)
-        return preferred_content
-
-    def update_with_content(self, content):
-        preferred_content = self.get_preferred_content(content)
-
-        self.content_path = str(preferred_content.relative_to(content.root))
-        if content.tailoring:
-            self.tailoring_path = str(content.tailoring.relative_to(content.root))
-
     def _terminate(self, message):
         if flags.flags.automatedInstall and not flags.flags.ksprompt:
             # cannot have ask in a non-interactive kickstart
@@ -465,7 +446,7 @@ class OSCAPdata(AddonData):
 
         try:
             # just check that preferred content exists
-            _ = self.get_preferred_content(content)
+            _ = self.model.get_preferred_content(content)
         except Exception as exc:
             self._terminate(str(exc))
             return

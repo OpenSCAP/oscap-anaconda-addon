@@ -252,7 +252,7 @@ class OSCAPSpoke(NormalSpoke):
         self._anaconda_spokes_initialized = threading.Event()
         self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
 
-        self.model = Model(None)
+        self.model = Model(self._addon_data)
 
     def _all_anaconda_spokes_initialized(self):
         log.debug("OSCAP addon: Anaconda init_done signal triggered")
@@ -418,14 +418,14 @@ class OSCAPSpoke(NormalSpoke):
             return
 
         try:
-            preferred_content = self._addon_data.get_preferred_content(content)
             if actually_fetched_content:
-                self._addon_data.update_with_content(content)
+                self.model.use_downloaded_content(content)
+            log.info(f"{self._addon_data.preinst_content_path}, {self._addon_data.preinst_tailoring_path}")
             self._content_handler = scap_content_handler.SCAPContentHandler(
                 self._addon_data.preinst_content_path,
                 self._addon_data.preinst_tailoring_path)
         except Exception as e:
-            log.warning(str(e))
+            log.error(str(e))
             self._invalid_content()
             # fetching done
             with self._fetch_flag_lock:
@@ -1148,7 +1148,5 @@ class OSCAPSpoke(NormalSpoke):
         self.refresh()
 
     def on_use_ssg_clicked(self, *args):
-        self._addon_data.clear_all()
-        self._addon_data.content_type = "scap-security-guide"
-        self._addon_data.content_path = common.SSG_DIR + common.SSG_CONTENT
+        self.model.use_system_content()
         self._fetch_data_and_initialize()
