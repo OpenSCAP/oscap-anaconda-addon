@@ -21,7 +21,7 @@
 """Module with unit tests for the common.py module"""
 
 import os
-import mock
+from unittest import mock
 import shutil
 
 import pytest
