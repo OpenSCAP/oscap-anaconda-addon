@@ -23,8 +23,8 @@ def is_network(scheme):
         for net_prefix in data_fetch.NET_URL_PREFIXES)
 
 
-class Model:
-    CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR) / "content-download"
+class ContentBringer:
+    CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
     DEFAULT_CONTENT = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
 
     def __init__(self, addon_data):
@@ -66,6 +66,7 @@ class Model:
                 should handle them in the calling layer.
             cert: HTTPS certificates
         """
+        self.content_uri = self._addon_data.content_url
         shutil.rmtree(self.CONTENT_DOWNLOAD_LOCATION, ignore_errors=True)
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
         fetching_thread_name = self._fetch_files(

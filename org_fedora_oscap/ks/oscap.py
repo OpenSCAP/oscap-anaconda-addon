@@ -37,7 +37,7 @@ from pykickstart.errors import KickstartParseError, KickstartValueError
 from org_fedora_oscap import utils, common, rule_handling, data_fetch
 from org_fedora_oscap.common import SUPPORTED_ARCHIVES, _
 from org_fedora_oscap.content_handling import ContentCheckError, ContentHandlingError
-from org_fedora_oscap import model
+from org_fedora_oscap import content_discovery
 
 log = logging.getLogger("anaconda")
 
@@ -104,8 +104,7 @@ class OSCAPdata(AddonData):
         self.rule_data = rule_handling.RuleData()
         self.dry_run = False
 
-        self.model = model.Model(self)
-        self.model.CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
+        self.content_bringer = content_discovery.ContentBringer(self)
 
     def __str__(self):
         """
@@ -431,14 +430,13 @@ class OSCAPdata(AddonData):
         thread_name = None
         if not os.path.exists(self.preinst_content_path) and not os.path.exists(self.raw_preinst_content_path):
             # content not available/fetched yet
-            self.model.content_uri = self.content_url
-            thread_name = self.model.fetch_content(self._handle_error, self.certificates)
+            thread_name = self.content_bringer.fetch_content(self._handle_error, self.certificates)
 
         content_dest = None
         if self.content_type != "scap-security-guide":
             content_dest = self.raw_preinst_content_path
 
-        content = self.model.finish_content_fetch(
+        content = self.content_bringer.finish_content_fetch(
             thread_name, self.fingerprint, lambda msg: log.info(msg), content_dest, self._handle_error)
 
         if not content:
@@ -446,7 +444,7 @@ class OSCAPdata(AddonData):
 
         try:
             # just check that preferred content exists
-            _ = self.model.get_preferred_content(content)
+            _ = self.content_bringer.get_preferred_content(content)
         except Exception as exc:
             self._terminate(str(exc))
             return
