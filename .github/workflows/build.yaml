@@ -1,15 +1,42 @@
 name: Gating
 on:
   push:
-    branches: [ '*' ]
+    branches: [ master, rhel8-branch, rhel9-branch ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, rhel8-branch, rhel9-branch ]
 jobs:
-  validate-fedora:
-    name: Unit Tests on Fedora 33 (Container)
+  validate-rhel8:
+    name: Unit Tests on Fedora 32 (Container)
+    if: github.ref == 'refs/heads/rhel8-branch'
     runs-on: ubuntu-latest
     container:
-      image: fedora:33
+      image: fedora:32
+    steps:
+      - name: Install Deps
+        run: dnf install -y make anaconda openscap-python3 python3-cpio python3-mock python3-pytest python3-pycurl
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Test
+        run: make unittest
+  validate-rhel9:
+    name: Unit Tests on Fedora 34 (Container)
+    if: github.ref == 'refs/heads/rhel9-branch'
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:34
+    steps:
+      - name: Install Deps
+        run: dnf install -y make anaconda openscap-python3 python3-cpio python3-mock python3-pytest python3-pycurl
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Test
+        run: make unittest
+  validate-master:
+    name: Unit Tests on Fedora Rawhide (Container)
+    if: github.ref == 'refs/heads/master' || github.event.pull_request.base.ref == 'master'
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:35
     steps:
       - name: Install Deps
         run: dnf install -y make anaconda openscap-python3 python3-cpio python3-mock python3-pytest python3-pycurl
