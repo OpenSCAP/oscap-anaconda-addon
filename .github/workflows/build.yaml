@@ -7,7 +7,7 @@ on:
 jobs:
   validate-rhel8:
     name: Unit Tests on Fedora 32 (Container)
-    if: github.ref == 'refs/heads/rhel8-branch'
+    if: github.ref == 'refs/heads/rhel8-branch' || github.event.pull_request.base.ref == 'rhel8-branch'
     runs-on: ubuntu-latest
     container:
       image: fedora:32
@@ -20,7 +20,7 @@ jobs:
         run: make unittest
   validate-rhel9:
     name: Unit Tests on Fedora 34 (Container)
-    if: github.ref == 'refs/heads/rhel9-branch'
+    if: github.ref == 'refs/heads/rhel9-branch' || github.event.pull_request.base.ref == 'rhel9-branch'
     runs-on: ubuntu-latest
     container:
       image: fedora:34
