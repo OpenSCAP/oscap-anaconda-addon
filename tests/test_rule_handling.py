@@ -121,7 +121,7 @@ def ksdata_mock():
 
 @pytest.fixture()
 def storage_mock():
-    return mock.Mock()
+    return None
 
 
 # monkeypatch is a predefined fixture that is used to perform per-test case changes in the test env.
@@ -682,7 +682,8 @@ def test_evaluation_various_rules(proxy_getter, rule_data, ksdata_mock, storage_
                  "package --add=firewalld", ]:
         rule_data.new_rule(rule)
 
-    storage_mock.mountpoints = dict()
+    ksdata_mock.packages.packageList = []
+    ksdata_mock.packages.excludedList = []
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
@@ -692,24 +693,35 @@ def test_evaluation_various_rules(proxy_getter, rule_data, ksdata_mock, storage_
 
 def test_revert_mount_options_nonexistent(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("part /tmp --mountoptions=nodev")
-    storage_mock.mountpoints = dict()
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
     # mount point doesn't exist -> one message, nothing done
     assert len(messages) == 1
-    assert storage_mock.mountpoints == dict()
+
+    device_tree_mock = STORAGE.get_proxy(DEVICE_TREE)
+    device_tree_mock.SetDeviceMountOptions.assert_not_called()
 
     # mount point doesn't exist -> shouldn't do anything
     rule_data.revert_changes(ksdata_mock, storage_mock)
-    assert storage_mock.mountpoints == dict()
+
+    device_tree_mock.SetDeviceMountOptions.assert_not_called()
 
 
 def test_revert_mount_options(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("part /tmp --mountoptions=nodev")
-    storage_mock.mountpoints = dict()
-    storage_mock.mountpoints["/tmp"] = mock.Mock()
-    storage_mock.mountpoints["/tmp"].format.options = "defaults"
+
+    device_tree_mock = STORAGE.get_proxy(DEVICE_TREE)
+    device_tree_mock.GetMountPoints.return_value = {
+        "/tmp": "/dev/sda1",
+    }
+
+    def set_mount_options(device_name, mount_options):
+        assert device_name == "/dev/sda1"
+        device_tree_mock.GetDeviceMountOptions.return_value = mount_options
+
+    device_tree_mock.SetDeviceMountOptions.side_effect = set_mount_options
+    device_tree_mock.GetDeviceMountOptions.return_value = "defaults"
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
@@ -717,12 +729,16 @@ def test_revert_mount_options(proxy_getter, rule_data, ksdata_mock, storage_mock
     assert len(messages) == 1
 
     # "nodev" option should be added
-    assert storage_mock.mountpoints["/tmp"].format.options, "defaults == nodev"
+    device_tree_mock.SetDeviceMountOptions.assert_called_once_with(
+        "/dev/sda1", "defaults,nodev"
+    )
 
     rule_data.revert_changes(ksdata_mock, storage_mock)
 
     # should be reverted to the original value
-    assert storage_mock.mountpoints["/tmp"].format.options == "defaults"
+    device_tree_mock.SetDeviceMountOptions.assert_called_with(
+        "/dev/sda1", "defaults"
+    )
 
     # another cycle of the same #
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
@@ -731,12 +747,16 @@ def test_revert_mount_options(proxy_getter, rule_data, ksdata_mock, storage_mock
     assert len(messages) == 1
 
     # "nodev" option should be added
-    assert storage_mock.mountpoints["/tmp"].format.options, "defaults == nodev"
+    device_tree_mock.SetDeviceMountOptions.assert_called_with(
+        "/dev/sda1", "defaults,nodev"
+    )
 
     rule_data.revert_changes(ksdata_mock, storage_mock)
 
     # should be reverted to the original value
-    assert storage_mock.mountpoints["/tmp"].format.options == "defaults"
+    device_tree_mock.SetDeviceMountOptions.assert_called_with(
+        "/dev/sda1", "defaults"
+    )
 
 
 def test_revert_password_policy_changes(proxy_getter, rule_data, ksdata_mock, storage_mock):
