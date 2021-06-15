@@ -1,5 +1,5 @@
 import pytest
-import mock
+from unittest import mock
 from collections import defaultdict
 
 from pyanaconda.modules.common.constants.objects import FIREWALL, DEVICE_TREE, BOOTLOADER
