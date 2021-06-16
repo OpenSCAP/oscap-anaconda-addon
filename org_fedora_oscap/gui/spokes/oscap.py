@@ -419,7 +419,14 @@ class OSCAPSpoke(NormalSpoke):
         try:
             if actually_fetched_content:
                 self.content_bringer.use_downloaded_content(content)
-            log.info(f"{self._addon_data.preinst_content_path}, {self._addon_data.preinst_tailoring_path}")
+
+            msg = f"Opening SCAP content at {self._addon_data.preinst_content_path}"
+            if self._addon_data.tailoring_path:
+                msg += f" with tailoring {self._addon_data.preinst_tailoring_path}"
+            else:
+                msg += " without considering tailoring"
+            log.info(msg)
+
             self._content_handler = scap_content_handler.SCAPContentHandler(
                 self._addon_data.preinst_content_path,
                 self._addon_data.preinst_tailoring_path)

@@ -25,7 +25,7 @@ def is_network(scheme):
 
 class ContentBringer:
     CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
-    DEFAULT_CONTENT = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
+    DEFAULT_SSG_DATA_STREAM_PATH = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
 
     def __init__(self, addon_data):
         self.content_uri_scheme = ""
@@ -194,7 +194,7 @@ class ContentBringer:
         fpaths = []
         if not actually_fetched_content:
             if not dest_filename:  # using scap-security-guide
-                fpaths = [self.DEFAULT_CONTENT]
+                fpaths = [self.DEFAULT_SSG_DATA_STREAM_PATH]
             else:  # Using downloaded XCCDF/OVAL/DS/tailoring
                 fpaths = glob(str(self.CONTENT_DOWNLOAD_LOCATION / "*.xml"))
         else:
@@ -329,7 +329,7 @@ class ObtainedContent:
                 msg = f"Couldn't find '{content_path}' among the available content"
             else:
                 msg = (
-                    "File '{content_path}' is not a valid datastream "
+                    f"File '{content_path}' is not a valid datastream "
                     "or a valid XCCDF of a XCCDF-OVAL file tuple")
             raise content_handling.ContentHandlingError(msg)
 

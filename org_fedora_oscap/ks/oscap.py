@@ -458,9 +458,9 @@ class OSCAPdata(AddonData):
         fatal_messages = [message for message in self.rule_data.eval_rules(ksdata, storage)
                           if message.type == common.MESSAGE_TYPE_FATAL]
         if any(fatal_messages):
-            msg = ["Wrong configuration detected!"]
-            msg.extend(fatal_messages)
-            self._terminate("\n".join(msg))
+            msg_lines = [_("Wrong configuration detected!")]
+            msg_lines.extend(fatal_messages)
+            self._terminate("\n".join(msg_lines))
             return
 
         # add packages needed on the target system to the list of packages
