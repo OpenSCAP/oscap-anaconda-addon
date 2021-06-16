@@ -15,8 +15,7 @@ What do you need to test your changes?
 
 1. Clone addon repository & use required branch & change code.
 2. Build addon update image.
-3. Serve image using local HTTP server.
-4. Load system with update image.
+3. Run a VM using reanaconda.
 
 
 === Clone repository & use required branch
@@ -51,8 +50,66 @@ or use the `lsinitrd` command, which is part of the `dracut` package on RHEL and
 lsinitrd update.img
 ----
 
+=== Use reanaconda
 
-=== Serve image using HTTP server
+The `reanaconda` script prepares and starts a VM with the update image.
+You can get it from the repository at 
+https://github.com/rhinstaller/devel-tools/tree/master/reanaconda
+
+Prepare the VM:
+
+----
+./reanaconda.py prime --sensible --tree http://ftp.fi.muni.cz/pub/linux/fedora/linux/releases/34/Everything/x86_64/os
+----
+
+After the script terminates, provide the update image:
+
+----
+./reanaconda.py updates path/to/updates.img
+----
+
+The VM should be shown in a QEMU window, which you can play with and you can
+close it any time.
+
+If you run a Fedora VM, there won't be `scap-security-guide` content available,
+so you will have to serve the content from your host machine using a HTTP
+server. For example, you can provide your local SSG build. In a new terminal,
+run:
+
+----
+cd ~/work/git/scap-security-guide/build
+python3 -m http.server
+----
+
+And then, in the OSCAP Anaconda Addon user interface, enter the URL. Your host
+is visible from your guest at `10.0.2.2`. For example:
+
+----
+http://10.0.2.2:8000/ssg-fedora-ds.xml
+----
+
+Watch the console, as the VM is supposed to download the update image, and the Python server should output the corresponding HTTP request:
+
+`<IP> - - [<date>] "GET /update.img HTTP/1.1" 200 -`
+
+200 is the OK request status.
+
+There is a cleanup step, but you don't have to run it if you only want to
+restart the VM with a new image:
+
+----
+./reanaconda.py cleanup
+----
+
+=== Further introspection of Anaconda
+
+After reaching the Anaconda GUI, you can switch into another VT and check out that the update went OK by examining the files on the disc.
+You can also debug Anaconda in a sophisticated way - as of 04/2018, switching to tty1 brought you to a TMUX session with windows attached to various processes.
+There is also an official https://fedoraproject.org/wiki/How_to_debug_installation_problems[how-to-debug documentation] though.
+
+=== Older method without reanaconda
+
+==== Serve image using HTTP server
 
 You don't need public HTTP server or setup Apache.
 You can use simple python HTTP server - it serves all files in you current directory.
@@ -64,7 +121,7 @@ python3 -m http.server
 **Setup your firewall rules correctly to make webserver port accessible from virtual machine.**
 
 
-=== Load system with update image
+==== Load system with update image
 
 If you want to load your changes to anaconda, you have to setup boot options correctly.
 You have two ways how to setup it:
@@ -99,11 +156,7 @@ Watch the console, as the VM is supposed to download the update image, and the P
 200 is the OK request status.
 
 
-=== Further introspection of Anaconda
 
-After reaching the Anaconda GUI, you can switch into another VT and check out that the update went OK by examining the files on the disc.
-You can also debug Anaconda in a sophisticated way - as of 04/2018, switching to tty1 brought you to a TMUX session with windows attached to various processes.
-There is also an official https://fedoraproject.org/wiki/How_to_debug_installation_problems[how-to-debug documentation] though.
 
 
 == Available make commands

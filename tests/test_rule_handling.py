@@ -1,5 +1,5 @@
 import pytest
-import mock
+from unittest import mock
 from collections import defaultdict
 
 from pyanaconda.core.constants import PAYLOAD_TYPE_DNF

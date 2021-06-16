@@ -28,6 +28,7 @@ from org_fedora_oscap import common
 from org_fedora_oscap import data_fetch
 from org_fedora_oscap import rule_handling
 from org_fedora_oscap import content_handling
+from org_fedora_oscap import scap_content_handler
 from org_fedora_oscap import utils
 from org_fedora_oscap.constants import OSCAP
 from org_fedora_oscap.structures import PolicyData
@@ -224,8 +225,6 @@ class OSCAPSpoke(NormalSpoke):
         # the first status provided
         self._unitialized_status = _("Not ready")
 
-        self._content_handler = None
-        self._content_handling_cls = None
         self._ds_checklists = None
 
         # the proxy to OSCAP DBus module
@@ -366,7 +365,7 @@ class OSCAPSpoke(NormalSpoke):
                for net_prefix in data_fetch.NET_URL_PREFIXES):
             # need to fetch data over network
             try:
-                thread_name = common.wait_and_fetch_net_data(
+                thread_name = data_fetch.wait_and_fetch_net_data(
                     self._policy_data.content_url,
                     common.get_raw_preinst_content_path(self._policy_data),
                     self._policy_data.certificates
@@ -416,7 +415,7 @@ class OSCAPSpoke(NormalSpoke):
 
         if self._policy_data.fingerprint:
             hash_obj = utils.get_hashing_algorithm(self._policy_data.fingerprint)
-            digest = utils.get_file_fingerprint(self._policy_data.raw_preinst_content_path,
+            digest = utils.get_file_fingerprint(common.get_raw_preinst_content_path(self._policy_data),
                                                 hash_obj)
             if digest != self._policy_data.fingerprint:
                 self._integrity_check_failed()
@@ -442,26 +441,23 @@ class OSCAPSpoke(NormalSpoke):
                 return
 
             # and populate missing fields
-            self._content_handling_cls, files = content_handling.explore_content_files(fpaths)
+            files = content_handling.explore_content_files(fpaths)
             files = common.strip_content_dir(files)
 
             # pylint: disable-msg=E1103
             self._policy_data.content_path = self._policy_data.content_path or files.xccdf
             self._policy_data.cpe_path = self._policy_data.cpe_path or files.cpe
             self._policy_data.tailoring_path = self._policy_data.tailoring_path or files.tailoring
-        elif self._policy_data.content_type == "datastream":
-            self._content_handling_cls = content_handling.DataStreamHandler
-        elif self._policy_data.content_type == "scap-security-guide":
-            self._content_handling_cls = content_handling.BenchmarkHandler
-        else:
+        elif self._policy_data.content_type not in (
+                "datastream", "scap-security-guide"):
             raise common.OSCAPaddonError("Unsupported content type")
 
         try:
-            self._content_handler = self._content_handling_cls(
+            self._content_handler = scap_content_handler.SCAPContentHandler(
                 common.get_preinst_content_path(self._policy_data),
-                common.get_preinst_tailoring_path(self._policy_data)
-            )
-        except content_handling.ContentHandlingError:
+                common.get_preinst_tailoring_path(self._policy_data))
+        except scap_content_handler.SCAPContentHandlerError as e:
+            log.warning(str(e))
             self._invalid_content()
             # fetching done
             with self._fetch_flag_lock:
@@ -469,9 +465,9 @@ class OSCAPSpoke(NormalSpoke):
 
             return
 
+        self._ds_checklists = self._content_handler.get_data_streams_checklists()
         if self._using_ds:
             # populate the stores from items from the content
-            self._ds_checklists = self._content_handler.get_data_streams_checklists()
             add_ds_ids = GtkActionList()
             add_ds_ids.add_action(self._ds_store.clear)
             for dstream in self._ds_checklists.keys():
@@ -518,7 +514,7 @@ class OSCAPSpoke(NormalSpoke):
 
     @property
     def _using_ds(self):
-        return self._content_handling_cls == content_handling.DataStreamHandler
+        return self._ds_checklists is not None
 
     @property
     def _current_ds_id(self):
@@ -594,18 +590,17 @@ class OSCAPSpoke(NormalSpoke):
             # not initialized, cannot do anything
             return
 
-        if self._using_ds and self._ds_checklists is None:
+        if self._using_ds and (
+                self._current_xccdf_id is None or self._current_ds_id is None):
             # not initialized, cannot do anything
             return
 
         self._profiles_store.clear()
-
-        if self._using_ds:
-            profiles = self._content_handler.get_profiles(self._current_ds_id,
-                                                          self._current_xccdf_id)
-        else:
-            # pylint: disable-msg=E1103
-            profiles = self._content_handler.profiles
+        try:
+            profiles = self._content_handler.get_profiles()
+        except scap_content_handler.SCAPContentHandlerError as e:
+            log.warning(str(e))
+            self._invalid_content()
 
         for profile in profiles:
             profile_markup = '<span weight="bold">%s</span>\n%s' \
@@ -866,7 +861,6 @@ class OSCAPSpoke(NormalSpoke):
         self._content_url_entry.set_sensitive(True)
         self._content_url_entry.grab_focus()
         self._content_url_entry.select_region(0, -1)
-        self._content_handling_cls = None
         self._set_error(msg)
 
     @async_action_wait
@@ -1115,6 +1109,8 @@ class OSCAPSpoke(NormalSpoke):
 
     def on_xccdf_combo_changed(self, *args):
         """Handler for the XCCDF ID change."""
+        self._content_handler.select_checklist(
+            self._current_ds_id, self._current_xccdf_id)
 
         # may take a while
         self._update_profiles_store()
