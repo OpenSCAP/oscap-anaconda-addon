@@ -57,24 +57,24 @@ class ContentBringer:
         self.content_uri_path = path
         self.content_uri_scheme = scheme
 
-    def fetch_content(self, what_if_fail, cert=""):
+    def fetch_content(self, what_if_fail, ca_certs_path=""):
         """
         Initiate fetch of the content into an appropriate directory
 
         Args:
             what_if_fail: Callback accepting exception as an argument that
                 should handle them in the calling layer.
-            cert: HTTPS certificates
+            ca_certs_path: Path to the HTTPS certificate file
         """
         self.content_uri = self._addon_data.content_url
         shutil.rmtree(self.CONTENT_DOWNLOAD_LOCATION, ignore_errors=True)
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
         fetching_thread_name = self._fetch_files(
             self.content_uri_scheme, self.content_uri_path,
-            self.CONTENT_DOWNLOAD_LOCATION, cert, what_if_fail)
+            self.CONTENT_DOWNLOAD_LOCATION, ca_certs_path, what_if_fail)
         return fetching_thread_name
 
-    def _fetch_files(self, scheme, path, destdir, cert, what_if_fail):
+    def _fetch_files(self, scheme, path, destdir, ca_certs_path, what_if_fail):
         with self.activity_lock:
             if self.now_fetching_or_processing:
                 msg = "Strange, it seems that we are already fetching something."
@@ -84,7 +84,7 @@ class ContentBringer:
 
         fetching_thread_name = None
         try:
-            fetching_thread_name = self._start_actual_fetch(scheme, path, destdir, cert)
+            fetching_thread_name = self._start_actual_fetch(scheme, path, destdir, ca_certs_path)
         except Exception as exc:
             with self.activity_lock:
                 self.now_fetching_or_processing = False
@@ -93,7 +93,7 @@ class ContentBringer:
         # We are not finished yet with the fetch
         return fetching_thread_name
 
-    def _start_actual_fetch(self, scheme, path, destdir, cert):
+    def _start_actual_fetch(self, scheme, path, destdir, ca_certs_path):
         fetching_thread_name = None
         url = scheme + "://" + path
 
@@ -111,7 +111,7 @@ class ContentBringer:
             fetching_thread_name = data_fetch.wait_and_fetch_net_data(
                 url,
                 dest,
-                cert
+                ca_certs_path
             )
         else:  # invalid schemes are handled down the road
             fetching_thread_name = data_fetch.fetch_local_data(

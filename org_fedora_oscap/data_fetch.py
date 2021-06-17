@@ -95,7 +95,7 @@ def fetch_local_data(url, out_file):
     return common.THREAD_FETCH_DATA
 
 
-def wait_and_fetch_net_data(url, out_file, ca_certs=None):
+def wait_and_fetch_net_data(url, out_file, ca_certs_path=None):
     """
     Function that waits for network connection and starts a thread that fetches
     data over network.
@@ -119,7 +119,7 @@ def wait_and_fetch_net_data(url, out_file, ca_certs=None):
     log.info(f"Fetching data from {url}")
     fetch_data_thread = AnacondaThread(name=common.THREAD_FETCH_DATA,
                                        target=fetch_data,
-                                       args=(url, out_file, ca_certs),
+                                       args=(url, out_file, ca_certs_path),
                                        fatal=False)
 
     # register and run the thread
@@ -143,9 +143,9 @@ def can_fetch_from(url):
     return any(url.startswith(prefix) for prefix in resources)
 
 
-def fetch_data(url, out_file, ca_certs=None):
+def fetch_data(url, out_file, ca_certs_path=None):
     """
-    Fetch data from a given URL. If the URL starts with https://, ca_certs can
+    Fetch data from a given URL. If the URL starts with https://, ca_certs_path can
     be a path to PEM file with CA certificate chain to validate server
     certificate.
 
@@ -153,10 +153,10 @@ def fetch_data(url, out_file, ca_certs=None):
     :type url: str
     :param out_file: path to the output file
     :type out_file: str
-    :param ca_certs: path to a PEM file with CA certificate chain
-    :type ca_certs: str
+    :param ca_certs_path: path to a PEM file with CA certificate chain
+    :type ca_certs_path: str
     :raise WrongRequestError: if a wrong combination of arguments is passed
-                              (ca_certs file path given and url starting with
+                              (ca_certs_path file path given and url starting with
                               http://) or arguments don't have required format
     :raise CertificateValidationError: if server certificate validation fails
     :raise FetchError: if data fetching fails (usually due to I/O errors)
@@ -168,14 +168,14 @@ def fetch_data(url, out_file, ca_certs=None):
     utils.ensure_dir_exists(out_dir)
 
     if can_fetch_from(url):
-        _curl_fetch(url, out_file, ca_certs)
+        _curl_fetch(url, out_file, ca_certs_path)
     else:
         msg = "Cannot fetch data from '%s': unknown URL format" % url
         raise UnknownURLformatError(msg)
     log.info(f"Data fetch from {url} completed")
 
 
-def _curl_fetch(url, out_file, ca_certs=None):
+def _curl_fetch(url, out_file, ca_certs_path=None):
     """
     Function that fetches data and writes it out to the given file path. If a
     path to the file with CA certificates is given and the url starts with
@@ -185,11 +185,11 @@ def _curl_fetch(url, out_file, ca_certs=None):
     :type url: str
     :param out_file: path to the output file
     :type out_file: str
-    :param ca_certs: path to the file with CA certificates for server
+    :param ca_certs_path: path to the file with CA certificates for server
                      certificate validation
-    :type ca_certs: str
+    :type ca_certs_path: str
     :raise WrongRequestError: if a wrong combination of arguments is passed
-                              (ca_certs file path given and url starting with
+                              (ca_certs_path file path given and url starting with
                               http://) or arguments don't have required format
     :raise CertificateValidationError: if server certificate validation fails
     :raise FetchError: if data fetching fails (usually due to I/O errors)
@@ -223,18 +223,18 @@ def _curl_fetch(url, out_file, ca_certs=None):
     if not out_file:
         raise WrongRequestError("out_file cannot be an empty string")
 
-    if ca_certs and protocol != "https":
+    if ca_certs_path and protocol != "https":
         msg = "Cannot verify server certificate when using plain HTTP"
         raise WrongRequestError(msg)
 
     curl = pycurl.Curl()
     curl.setopt(pycurl.URL, url)
 
-    if ca_certs and protocol == "https":
+    if ca_certs_path and protocol == "https":
         # the strictest verification
         curl.setopt(pycurl.SSL_VERIFYHOST, 2)
         curl.setopt(pycurl.SSL_VERIFYPEER, 1)
-        curl.setopt(pycurl.CAINFO, ca_certs)
+        curl.setopt(pycurl.CAINFO, ca_certs_path)
 
     # may be turned off by flags (specified on command line, take precedence)
     if not conf.payload.verify_ssl:
