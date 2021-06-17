@@ -25,6 +25,7 @@ import re
 import os
 import time
 import logging
+import pathlib
 
 from pyanaconda.addons import AddonData
 from pyanaconda.core.configuration.anaconda import conf
@@ -35,6 +36,8 @@ from pyanaconda import flags
 from pykickstart.errors import KickstartParseError, KickstartValueError
 from org_fedora_oscap import utils, common, rule_handling, data_fetch
 from org_fedora_oscap.common import SUPPORTED_ARCHIVES, _
+from org_fedora_oscap.content_handling import ContentCheckError, ContentHandlingError
+from org_fedora_oscap import content_discovery
 
 log = logging.getLogger("anaconda")
 
@@ -47,7 +50,7 @@ SUPPORTED_CONTENT_TYPES = ("datastream", "rpm", "archive",
                            "scap-security-guide",
                            )
 
-SUPPORTED_URL_PREFIXES = ("http://", "https://", "ftp://"
+SUPPORTED_URL_PREFIXES = ("http://", "https://", "ftp://", "file://"
                           # LABEL:?, hdaX:?,
                           )
 
@@ -100,6 +103,8 @@ class OSCAPdata(AddonData):
         # internal values
         self.rule_data = rule_handling.RuleData()
         self.dry_run = False
+
+        self.content_bringer = content_discovery.ContentBringer(self)
 
     def __str__(self):
         """
@@ -367,27 +372,42 @@ class OSCAPdata(AddonData):
         return utils.join_paths(common.TARGET_CONTENT_DIR,
                                 self.tailoring_path)
 
-    def _fetch_content_and_initialize(self):
-        """Fetch content and initialize from it"""
+    def _terminate(self, message):
+        message += "\n" + _("The installation should be aborted.")
+        message += " " + _("Do you wish to continue anyway?")
+        if flags.flags.automatedInstall and not flags.flags.ksprompt:
+            # cannot have ask in a non-interactive kickstart
+            # installation
+            raise errors.CmdlineError(message)
 
-        data_fetch.fetch_data(self.content_url, self.raw_preinst_content_path,
-                              self.certificates)
-        # RPM is an archive at this phase
-        if self.content_type in ("archive", "rpm"):
-            # extract the content
-            common.extract_data(self.raw_preinst_content_path,
-                                common.INSTALLATION_CONTENT_DIR,
-                                [self.content_path])
+        answ = errors.errorHandler.ui.showYesNoQuestion(message)
+        if answ == errors.ERROR_CONTINUE:
+            # prevent any futher actions here by switching to the dry
+            # run mode and let things go on
+            self.dry_run = True
+            return
+        else:
+            # Let's sleep forever to prevent any further actions and
+            # wait for the main thread to quit the process.
+            progressQ.send_quit(1)
+            while True:
+                time.sleep(100000)
 
-        rules = common.get_fix_rules_pre(self.profile_id,
-                                         self.preinst_content_path,
-                                         self.datastream_id, self.xccdf_id,
-                                         self.preinst_tailoring_path)
+    def _handle_error(self, exception):
+        log.error("Failed to fetch and initialize SCAP content!")
 
-        # parse and store rules with a clean RuleData instance
-        self.rule_data = rule_handling.RuleData()
-        for rule in rules.splitlines():
-            self.rule_data.new_rule(rule)
+        if isinstance(exception, ContentCheckError):
+            msg = _("The integrity check of the security content failed.")
+            self._terminate(msg)
+        elif (isinstance(exception, common.OSCAPaddonError)
+            or isinstance(exception, data_fetch.DataFetchError)):
+            msg = _("There was an error fetching and loading the security content:\n" +
+                    f"{str(exception)}")
+            self._terminate(msg)
+
+        else:
+            msg = _("There was an unexpected problem with the supplied content.")
+            self._terminate(msg)
 
     def setup(self, storage, ksdata, payload):
         """
@@ -408,86 +428,41 @@ class OSCAPdata(AddonData):
             # selected
             return
 
+        thread_name = None
         if not os.path.exists(self.preinst_content_path) and not os.path.exists(self.raw_preinst_content_path):
             # content not available/fetched yet
-            try:
-                self._fetch_content_and_initialize()
-            except (common.OSCAPaddonError, data_fetch.DataFetchError) as e:
-                log.error("Failed to fetch and initialize SCAP content!")
-                msg = _("There was an error fetching and loading the security content:\n" +
-                        "%s\n" +
-                        "The installation should be aborted. Do you wish to continue anyway?") % e
+            thread_name = self.content_bringer.fetch_content(self._handle_error, self.certificates)
 
-                if flags.flags.automatedInstall and not flags.flags.ksprompt:
-                    # cannot have ask in a non-interactive kickstart
-                    # installation
-                    raise errors.CmdlineError(msg)
+        content_dest = None
+        if self.content_type != "scap-security-guide":
+            content_dest = self.raw_preinst_content_path
 
-                answ = errors.errorHandler.ui.showYesNoQuestion(msg)
-                if answ == errors.ERROR_CONTINUE:
-                    # prevent any futher actions here by switching to the dry
-                    # run mode and let things go on
-                    self.dry_run = True
-                    return
-                else:
-                    # Let's sleep forever to prevent any further actions and
-                    # wait for the main thread to quit the process.
-                    progressQ.send_quit(1)
-                    while True:
-                        time.sleep(100000)
+        content = self.content_bringer.finish_content_fetch(
+            thread_name, self.fingerprint, lambda msg: log.info(msg), content_dest, self._handle_error)
 
-        # check fingerprint if given
-        if self.fingerprint:
-            hash_obj = utils.get_hashing_algorithm(self.fingerprint)
-            digest = utils.get_file_fingerprint(self.raw_preinst_content_path,
-                                                hash_obj)
-            if digest != self.fingerprint:
-                log.error("Failed to fetch and initialize SCAP content!")
-                msg = _("The integrity check of the security content failed.\n" +
-                        "The installation should be aborted. Do you wish to continue anyway?")
+        if not content:
+            return
 
-                if flags.flags.automatedInstall and not flags.flags.ksprompt:
-                    # cannot have ask in a non-interactive kickstart
-                    # installation
-                    raise errors.CmdlineError(msg)
+        try:
+            # just check that preferred content exists
+            _ = self.content_bringer.get_preferred_content(content)
+        except Exception as exc:
+            self._terminate(str(exc))
+            return
 
-                answ = errors.errorHandler.ui.showYesNoQuestion(msg)
-                if answ == errors.ERROR_CONTINUE:
-                    # prevent any futher actions here by switching to the dry
-                    # run mode and let things go on
-                    self.dry_run = True
-                    return
-                else:
-                    # Let's sleep forever to prevent any further actions and
-                    # wait for the main thread to quit the process.
-                    progressQ.send_quit(1)
-                    while True:
-                        time.sleep(100000)
+        self.rule_data = rule_handling.get_rule_data_from_content(
+            self.profile_id, self.preinst_content_path,
+            self.datastream_id, self.xccdf_id, self.preinst_tailoring_path)
 
         # evaluate rules, do automatic fixes and stop if something that cannot
         # be fixed automatically is wrong
         fatal_messages = [message for message in self.rule_data.eval_rules(ksdata, storage)
                           if message.type == common.MESSAGE_TYPE_FATAL]
         if any(fatal_messages):
-            msg = "Wrong configuration detected!\n"
-            msg += "\n".join(message.text for message in fatal_messages)
-            msg += "\nThe installation should be aborted. Do you wish to continue anyway?"
-            if flags.flags.automatedInstall and not flags.flags.ksprompt:
-                # cannot have ask in a non-interactive kickstart installation
-                raise errors.CmdlineError(msg)
-
-            answ = errors.errorHandler.ui.showYesNoQuestion(msg)
-            if answ == errors.ERROR_CONTINUE:
-                # prevent any futher actions here by switching to the dry
-                # run mode and let things go on
-                self.dry_run = True
-                return
-            else:
-                # Let's sleep forever to prevent any further actions and wait
-                # for the main thread to quit the process.
-                progressQ.send_quit(1)
-                while True:
-                    time.sleep(100000)
+            msg_lines = [_("Wrong configuration detected!")]
+            msg_lines.extend(fatal_messages)
+            self._terminate("\n".join(msg_lines))
+            return
 
         # add packages needed on the target system to the list of packages
         # that are requested to be installed

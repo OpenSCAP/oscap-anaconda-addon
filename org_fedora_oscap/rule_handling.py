@@ -68,6 +68,17 @@ log = logging.getLogger("anaconda")
 _ = common._
 
 
+def get_rule_data_from_content(profile_id, content_path, ds_id="", xccdf_id="", tailoring_path=""):
+    rules = common.get_fix_rules_pre(
+        profile_id, content_path, ds_id, xccdf_id, tailoring_path)
+
+    # parse and store rules with a clean RuleData instance
+    rule_data = RuleData()
+    for rule in rules.splitlines():
+        rule_data.new_rule(rule)
+    return rule_data
+
+
 # TODO: use set instead of list for mount options?
 def parse_csv(option, opt_str, value, parser):
     for item in value.split(","):
