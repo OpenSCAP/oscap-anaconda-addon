@@ -261,7 +261,7 @@ class ObtainedContent:
         self.labelled_files = dict()
         self.datastream = ""
         self.xccdf = ""
-        self.oval = ""
+        self.ovals = []
         self.tailoring = ""
         self.archive = ""
         self.verified = ""
@@ -289,7 +289,7 @@ class ObtainedContent:
             msg = (
                 f"When dealing with {attribute_name}, "
                 f"there was already the {old_value.name} when setting the new {new_value.name}")
-            raise RuntimeError(msg)
+            raise content_handling.ContentHandlingError(msg)
         setattr(self, attribute_name, new_value)
 
     def add_file(self, fname, label):
@@ -299,7 +299,7 @@ class ObtainedContent:
         elif label == content_handling.CONTENT_TYPES["DATASTREAM"]:
             self._assign_content_type("datastream", path)
         elif label == content_handling.CONTENT_TYPES["OVAL"]:
-            self._assign_content_type("oval", path)
+            self.ovals.append(path)
         elif label == content_handling.CONTENT_TYPES["XCCDF_CHECKLIST"]:
             self._assign_content_type("xccdf", path)
         self.labelled_files[path] = label
@@ -312,9 +312,10 @@ class ObtainedContent:
         return self.datastream
 
     def _xccdf_content(self):
-        if not self.xccdf or not self.oval:
+        if not self.xccdf or not self.ovals:
             return None
-        if not (self.xccdf.exists() and self.oval.exists()):
+        some_ovals_exist = any([path.exists() for path in self.ovals])
+        if not (self.xccdf.exists() and some_ovals_exist):
             return None
         return self.xccdf
 

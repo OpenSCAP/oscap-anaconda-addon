@@ -406,7 +406,8 @@ class OSCAPdata(AddonData):
             self._terminate(msg)
 
         else:
-            raise exception
+            msg = _("There was an unexpected problem with the supplied content.")
+            self._terminate(msg)
 
     def setup(self, storage, ksdata, payload):
         """

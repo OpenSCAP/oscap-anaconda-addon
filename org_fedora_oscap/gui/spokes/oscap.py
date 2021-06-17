@@ -352,7 +352,7 @@ class OSCAPSpoke(NormalSpoke):
         elif isinstance(exception, content_handling.ContentCheckError):
             self._integrity_check_failed()
         else:
-            raise exception
+            self._general_content_problem()
 
     def _end_fetching(self, fetched_content):
         # stop the spinner in any case
@@ -768,6 +768,12 @@ class OSCAPSpoke(NormalSpoke):
         else:
             self._error = None
             self.clear_info()
+
+    @async_action_wait
+    def _general_content_problem(self):
+        msg = _("There was an unexpected problem with the supplied content.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
+        self._wrong_content(msg)
 
     @async_action_wait
     def _invalid_content(self):
