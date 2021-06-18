@@ -332,7 +332,10 @@ def extract_data(archive, out_dir, ensure_has_files=None):
         ensure_has_files = []
 
     # get rid of empty file paths
-    ensure_has_files = [fpath for fpath in ensure_has_files if fpath]
+    if not ensure_has_files:
+        ensure_has_files = []
+    else:
+        ensure_has_files = [fpath for fpath in ensure_has_files if fpath]
 
     msg = "OSCAP addon: Extracting {archive}".format(archive=archive)
     if ensure_has_files:

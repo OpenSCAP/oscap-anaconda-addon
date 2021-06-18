@@ -27,6 +27,8 @@ from it.
 import os.path
 
 from collections import namedtuple
+import multiprocessing
+
 from pyanaconda.core.util import execReadlines
 try:
     from html.parser import HTMLParser
@@ -35,6 +37,29 @@ except ImportError:
 
 import logging
 log = logging.getLogger("anaconda")
+
+
+CONTENT_TYPES = dict(
+    DATASTREAM="Source Data Stream",
+    XCCDF_CHECKLIST="XCCDF Checklist",
+    OVAL="OVAL Definitions",
+    CPE_DICT="CPE Dictionary",
+    TAILORING="XCCDF Tailoring",
+)
+
+
+class ContentHandlingError(Exception):
+    """Exception class for errors related to SCAP content handling."""
+
+    pass
+
+
+class ContentCheckError(ContentHandlingError):
+    """
+    Exception class for errors related to content (integrity,...) checking.
+    """
+
+    pass
 
 
 class ParseHTMLContent(HTMLParser):
@@ -85,6 +110,33 @@ def parse_HTML_from_content(content):
 ContentFiles = namedtuple("ContentFiles", ["xccdf", "cpe", "tailoring"])
 
 
+def identify_files(fpaths):
+    with multiprocessing.Pool(os.cpu_count()) as p:
+        labels = p.map(get_doc_type, fpaths)
+    return {path: label for (path, label) in zip(fpaths, labels)}
+
+
+def get_doc_type(file_path):
+    content_type = "unknown"
+    try:
+        for line in execReadlines("oscap", ["info", file_path]):
+            if line.startswith("Document type:"):
+                _prefix, _sep, type_info = line.partition(":")
+                content_type = type_info.strip()
+                break
+    except OSError:
+        # 'oscap info' exitted with a non-zero exit code -> unknown doc
+        # type
+        pass
+    except UnicodeDecodeError:
+        # 'oscap info' supplied weird output, which happens when it tries
+        # to explain why it can't examine e.g. a JPG.
+        return None
+    log.info("OSCAP addon: Identified {file_path} as {content_type}"
+             .format(file_path=file_path, content_type=content_type))
+    return content_type
+
+
 def explore_content_files(fpaths):
     """
     Function for finding content files in a list of file paths. SIMPLY PICKS
@@ -99,23 +151,6 @@ def explore_content_files(fpaths):
     :rtype: ContentFiles
 
     """
-
-    def get_doc_type(file_path):
-        content_type = "unknown"
-        try:
-            for line in execReadlines("oscap", ["info", file_path]):
-                if line.startswith("Document type:"):
-                    _prefix, _sep, type_info = line.partition(":")
-                    content_type = type_info.strip()
-                    break
-        except OSError:
-            # 'oscap info' exitted with a non-zero exit code -> unknown doc
-            # type
-            pass
-        log.info("OSCAP addon: Identified {file_path} as {content_type}"
-                 .format(file_path=file_path, content_type=content_type))
-        return content_type
-
     xccdf_file = ""
     cpe_file = ""
     tailoring_file = ""
