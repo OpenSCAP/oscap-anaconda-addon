@@ -174,6 +174,7 @@ class ContentBringer:
 
     def _verify_fingerprint(self, dest_filename, fingerprint=""):
         if not fingerprint:
+            log.info("No fingerprint provided, skipping integrity check")
             return
 
         hash_obj = utils.get_hashing_algorithm(fingerprint)
@@ -186,6 +187,7 @@ class ContentBringer:
             )
             msg = _(f"Integrity check of the content failed - {hash_obj.name} hash didn't match")
             raise content_handling.ContentCheckError(msg)
+        log.info(f"Integrity check passed using {hash_obj.name} hash")
 
     def _finish_actual_fetch(self, wait_for, fingerprint, report_callback, dest_filename):
         threadMgr.wait(wait_for)

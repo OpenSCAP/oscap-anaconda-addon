@@ -28,7 +28,7 @@ from pyanaconda.modules.common.structures.requirement import Requirement
 
 from org_fedora_oscap import common
 from org_fedora_oscap.constants import OSCAP
-from org_fedora_oscap.service.installation import FetchContentTask, CheckFingerprintTask, \
+from org_fedora_oscap.service.installation import PrepareValidContent, \
     EvaluateRulesTask, InstallContentTask, RemediateSystemTask
 from org_fedora_oscap.service.kickstart import OSCAPKickstartSpecification, KickstartParseError
 from org_fedora_oscap.service.oscap_interface import OSCAPInterface
@@ -207,14 +207,10 @@ class OSCAPService(KickstartService):
             return []
 
         tasks = [
-            FetchContentTask(
+            PrepareValidContent(
                 policy_data=self.policy_data,
                 file_path=common.get_raw_preinst_content_path(self.policy_data),
                 content_path=common.get_preinst_content_path(self.policy_data),
-            ),
-            CheckFingerprintTask(
-                policy_data=self.policy_data,
-                file_path=common.get_raw_preinst_content_path(self.policy_data),
             ),
             EvaluateRulesTask(
                 policy_data=self.policy_data,

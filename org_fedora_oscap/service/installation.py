@@ -25,6 +25,8 @@ from pyanaconda.modules.common.errors.installation import NonCriticalInstallatio
 
 from org_fedora_oscap import common, data_fetch, rule_handling, utils
 from org_fedora_oscap.common import _, get_packages_data, set_packages_data
+from org_fedora_oscap.content_handling import ContentCheckError
+from org_fedora_oscap import content_discovery
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +34,31 @@ log = logging.getLogger(__name__)
 REQUIRED_PACKAGES = ("openscap", "openscap-scanner",)
 
 
-class FetchContentTask(Task):
+def _handle_error(exception):
+    log.error("Failed to fetch and initialize SCAP content!")
+
+    if isinstance(exception, ContentCheckError):
+        msg = _("The integrity check of the security content failed.")
+        terminate(msg)
+    elif (
+            isinstance(exception, common.OSCAPaddonError)
+            or isinstance(exception, data_fetch.DataFetchError)):
+        msg = _("There was an error fetching and loading the security content:\n" +
+                f"{str(exception)}")
+        terminate(msg)
+
+    else:
+        msg = _("There was an unexpected problem with the supplied content.")
+        terminate(msg)
+
+
+def terminate(message):
+    message += "\n" + _("The installation should be aborted.")
+    message += " " + _("Do you wish to continue anyway?")
+    raise NonCriticalInstallationError(message)
+
+
+class PrepareValidContent(Task):
     """The installation task for fetching the content."""
 
     def __init__(self, policy_data, file_path, content_path):
@@ -41,76 +67,37 @@ class FetchContentTask(Task):
         self._policy_data = policy_data
         self._file_path = file_path
         self._content_path = content_path
+        self.content_bringer = content_discovery.ContentBringer(policy_data)
 
     @property
     def name(self):
-        return "Fetch the content"
+        return "Fetch the content, and optionally perform check or archive extraction"
 
     def run(self):
         """Run the task."""
         # Is the content available?
-        if os.path.exists(self._content_path):
-            log.debug("Content is already available. Skip.")
-            return
+        fetching_thread_name = None
+        if not os.path.exists(self._content_path) and not os.path.exists(self._file_path):
+            # content not available/fetched yet
+            fetching_thread_name = self.content_bringer.fetch_content(
+                _handle_error, self._policy_data.certificates)
 
-        if os.path.exists(self._file_path):
-            log.debug("Content is already available. Skip.")
+        content_dest = None
+        if self._policy_data.content_type != "scap-security-guide":
+            content_dest = self._file_path
+
+        content = self.content_bringer.finish_content_fetch(
+            fetching_thread_name, self._policy_data.fingerprint,
+            lambda msg: log.info(msg), content_dest, _handle_error)
+
+        if not content:
             return
 
         try:
-            data_fetch.fetch_data(
-                self._policy_data.content_url,
-                self._file_path,
-                self._policy_data.certificates
-            )
-
-            # RPM is an archive at this phase
-            if self._policy_data.content_type in ("archive", "rpm"):
-                # extract the content
-                common.extract_data(
-                    self._file_path,
-                    common.INSTALLATION_CONTENT_DIR,
-                    [self._policy_data.content_path]
-                )
-
-        except (common.OSCAPaddonError, data_fetch.DataFetchError) as e:
-            log.error("Failed to fetch SCAP content!")
-
-            raise NonCriticalInstallationError(_(
-                "There was an error fetching the security content:\n%s\n"
-                "The installation should be aborted."
-            ) % e)
-
-
-class CheckFingerprintTask(Task):
-    """The installation task for checking the fingerprint."""
-
-    def __init__(self, policy_data, file_path):
-        """Create a task."""
-        super().__init__()
-        self._policy_data = policy_data
-        self._file_path = file_path
-
-    @property
-    def name(self):
-        return "Check the fingerprint"
-
-    def run(self):
-        """Run the task."""
-        if not self._policy_data.fingerprint:
-            log.debug("No fingerprint is provided. Skip.")
-            return
-
-        hash_obj = utils.get_hashing_algorithm(self._policy_data.fingerprint)
-        digest = utils.get_file_fingerprint(self._file_path, hash_obj)
-
-        if digest != self._policy_data.fingerprint:
-            log.error("Failed to fetch and initialize SCAP content!")
-
-            raise NonCriticalInstallationError(_(
-                "The integrity check of the security content failed.\n" +
-                "The installation should be aborted."
-            ))
+            # just check that preferred content exists
+            _ = self.content_bringer.get_preferred_content(content)
+        except Exception as exc:
+            terminate(str(exc))
 
 
 class EvaluateRulesTask(Task):
@@ -134,41 +121,27 @@ class EvaluateRulesTask(Task):
 
     def _initialize_rules(self):
         try:
-            rules = common.get_fix_rules_pre(
-                self._policy_data.profile_id,
-                self._content_path,
-                self._policy_data.datastream_id,
-                self._policy_data.xccdf_id,
-                self._tailoring_path
-            )
-
-            # parse and store rules
-            rule_data = rule_handling.RuleData()
-
-            for rule in rules.splitlines():
-                rule_data.new_rule(rule)
-
+            rule_data = rule_handling.get_rule_data_from_content(
+                self._policy_data.profile_id, self._content_path,
+                self._policy_data.datastream_id, self._policy_data.xccdf_id,
+                self._tailoring_path)
             return rule_data
 
         except common.OSCAPaddonError as e:
-            log.error("Failed to load SCAP content!")
+            _handle_error(e)
 
-            raise NonCriticalInstallationError(_(
-                "There was an error loading the security content:\n%s\n"
-                "The installation should be aborted."
-            ) % e)
 
     def _evaluate_rules(self, rule_data):
         # evaluate rules, do automatic fixes and stop if something that cannot
         # be fixed automatically is wrong
         all_messages = rule_data.eval_rules(None, None)
-        fatal_messages = [m for m in all_messages if m.type == common.MESSAGE_TYPE_FATAL]
-
+        fatal_messages = [message for message in all_messages
+                          if message.type == common.MESSAGE_TYPE_FATAL]
         if any(fatal_messages):
-            raise NonCriticalInstallationError(_(
-                "There was a wrong configuration detected:\n%s\n"
-                "The installation should be aborted."
-            ) % "\n".join(message.text for message in fatal_messages))
+            msg_lines = [_("Wrong configuration detected!")]
+            msg_lines.extend(fatal_messages)
+            terminate("\n".join(msg_lines))
+            return
 
         # add packages needed on the target system to the list of packages
         # that are requested to be installed
