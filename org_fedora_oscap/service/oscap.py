@@ -16,7 +16,9 @@
 # Red Hat, Inc.
 #
 import logging
+import warnings
 
+from pykickstart.errors import KickstartDeprecationWarning
 from pyanaconda.core.configuration.anaconda import conf
 from pyanaconda.core.dbus import DBus
 from pyanaconda.core.signal import Signal
@@ -28,7 +30,7 @@ from org_fedora_oscap import common
 from org_fedora_oscap.constants import OSCAP
 from org_fedora_oscap.service.installation import FetchContentTask, CheckFingerprintTask, \
     EvaluateRulesTask, InstallContentTask, RemediateSystemTask
-from org_fedora_oscap.service.kickstart import OSCAPKickstartSpecification
+from org_fedora_oscap.service.kickstart import OSCAPKickstartSpecification, KickstartParseError
 from org_fedora_oscap.service.oscap_interface import OSCAPInterface
 from org_fedora_oscap.structures import PolicyData
 
@@ -50,6 +52,8 @@ class OSCAPService(KickstartService):
         self.policy_data_changed = Signal()
 
         self.installation_canceled = Signal()
+
+        self.canonical_addon_name = common.ADDON_NAMES[0]
 
     @property
     def policy_enabled(self):
@@ -122,12 +126,35 @@ class OSCAPService(KickstartService):
         policy_data.fingerprint = addon_data.fingerprint
         policy_data.certificates = addon_data.certificates
 
+        preferred_section_header = f"%addon {self.canonical_addon_name}"
+        all_addon_data = [
+            getattr(data.addons, name) for name in common.ADDON_NAMES]
+        relevant_data = [d for d in all_addon_data if d.addon_section_present]
+        if len(relevant_data) > 1:
+            msg = common._(
+                "You have used more than one oscap addon sections in the kickstart. "
+                f"Please use only one, preferably '{preferred_section_header}'.")
+            raise KickstartParseError(msg)
+        if len(relevant_data) == 0:
+            addon_data = all_addon_data[0]
+        else:
+            addon_data = relevant_data[0]
+
         self.policy_data = policy_data
+
+        if (common.COMPLAIN_ABOUT_NON_CANONICAL_NAMES
+                and addon_data.name != self.canonical_addon_name):
+            used_section_header = f"%addon {addon_data.name}"
+            msg = common._(
+                f"You have configured the oscap addon using '{used_section_header}' section. "
+                f"Please update your configuration and use '{preferred_section_header}'. "
+                "Support for legacy sections will be removed in the future major version.")
+            warnings.warn(msg, KickstartDeprecationWarning)
 
     def setup_kickstart(self, data):
         """Set the given kickstart data."""
         policy_data = self.policy_data
-        addon_data = data.addons.org_fedora_oscap
+        addon_data = getattr(data.addons, self.canonical_addon_name)
 
         addon_data.content_type = policy_data.content_type
         addon_data.content_url = policy_data.content_url

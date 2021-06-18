@@ -75,6 +75,12 @@ TARGET_CONTENT_DIR = "/root/openscap_data/"
 
 SSG_DIR = "/usr/share/xml/scap/ssg/content/"
 
+# Make it easy to change e.g. by sed substitution in spec files
+# First name is the canonical addon name, rest are adapters
+ADDON_NAMES = ["com_redhat_oscap", "org_fedora_oscap"]
+
+COMPLAIN_ABOUT_NON_CANONICAL_NAMES = True
+
 # Enable patches that set the content name at package-time
 DEFAULT_SSG_CONTENT_NAME = ""
 SSG_CONTENT = DEFAULT_SSG_CONTENT_NAME

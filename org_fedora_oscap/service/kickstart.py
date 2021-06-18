@@ -37,7 +37,7 @@ def key_value_pair(key, value, indent=4):
 
 
 class OSCAPKickstartData(AddonData):
-    """The kickstart data for the org_fedora_oscap add-on."""
+    """The kickstart data for the add-on."""
 
     def __init__(self):
         super().__init__()
@@ -57,10 +57,9 @@ class OSCAPKickstartData(AddonData):
         # certificate to verify HTTPS connection or signed data
         self.certificates = ""
 
-    @property
-    def name(self):
         """The name of the %addon section."""
-        return "org_fedora_oscap"
+        self.name = common.ADDON_NAMES[0]
+        self.addon_section_present = False
 
     def handle_header(self, args, line_number=None):
         """Handle the arguments of the %addon line.
@@ -69,7 +68,7 @@ class OSCAPKickstartData(AddonData):
         :param line_number: a line number
         :raise: KickstartParseError for invalid arguments
         """
-        pass
+        self.addon_section_present = True
 
     def handle_line(self, line, line_number=None):
         """Handle one line of the section.
@@ -245,9 +244,18 @@ class OSCAPKickstartData(AddonData):
         return ret
 
 
+def get_oscap_kickstart_data(name):
+    class NamedOSCAPKickstartData(OSCAPKickstartData):
+        def __init__(self):
+            super().__init__()
+            self.name = name
+
+    return NamedOSCAPKickstartData
+
+
 class OSCAPKickstartSpecification(KickstartSpecification):
     """The kickstart specification of the OSCAP service."""
 
     addons = {
-        "org_fedora_oscap": OSCAPKickstartData
+        name: get_oscap_kickstart_data(name) for name in common.ADDON_NAMES
     }
