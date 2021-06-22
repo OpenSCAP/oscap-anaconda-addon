@@ -37,6 +37,18 @@ class PolicyData(DBusData):
         self._fingerprint = ""
         self._certificates = ""
 
+    def update_from(self, rhs):
+        self._content_type = rhs._content_type
+        self._content_url = rhs._content_url
+        self._datastream_id = rhs._datastream_id
+        self._xccdf_id = rhs._xccdf_id
+        self._profile_id = rhs._profile_id
+        self._content_path = rhs._content_path
+        self._cpe_path = rhs._cpe_path
+        self._tailoring_path = rhs._tailoring_path
+        self._fingerprint = rhs._fingerprint
+        self._certificates = rhs._certificates
+
     @property
     def content_type(self) -> Str:
         """Type of the security content.

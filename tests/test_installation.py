@@ -89,6 +89,7 @@ def test_check_fingerprint_task(caplog, file_path):
     assert "No fingerprint is provided. Skip." in caplog.text
 
 
+@pytest.mark.skip(reason="Test seems to require Anaconda listening on dbus")
 def test_evaluate_rules_task(rule_evaluator, content_path, tailoring_path):
     data = PolicyData()
     task = installation.EvaluateRulesTask(

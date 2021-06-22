@@ -37,16 +37,17 @@ import logging
 from collections import namedtuple
 import gettext
 from functools import wraps
+
 from dasbus.identifier import DBusServiceIdentifier
 from pyanaconda.core import constants
 from pyanaconda.core.dbus import DBus
 from pyanaconda.core.constants import PAYLOAD_TYPE_DNF
 from pyanaconda.modules.common.constants.namespaces import ADDONS_NAMESPACE
-from pyanaconda.modules.common.constants.services import NETWORK, PAYLOADS
+from pyanaconda.modules.common.constants.services import PAYLOADS
 from pyanaconda.modules.common.structures.payload import PackagesConfigurationData
 from pyanaconda.threading import threadMgr, AnacondaThread
+
 from org_fedora_oscap import utils
-from org_fedora_oscap.data_fetch import fetch_data
 
 log = logging.getLogger("anaconda")
 
@@ -64,7 +65,7 @@ def N_(string): return string
 
 # everything else should be private
 __all__ = ["run_oscap_remediate", "get_fix_rules_pre",
-           "wait_and_fetch_net_data", "extract_data", "strip_content_dir",
+           "extract_data", "strip_content_dir",
            "OSCAPaddonError", "get_payload_proxy", "get_packages_data",
            "set_packages_data"]
 
@@ -72,13 +73,20 @@ INSTALLATION_CONTENT_DIR = "/tmp/openscap_data/"
 TARGET_CONTENT_DIR = "/root/openscap_data/"
 
 SSG_DIR = "/usr/share/xml/scap/ssg/content/"
-SSG_CONTENT = "ssg-rhel7-ds.xml"
-if constants.shortProductName != 'anaconda':
-    if constants.shortProductName == 'fedora':
-        SSG_CONTENT  = "ssg-fedora-ds.xml"
-    else:
-        SSG_CONTENT = "ssg-%s%s-ds.xml" % (constants.shortProductName,
-                                            constants.productVersion.strip(".")[0])
+
+# Enable patches that set the content name at package-time
+DEFAULT_SSG_CONTENT_NAME = ""
+SSG_CONTENT = DEFAULT_SSG_CONTENT_NAME
+if not SSG_CONTENT:
+    if constants.shortProductName != 'anaconda':
+        if constants.shortProductName == 'fedora':
+            SSG_CONTENT = "ssg-fedora-ds.xml"
+        else:
+            SSG_CONTENT = (
+                "ssg-{name}{version}-ds.xml"
+                .format(
+                    name=constants.shortProductName,
+                    version=constants.productVersion.strip(".")[0]))
 
 RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR,
                                 "eval_remediate_results.xml")
@@ -148,6 +156,10 @@ class SubprocessLauncher(object):
         self.returncode = None
 
     def execute(self, ** kwargs):
+        command_string = " ".join(self.args)
+        log.info(
+            "OSCAP addon: Executing subprocess: '{command_string}'"
+            .format(command_string=command_string))
         try:
             proc = subprocess.Popen(self.args, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, ** kwargs)
@@ -299,38 +311,6 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     return proc.stdout
 
 
-def wait_and_fetch_net_data(url, out_file, ca_certs=None):
-    """
-    Function that waits for network connection and starts a thread that fetches
-    data over network.
-
-    :see: org_fedora_oscap.data_fetch.fetch_data
-    :return: the name of the thread running fetch_data
-    :rtype: str
-
-    """
-
-    # get thread that tries to establish a network connection
-    nm_conn_thread = threadMgr.get(constants.THREAD_WAIT_FOR_CONNECTING_NM)
-    if nm_conn_thread:
-        # NM still connecting, wait for it to finish
-        nm_conn_thread.join()
-
-    network_proxy = NETWORK.get_proxy()
-    if not network_proxy.Connected:
-        raise OSCAPaddonNetworkError("Network connection needed to fetch data.")
-
-    fetch_data_thread = AnacondaThread(name=THREAD_FETCH_DATA,
-                                       target=fetch_data,
-                                       args=(url, out_file, ca_certs),
-                                       fatal=False)
-
-    # register and run the thread
-    threadMgr.add(fetch_data_thread)
-
-    return THREAD_FETCH_DATA
-
-
 def extract_data(archive, out_dir, ensure_has_files=None):
     """
     Fuction that extracts the given archive to the given output directory. It
@@ -348,15 +328,28 @@ def extract_data(archive, out_dir, ensure_has_files=None):
 
     """
 
-    # get rid of empty file paths
-    ensure_has_files = [fpath for fpath in ensure_has_files if fpath]
+    if not ensure_has_files:
+        ensure_has_files = []
 
+    # get rid of empty file paths
+    if not ensure_has_files:
+        ensure_has_files = []
+    else:
+        ensure_has_files = [fpath for fpath in ensure_has_files if fpath]
+
+    msg = "OSCAP addon: Extracting {archive}".format(archive=archive)
+    if ensure_has_files:
+        msg += ", expecting to find {files} there.".format(files=tuple(ensure_has_files))
+    log.info(msg)
+
+    result = []
     if archive.endswith(".zip"):
         # ZIP file
         try:
             zfile = zipfile.ZipFile(archive, "r")
-        except zipfile.BadZipfile as err:
-            raise ExtractionError(str(err))
+        except Exception as exc:
+            msg = _(f"Error extracting archive as a zipfile: {exc}")
+            raise ExtractionError(msg)
 
         # generator for the paths of the files found in the archive (dirs end
         # with "/")
@@ -372,22 +365,24 @@ def extract_data(archive, out_dir, ensure_has_files=None):
         zfile.extractall(path=out_dir)
         result = [utils.join_paths(out_dir, info.filename) for info in zfile.filelist]
         zfile.close()
-        return result
     elif archive.endswith(".tar"):
         # plain tarball
-        return _extract_tarball(archive, out_dir, ensure_has_files, None)
+        result = _extract_tarball(archive, out_dir, ensure_has_files, None)
     elif archive.endswith(".tar.gz"):
         # gzipped tarball
-        return _extract_tarball(archive, out_dir, ensure_has_files, "gz")
+        result = _extract_tarball(archive, out_dir, ensure_has_files, "gz")
     elif archive.endswith(".tar.bz2"):
         # bzipped tarball
-        return _extract_tarball(archive, out_dir, ensure_has_files, "bz2")
+        result = _extract_tarball(archive, out_dir, ensure_has_files, "bz2")
     elif archive.endswith(".rpm"):
         # RPM
-        return _extract_rpm(archive, out_dir, ensure_has_files)
+        result = _extract_rpm(archive, out_dir, ensure_has_files)
     # elif other types of archives
     else:
         raise ExtractionError("Unsuported archive type")
+    log.info("OSCAP addon: Extracted {files} from the supplied content"
+             .format(files=result))
+    return result
 
 
 def _extract_tarball(archive, out_dir, ensure_has_files, alg):
@@ -527,6 +522,10 @@ def strip_content_dir(fpaths, phase="preinst"):
     return utils.keep_type_map(remove_prefix, fpaths)
 
 
+def get_ssg_path(root="/"):
+    return utils.join_paths(root, SSG_DIR + SSG_CONTENT)
+
+
 def ssg_available(root="/"):
     """
     Tries to find the SCAP Security Guide under the given root.
@@ -535,7 +534,7 @@ def ssg_available(root="/"):
 
     """
 
-    return os.path.exists(utils.join_paths(root, SSG_DIR + SSG_CONTENT))
+    return os.path.exists(get_ssg_path(root))
 
 
 def get_content_name(data):

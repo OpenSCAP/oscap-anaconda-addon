@@ -47,18 +47,43 @@ from org_fedora_oscap.common import OSCAPaddonError, RuleMessage, KDUMP, get_pac
 __all__ = ["RuleData"]
 
 
+# Mapping of packages to package environments and/or groups that depends on them
+# See also https://access.redhat.com/solutions/1201413 how to get group IDs.
+# on RHEL8, use e.g. grep -R "<id>" /var/cache/dnf/*
 ESSENTIAL_PACKAGES = {
     "xorg-x11-server-common": {
         "env": ["graphical-server-environment", "workstation-product-environment"],
+        "groups": ["workstation-product-environment"],
     },
     "nfs-utils": {
         "env": ["graphical-server-environment", "workstation-product-environment"],
+        "groups": ["workstation-product-environment"],
+    },
+    "tftp": {
+        "groups": ["network-server"],
+    },
+    "abrt": {
+        "groups": ["debugging"],
+    },
+    "gssproxy": {
+        "groups": ["file-server"],
     },
 }
 
 log = logging.getLogger("anaconda")
 
 _ = common._
+
+
+def get_rule_data_from_content(profile_id, content_path, ds_id="", xccdf_id="", tailoring_path=""):
+    rules = common.get_fix_rules_pre(
+        profile_id, content_path, ds_id, xccdf_id, tailoring_path)
+
+    # parse and store rules with a clean RuleData instance
+    rule_data = RuleData()
+    for rule in rules.splitlines():
+        rule_data.new_rule(rule)
+    return rule_data
 
 
 # TODO: use set instead of list for mount options?
@@ -668,7 +693,7 @@ class PackageRules(RuleHandler):
             return True
 
         selected_install_env = packages_data.environment
-        if selected_install_env in ESSENTIAL_PACKAGES[package_name].get("env"):
+        if selected_install_env in ESSENTIAL_PACKAGES[package_name].get("env", []):
             return True
 
         for g in ESSENTIAL_PACKAGES[package_name].get("groups", []):

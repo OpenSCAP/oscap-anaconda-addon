@@ -146,7 +146,7 @@ oaa_root="$(cd "$script_dir/.." && pwd)"
 
 # $1: Where to put those translations
 pull_translations_locally () {
-	(cd "$oaa_root" && make po-pull ZANATA_PULL_ARGS="--transdir $1")
+	(cd "$oaa_root" && make po-pull TRANSLATIONS_DIR="$1")
 }
 
 
@@ -195,7 +195,7 @@ mkdir -p "$destdir"
 if test -n "$_arg_local_content"; then
 	copy_translations_from_directory "$_arg_local_content" "$destdir"
 else
-	pull_translations_locally "$tmpdir/a/po"
+	pull_translations_locally "$destdir"
 fi
 
 cp "$oaa_root/po/Makefile" "$oaa_root/po/oscap-anaconda-addon.pot" "$destdir"
