@@ -112,20 +112,6 @@ class OSCAPService(KickstartService):
 
     def process_kickstart(self, data):
         """Process the kickstart data."""
-        addon_data = data.addons.org_fedora_oscap
-        policy_data = PolicyData()
-
-        policy_data.content_type = addon_data.content_type
-        policy_data.content_url = addon_data.content_url
-        policy_data.datastream_id = addon_data.datastream_id
-        policy_data.xccdf_id = addon_data.xccdf_id
-        policy_data.profile_id = addon_data.profile_id
-        policy_data.content_path = addon_data.content_path
-        policy_data.cpe_path = addon_data.cpe_path
-        policy_data.tailoring_path = addon_data.tailoring_path
-        policy_data.fingerprint = addon_data.fingerprint
-        policy_data.certificates = addon_data.certificates
-
         preferred_section_header = f"%addon {self.canonical_addon_name}"
         all_addon_data = [
             getattr(data.addons, name) for name in common.ADDON_NAMES]
@@ -140,7 +126,7 @@ class OSCAPService(KickstartService):
         else:
             addon_data = relevant_data[0]
 
-        self.policy_data = policy_data
+        self.policy_data = addon_data.policy_data
 
         if (common.COMPLAIN_ABOUT_NON_CANONICAL_NAMES
                 and addon_data.name != self.canonical_addon_name):
@@ -156,16 +142,7 @@ class OSCAPService(KickstartService):
         policy_data = self.policy_data
         addon_data = getattr(data.addons, self.canonical_addon_name)
 
-        addon_data.content_type = policy_data.content_type
-        addon_data.content_url = policy_data.content_url
-        addon_data.datastream_id = policy_data.datastream_id
-        addon_data.xccdf_id = policy_data.xccdf_id
-        addon_data.profile_id = policy_data.profile_id
-        addon_data.content_path = policy_data.content_path
-        addon_data.cpe_path = policy_data.cpe_path
-        addon_data.tailoring_path = policy_data.tailoring_path
-        addon_data.fingerprint = policy_data.fingerprint
-        addon_data.certificates = policy_data.certificates
+        addon_data.policy_data = policy_data
 
     def collect_requirements(self):
         """Return installation requirements.
