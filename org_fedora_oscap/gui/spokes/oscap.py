@@ -1125,6 +1125,7 @@ class OSCAPSpoke(NormalSpoke):
             return
 
         # if a profile is double-clicked, we should switch to it
+        # pylint: disable = E1101
         if event.type == Gdk.EventType._2BUTTON_PRESS:
             self._switch_profile()
 

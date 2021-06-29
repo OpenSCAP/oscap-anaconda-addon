@@ -18,6 +18,7 @@
 import pytest
 from textwrap import dedent
 from org_fedora_oscap.service.oscap import OSCAPService
+from org_fedora_oscap import common
 
 
 @pytest.fixture()
@@ -260,6 +261,9 @@ def test_section_confusion(service):
 
 
 def test_scap_security_guide(service):
+    if common.ssg_available():
+        pytest.skip("Test works only if scap-security-guide is not installed")
+
     ks_in = """
     %addon com_redhat_oscap
         content-type = scap-security-guide
