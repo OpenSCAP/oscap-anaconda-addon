@@ -54,7 +54,6 @@ def _handle_error(exception):
 
 def terminate(message):
     message += "\n" + _("The installation should be aborted.")
-    message += " " + _("Do you wish to continue anyway?")
     raise NonCriticalInstallationError(message)
 
 
