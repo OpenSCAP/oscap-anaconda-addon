@@ -325,8 +325,7 @@ class OSCAPdata(AddonData):
         """Path to the pre-installation content file"""
 
         if self.content_type == "datastream":
-            return utils.join_paths(common.INSTALLATION_CONTENT_DIR,
-                                    self.content_name)
+            return self.raw_preinst_content_path
         elif self.content_type == "scap-security-guide":
             # SSG is not copied to the standard place
             return self.content_path
