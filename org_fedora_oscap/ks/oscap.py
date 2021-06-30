@@ -445,7 +445,7 @@ class OSCAPdata(AddonData):
 
         try:
             # just check that preferred content exists
-            _ = self.content_bringer.get_preferred_content(content)
+            self.content_bringer.get_preferred_content(content)
         except Exception as exc:
             self._terminate(str(exc))
             return
