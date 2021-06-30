@@ -578,10 +578,7 @@ def get_preinst_content_path(data):
         return data.content_path
 
     if data.content_type == "datastream":
-        return utils.join_paths(
-            INSTALLATION_CONTENT_DIR,
-            get_content_name(data)
-        )
+        return get_raw_preinst_content_path(data)
 
     return utils.join_paths(
         INSTALLATION_CONTENT_DIR,
