@@ -460,7 +460,7 @@ class OSCAPdata(AddonData):
                           if message.type == common.MESSAGE_TYPE_FATAL]
         if any(fatal_messages):
             msg_lines = [_("Wrong configuration detected!")]
-            msg_lines.extend(fatal_messages)
+            msg_lines.extend([m.text for m in fatal_messages])
             self._terminate("\n".join(msg_lines))
             return
 
