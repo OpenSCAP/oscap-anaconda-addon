@@ -243,9 +243,10 @@ class ContentBringer:
         return preferred_content
 
     def get_preferred_tailoring(self, content):
-        if self._addon_data.tailoring_path:
-            if self._addon_data.tailoring_path != str(content.tailoring.relative_to(content.root)):
-                msg = f"Expected a tailoring {self.tailoring_path}, but it couldn't be found"
+        tailoring_path = self._addon_data.tailoring_path
+        if tailoring_path:
+            if tailoring_path != str(content.tailoring.relative_to(content.root)):
+                msg = f"Expected a tailoring {tailoring_path}, but it couldn't be found"
                 raise content_handling.ContentHandlingError(msg)
         return content.tailoring
 
