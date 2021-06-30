@@ -669,7 +669,8 @@ class OSCAPSpoke(NormalSpoke):
                     self.__class__, common.MESSAGE_TYPE_WARNING, msg.text)
                 messages.append(msg)
 
-            if not report_only:
+            passwords_can_be_fixed = False
+            if not report_only and passwords_can_be_fixed:
                 users_proxy = USERS.get_proxy()
 
                 self.__old_root_pw = users_proxy.RootPassword
