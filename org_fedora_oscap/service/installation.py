@@ -77,7 +77,7 @@ class PrepareValidContent(Task):
         """Run the task."""
         # Is the content available?
         fetching_thread_name = None
-        if not os.path.exists(self._content_path) and not os.path.exists(self._file_path):
+        if not os.path.exists(self._content_path):
             # content not available/fetched yet
             fetching_thread_name = self.content_bringer.fetch_content(
                 _handle_error, self._policy_data.certificates)
@@ -91,7 +91,15 @@ class PrepareValidContent(Task):
             lambda msg: log.info(msg), content_dest, _handle_error)
 
         if not content:
-            return
+            # this shouldn't happen because error handling is supposed to
+            # terminate the addon before finish_content_fetch returns
+            _handle_error(Exception())
+
+        remote_content_was_present = (
+            not fetching_thread_name
+            and self._policy_data.content_type != "scap-security-guide")
+        if remote_content_was_present:
+            content.add_file(self._content_path)
 
         try:
             # just check that preferred content exists
