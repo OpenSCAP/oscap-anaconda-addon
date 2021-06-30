@@ -61,9 +61,10 @@ def test_unsupported_url():
     assert not data_fetch.can_fetch_from("aaaaa")
 
 
-def test_fetch_local(tmp_path):
-    source_path = pathlib.Path(__file__).absolute()
-    dest_path = tmp_path / "dest"
-    data_fetch.fetch_data("file://" + str(source_path), dest_path)
-    with open(dest_path, "r") as copied_file:
-        assert "This line is here and in the copied file as well" in copied_file.read()
+def test_fetch_local():
+    with tempfile.NamedTemporaryFile() as f:
+        dest_path = pathlib.Path(f.name)
+        source_path = pathlib.Path(__file__).absolute()
+        data_fetch.fetch_data("file://" + str(source_path), dest_path)
+        with open(dest_path, "r") as copied_file:
+            assert "This line is here and in the copied file as well" in copied_file.read()
