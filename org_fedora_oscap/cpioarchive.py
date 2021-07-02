@@ -154,6 +154,7 @@ class CpioArchive(object):
             self.file.close()
 
     def __next__(self):
+        # pylint: disable = E1102
         return self.next()
 
     def next(self):

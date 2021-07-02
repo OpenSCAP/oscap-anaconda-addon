@@ -3,6 +3,7 @@ import logging
 import pathlib
 import shutil
 from glob import glob
+from typing import List
 
 from pyanaconda.core import constants
 from pyanaconda.threading import threadMgr
@@ -174,6 +175,7 @@ class ContentBringer:
 
     def _verify_fingerprint(self, dest_filename, fingerprint=""):
         if not fingerprint:
+            log.info("No fingerprint provided, skipping integrity check")
             return
 
         hash_obj = utils.get_hashing_algorithm(fingerprint)
@@ -186,6 +188,7 @@ class ContentBringer:
             )
             msg = _(f"Integrity check of the content failed - {hash_obj.name} hash didn't match")
             raise content_handling.ContentCheckError(msg)
+        log.info(f"Integrity check passed using {hash_obj.name} hash")
 
     def _finish_actual_fetch(self, wait_for, fingerprint, report_callback, dest_filename):
         threadMgr.wait(wait_for)
@@ -263,9 +266,10 @@ class ContentBringer:
         return preferred_content
 
     def get_preferred_tailoring(self, content):
-        if self._addon_data.tailoring_path:
-            if self._addon_data.tailoring_path != str(content.tailoring.relative_to(content.root)):
-                msg = f"Expected a tailoring {self.tailoring_path}, but it couldn't be found"
+        tailoring_path = self._addon_data.tailoring_path
+        if tailoring_path:
+            if tailoring_path != str(content.tailoring.relative_to(content.root)):
+                msg = f"Expected a tailoring {tailoring_path}, but it couldn't be found"
                 raise content_handling.ContentHandlingError(msg)
         return content.tailoring
 
@@ -279,12 +283,12 @@ class ObtainedContent:
     """
     def __init__(self, root):
         self.labelled_files = dict()
-        self.datastream = ""
-        self.xccdf = ""
-        self.ovals = []
-        self.tailoring = ""
-        self.archive = ""
-        self.verified = ""
+        self.datastream = None  # type: Pathlib.Path
+        self.xccdf = None  # type: Pathlib.Path
+        self.ovals = []  # type: List[Pathlib.Path]
+        self.tailoring = None  # type: Pathlib.Path
+        self.archive = None  # type: Pathlib.Path
+        self.verified = None  # type: Pathlib.Path
         self.root = pathlib.Path(root)
 
     def record_verification(self, path):
@@ -305,14 +309,16 @@ class ObtainedContent:
 
     def _assign_content_type(self, attribute_name, new_value):
         old_value = getattr(self, attribute_name)
-        if old_value:
+        if old_value and old_value != new_value:
             msg = (
                 f"When dealing with {attribute_name}, "
                 f"there was already the {old_value.name} when setting the new {new_value.name}")
             raise content_handling.ContentHandlingError(msg)
         setattr(self, attribute_name, new_value)
 
-    def add_file(self, fname, label):
+    def add_file(self, fname, label=None):
+        if not label:
+            label = content_handling.identify_files([fname])[fname]
         path = pathlib.Path(fname)
         if label == content_handling.CONTENT_TYPES["TAILORING"]:
             self._assign_content_type("tailoring", path)

@@ -260,6 +260,7 @@ class OSCAPSpoke(NormalSpoke):
         self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
 
         self.content_bringer = content_discovery.ContentBringer(self._policy_data)
+        self._content_handler = None
 
     def _all_anaconda_spokes_initialized(self):
         log.debug("OSCAP addon: Anaconda init_done signal triggered")
@@ -669,7 +670,8 @@ class OSCAPSpoke(NormalSpoke):
                     self.__class__, common.MESSAGE_TYPE_WARNING, msg.text)
                 messages.append(msg)
 
-            if not report_only:
+            passwords_can_be_fixed = False
+            if not report_only and passwords_can_be_fixed:
                 users_proxy = USERS.get_proxy()
 
                 self.__old_root_pw = users_proxy.RootPassword
@@ -1125,6 +1127,7 @@ class OSCAPSpoke(NormalSpoke):
             return
 
         # if a profile is double-clicked, we should switch to it
+        # pylint: disable = E1101
         if event.type == Gdk.EventType._2BUTTON_PRESS:
             self._switch_profile()
 
