@@ -19,6 +19,7 @@ TRANSLATIONS_DIR ?= po
 
 FILES = $(ADDON) \
 	$(TESTS) \
+	data \
 	po \
 	COPYING \
 	Makefile \
