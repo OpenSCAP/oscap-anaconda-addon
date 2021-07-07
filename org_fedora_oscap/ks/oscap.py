@@ -325,8 +325,7 @@ class OSCAPdata(AddonData):
         """Path to the pre-installation content file"""
 
         if self.content_type == "datastream":
-            return utils.join_paths(common.INSTALLATION_CONTENT_DIR,
-                                    self.content_name)
+            return self.raw_preinst_content_path
         elif self.content_type == "scap-security-guide":
             # SSG is not copied to the standard place
             return self.content_path
@@ -445,7 +444,7 @@ class OSCAPdata(AddonData):
 
         try:
             # just check that preferred content exists
-            _ = self.content_bringer.get_preferred_content(content)
+            self.content_bringer.get_preferred_content(content)
         except Exception as exc:
             self._terminate(str(exc))
             return
@@ -460,7 +459,7 @@ class OSCAPdata(AddonData):
                           if message.type == common.MESSAGE_TYPE_FATAL]
         if any(fatal_messages):
             msg_lines = [_("Wrong configuration detected!")]
-            msg_lines.extend(fatal_messages)
+            msg_lines.extend([m.text for m in fatal_messages])
             self._terminate("\n".join(msg_lines))
             return
 
