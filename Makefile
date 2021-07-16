@@ -35,7 +35,7 @@ L10N_REPOSITORY_RW ?= git@github.com:$(L10N_REPO_RELATIVE_PATH)
 # This should be master all the time, unless you are testing translation PRs.
 GIT_L10N_BRANCH ?= master
 # The base branch, used to pair code with translations
-OAA_PARENT_BRANCH ?= master
+OAA_PARENT_BRANCH ?= rhel9-branch
 
 all:
 
@@ -114,6 +114,7 @@ update-pot:
 	$(MAKE) -C po potfile
 	TEMP_DIR=$$(mktemp --tmpdir -d oscap-anaconda-addon-l10n-XXXXXXXXXX) || exit 1 ; \
 	git clone --depth 1 -b $(GIT_L10N_BRANCH) -- $(L10N_REPOSITORY_RW) $$TEMP_DIR || exit 2 ; \
+	mkdir -p $$TEMP_DIR/$(OAA_PARENT_BRANCH) ; \
 	cp po/$(POTFILE_BASENAME) $$TEMP_DIR/$(OAA_PARENT_BRANCH)/ || exit 3 ; \
 	pushd $$TEMP_DIR/$(OAA_PARENT_BRANCH) ; \
 	git difftool --trust-exit-code -y -x "diff -u -I '^\"POT-Creation-Date: .*$$'" HEAD ./$(POTFILE_BASENAME) &>/dev/null ; \
