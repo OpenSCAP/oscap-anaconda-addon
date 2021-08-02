@@ -232,11 +232,8 @@ class OSCAPSpoke(NormalSpoke):
         # the proxy to OSCAP DBus module
         self._oscap_module = OSCAP.get_proxy()
 
-        # the security policy data
-        self._policy_enabled = self._oscap_module.PolicyEnabled
-        self._policy_data = PolicyData.from_structure(
-            self._oscap_module.PolicyData
-        )
+        self._policy_data = PolicyData()
+        self._load_policy_data()
 
         # used for changing profiles
         self._rule_data = None
@@ -334,6 +331,7 @@ class OSCAPSpoke(NormalSpoke):
             log.info("OSCAP Addon: Defaulting to local content")
             self._policy_data.content_type = "scap-security-guide"
             self._policy_data.content_path = common.SSG_DIR + common.SSG_CONTENT
+            self._save_policy_data()
 
         if not self._content_defined:
             # nothing more to be done now, the spoke is ready
@@ -350,6 +348,16 @@ class OSCAPSpoke(NormalSpoke):
         else:
             # else fetch data
             self._fetch_data_and_initialize()
+
+    def _save_policy_data(self):
+        self._oscap_module.PolicyData = PolicyData.to_structure(self._policy_data)
+        self._oscap_module.PolicyEnabled = self._policy_enabled
+
+    def _load_policy_data(self):
+        self._policy_data.update_from(PolicyData.from_structure(
+            self._oscap_module.PolicyData
+        ))
+        self._policy_enabled = self._oscap_module.PolicyEnabled
 
     def _handle_error(self, exception):
         log.error("OSCAP Addon: " + str(exception))
@@ -897,13 +905,7 @@ class OSCAPSpoke(NormalSpoke):
         :see: pyanaconda.ui.common.UIObject.refresh
 
         """
-        # update the security policy data
-        self._policy_enabled = self._oscap_module.PolicyEnabled
-        fresh_data = PolicyData.from_structure(
-            self._oscap_module.PolicyData
-        )
-
-        self._policy_data.update_from(fresh_data)
+        self._load_policy_data()
         # update the UI elements
         self._refresh_ui()
 
@@ -1202,4 +1204,5 @@ class OSCAPSpoke(NormalSpoke):
 
     def on_use_ssg_clicked(self, *args):
         self.content_bringer.use_system_content()
+        self._save_policy_data()
         self._fetch_data_and_initialize()
