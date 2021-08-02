@@ -25,7 +25,7 @@ from pykickstart.errors import KickstartValueError, KickstartParseError
 from org_fedora_oscap import common, utils
 from org_fedora_oscap.structures import PolicyData
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("anaconda")
 
 __all__ = ["OSCAPKickstartSpecification"]
 

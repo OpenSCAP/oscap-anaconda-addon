@@ -28,14 +28,14 @@ from org_fedora_oscap.common import _, get_packages_data, set_packages_data
 from org_fedora_oscap.content_handling import ContentCheckError
 from org_fedora_oscap import content_discovery
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("anaconda")
 
 
 REQUIRED_PACKAGES = ("openscap", "openscap-scanner",)
 
 
 def _handle_error(exception):
-    log.error("Failed to fetch and initialize SCAP content!")
+    log.error("OSCAP Addon: Failed to fetch and initialize SCAP content!")
 
     if isinstance(exception, ContentCheckError):
         msg = _("The integrity check of the security content failed.")
@@ -87,7 +87,7 @@ class PrepareValidContent(Task):
 
         content = self.content_bringer.finish_content_fetch(
             fetching_thread_name, self._policy_data.fingerprint,
-            lambda msg: log.info(msg), content_dest, _handle_error)
+            lambda msg: log.info("OSCAP Addon: " + msg), content_dest, _handle_error)
 
         if not content:
             # this shouldn't happen because error handling is supposed to

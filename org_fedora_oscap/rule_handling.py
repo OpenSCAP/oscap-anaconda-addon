@@ -261,7 +261,7 @@ class RuleData(RuleHandler):
         try:
             actions[first_word](rule)
         except (ModifiedOptionParserException, KeyError) as e:
-            log.warning("Unknown OSCAP Addon rule '{}': {}".format(rule, e))
+            log.warning("OSCAP Addon: Unknown OSCAP Addon rule '{}': {}".format(rule, e))
 
     def eval_rules(self, ksdata, storage, report_only=False):
         """:see: RuleHandler.eval_rules"""
@@ -565,7 +565,7 @@ class PasswdRules(RuleHandler):
             # root password set
             if users_proxy.IsRootPasswordCrypted:
                 msg = _("cannot check root password length (password is crypted)")
-                log.warning("cannot check root password length (password is crypted)")
+                log.warning("OSCAP Addon: cannot check root password length (password is crypted)")
                 return [RuleMessage(self.__class__,
                                     common.MESSAGE_TYPE_WARNING, msg)]
             elif len(users_proxy.RootPassword) < self._minlen:
@@ -880,7 +880,7 @@ class KdumpRules(RuleHandler):
 
                 kdump_proxy.KdumpEnabled = self._kdump_enabled
             else:
-                log.warning("com_redhat_kdump is not installed. "
+                log.warning("OSCAP Addon: com_redhat_kdump is not installed. "
                             "Skipping kdump configuration")
 
         return messages
@@ -894,7 +894,7 @@ class KdumpRules(RuleHandler):
             if self._kdump_enabled is not None:
                 kdump_proxy.KdumpEnabled = self._kdump_default_enabled
         else:
-            log.warning("com_redhat_kdump is not installed. "
+            log.warning("OSCAP Addon: com_redhat_kdump is not installed. "
                         "Skipping reverting kdump configuration")
 
         self._kdump_enabled = None

@@ -34,7 +34,7 @@ from org_fedora_oscap.service.kickstart import OSCAPKickstartSpecification, Kick
 from org_fedora_oscap.service.oscap_interface import OSCAPInterface
 from org_fedora_oscap.structures import PolicyData
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("anaconda")
 
 __all__ = ["OSCAPService"]
 
@@ -71,7 +71,7 @@ class OSCAPService(KickstartService):
         """
         self._policy_enabled = value
         self.policy_enabled_changed.emit()
-        log.debug("Policy enabled is set to '%s'.", value)
+        log.debug("OSCAP Addon: Policy enabled is set to '%s'.", value)
 
     @property
     def policy_data(self):
@@ -89,7 +89,7 @@ class OSCAPService(KickstartService):
         """
         self._policy_data = value
         self.policy_data_changed.emit()
-        log.debug("Policy data is set to '%s'.", value)
+        log.debug("OSCAP Addon: Policy data is set to '%s'.", value)
 
     @property
     def installation_enabled(self):
@@ -150,7 +150,7 @@ class OSCAPService(KickstartService):
         :return: a list of requirements
         """
         if not self.installation_enabled:
-            log.debug("The installation is disabled. Skip the requirements.")
+            log.debug("OSCAP Addon: The installation is disabled. Skip the requirements.")
             return []
 
         requirements = [
@@ -180,7 +180,7 @@ class OSCAPService(KickstartService):
         :return: a list of tasks
         """
         if not self.installation_enabled:
-            log.debug("The installation is disabled. Skip the configuration.")
+            log.debug("OSCAP Addon: The installation is disabled. Skip the configuration.")
             return []
 
         tasks = [
@@ -205,7 +205,7 @@ class OSCAPService(KickstartService):
         :return: a list of tasks
         """
         if not self.installation_enabled:
-            log.debug("The installation is disabled. Skip the installation.")
+            log.debug("OSCAP Addon: The installation is disabled. Skip the installation.")
             return []
 
         tasks = [
