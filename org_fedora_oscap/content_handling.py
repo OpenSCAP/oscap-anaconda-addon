@@ -111,9 +111,8 @@ ContentFiles = namedtuple("ContentFiles", ["xccdf", "cpe", "tailoring"])
 
 
 def identify_files(fpaths):
-    with multiprocessing.Pool(os.cpu_count()) as p:
-        labels = p.map(get_doc_type, fpaths)
-    return {path: label for (path, label) in zip(fpaths, labels)}
+    result = {path: get_doc_type(path) for path in fpaths}
+    return result
 
 
 def get_doc_type(file_path):
@@ -131,7 +130,9 @@ def get_doc_type(file_path):
     except UnicodeDecodeError:
         # 'oscap info' supplied weird output, which happens when it tries
         # to explain why it can't examine e.g. a JPG.
-        return None
+        pass
+    except Exception as e:
+        log.warning(f"OSCAP addon: Unexpected error when looking at {file_path}: {str(e)}")
     log.info("OSCAP addon: Identified {file_path} as {content_type}"
              .format(file_path=file_path, content_type=content_type))
     return content_type

@@ -98,7 +98,7 @@ class ContentBringer:
     def _fetch_files(self, scheme, path, destdir, ca_certs_path, what_if_fail):
         with self.activity_lock:
             if self.now_fetching_or_processing:
-                msg = "Strange, it seems that we are already fetching something."
+                msg = "OSCAP Addon: Strange, it seems that we are already fetching something."
                 log.warn(msg)
                 return
             self.now_fetching_or_processing = True
@@ -175,7 +175,7 @@ class ContentBringer:
 
     def _verify_fingerprint(self, dest_filename, fingerprint=""):
         if not fingerprint:
-            log.info("No fingerprint provided, skipping integrity check")
+            log.info("OSCAP Addon: No fingerprint provided, skipping integrity check")
             return
 
         hash_obj = utils.get_hashing_algorithm(fingerprint)
@@ -183,15 +183,19 @@ class ContentBringer:
                                             hash_obj)
         if digest != fingerprint:
             log.error(
+                "OSCAP Addon: "
                 f"File {dest_filename} failed integrity check - assumed a "
                 f"{hash_obj.name} hash and '{fingerprint}', got '{digest}'"
             )
-            msg = _(f"Integrity check of the content failed - {hash_obj.name} hash didn't match")
+            msg = _(f"OSCAP Addon: Integrity check of the content failed - {hash_obj.name} hash didn't match")
             raise content_handling.ContentCheckError(msg)
         log.info(f"Integrity check passed using {hash_obj.name} hash")
 
     def _finish_actual_fetch(self, wait_for, fingerprint, report_callback, dest_filename):
-        threadMgr.wait(wait_for)
+        if wait_for:
+            log.info(f"OSCAP Addon: Waiting for thread {wait_for}")
+            threadMgr.wait(wait_for)
+            log.info(f"OSCAP Addon: Finished waiting for thread {wait_for}")
         actually_fetched_content = wait_for is not None
 
         if fingerprint and dest_filename:
@@ -201,6 +205,7 @@ class ContentBringer:
 
         structured_content = ObtainedContent(self.CONTENT_DOWNLOAD_LOCATION)
         content_type = self.get_content_type(str(dest_filename))
+        log.info(f"OSCAP Addon: started to look at the content")
         if content_type in ("archive", "rpm"):
             structured_content.add_content_archive(dest_filename)
 
@@ -211,6 +216,7 @@ class ContentBringer:
         if fingerprint and dest_filename:
             structured_content.record_verification(dest_filename)
 
+        log.info(f"OSCAP Addon: finished looking at the content")
         return structured_content
 
     def _gather_available_files(self, actually_fetched_content, dest_filename):
@@ -232,7 +238,7 @@ class ContentBringer:
                     )
                 except common.ExtractionError as err:
                     msg = f"Failed to extract the '{dest_filename}' archive: {str(err)}"
-                    log.error(msg)
+                    log.error("OSCAP Addon: " + msg)
                     raise err
 
             elif content_type == "file":

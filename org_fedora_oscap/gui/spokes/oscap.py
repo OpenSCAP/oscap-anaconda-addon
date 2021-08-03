@@ -232,11 +232,8 @@ class OSCAPSpoke(NormalSpoke):
         # the proxy to OSCAP DBus module
         self._oscap_module = OSCAP.get_proxy()
 
-        # the security policy data
-        self._policy_enabled = self._oscap_module.PolicyEnabled
-        self._policy_data = PolicyData.from_structure(
-            self._oscap_module.PolicyData
-        )
+        self._policy_data = PolicyData()
+        self._load_policy_data()
 
         # used for changing profiles
         self._rule_data = None
@@ -331,8 +328,10 @@ class OSCAPSpoke(NormalSpoke):
 
         # if no content was specified and SSG is available, use it
         if not self._policy_data.content_type and common.ssg_available():
+            log.info("OSCAP Addon: Defaulting to local content")
             self._policy_data.content_type = "scap-security-guide"
             self._policy_data.content_path = common.SSG_DIR + common.SSG_CONTENT
+            self._save_policy_data()
 
         if not self._content_defined:
             # nothing more to be done now, the spoke is ready
@@ -350,8 +349,18 @@ class OSCAPSpoke(NormalSpoke):
             # else fetch data
             self._fetch_data_and_initialize()
 
+    def _save_policy_data(self):
+        self._oscap_module.PolicyData = PolicyData.to_structure(self._policy_data)
+        self._oscap_module.PolicyEnabled = self._policy_enabled
+
+    def _load_policy_data(self):
+        self._policy_data.update_from(PolicyData.from_structure(
+            self._oscap_module.PolicyData
+        ))
+        self._policy_enabled = self._oscap_module.PolicyEnabled
+
     def _handle_error(self, exception):
-        log.error(str(exception))
+        log.error("OSCAP Addon: " + str(exception))
         if isinstance(exception, KickstartValueError):
             self._invalid_url()
         elif isinstance(exception, common.OSCAPaddonNetworkError):
@@ -365,7 +374,7 @@ class OSCAPSpoke(NormalSpoke):
         elif isinstance(exception, content_handling.ContentCheckError):
             self._integrity_check_failed()
         else:
-            log.exception("Unknown exception occurred", exc_info=exception)
+            log.exception("OSCAP Addon: Unknown exception occurred", exc_info=exception)
             self._general_content_problem()
 
     def _render_selected(self, column, renderer, model, itr, user_data=None):
@@ -385,6 +394,7 @@ class OSCAPSpoke(NormalSpoke):
 
         thread_name = None
         if self._policy_data.content_url and self._policy_data.content_type != "scap-security-guide":
+            log.info(f"OSCAP Addon: Actually fetching content from somewhere")
             thread_name = self.content_bringer.fetch_content(
                 self._handle_error, self._policy_data.certificates)
 
@@ -442,7 +452,7 @@ class OSCAPSpoke(NormalSpoke):
                 msg += f" with tailoring {preinst_tailoring_path}"
             else:
                 msg += " without considering tailoring"
-            log.info(msg)
+            log.info("OSCAP Addon: " + msg)
 
             self._content_handler = scap_content_handler.SCAPContentHandler(
                 preinst_content_path,
@@ -456,7 +466,7 @@ class OSCAPSpoke(NormalSpoke):
 
             return
 
-        log.info("OAA: Done with analysis")
+        log.info("OSCAP Addon: Done with analysis")
 
         self._ds_checklists = self._content_handler.get_data_streams_checklists()
         if self._using_ds:
@@ -592,7 +602,7 @@ class OSCAPSpoke(NormalSpoke):
         try:
             profiles = self._content_handler.get_profiles()
         except scap_content_handler.SCAPContentHandlerError as e:
-            log.warning(str(e))
+            log.warning("OSCAP Addon: " + str(e))
             self._invalid_content()
 
         for profile in profiles:
@@ -736,7 +746,7 @@ class OSCAPSpoke(NormalSpoke):
                 ds, xccdf, common.get_preinst_tailoring_path(self._policy_data))
         except common.OSCAPaddonError as exc:
             log.error(
-                "Failed to get rules for the profile '{}': {}"
+                "OSCAP Addon: Failed to get rules for the profile '{}': {}"
                 .format(profile_id, str(exc)))
             self._set_error(
                 "Failed to get rules for the profile '{}'"
@@ -895,19 +905,14 @@ class OSCAPSpoke(NormalSpoke):
         :see: pyanaconda.ui.common.UIObject.refresh
 
         """
-        # update the security policy data
-        self._policy_enabled = self._oscap_module.PolicyEnabled
-        fresh_data = PolicyData.from_structure(
-            self._oscap_module.PolicyData
-        )
-
-        self._policy_data.update_from(fresh_data)
+        self._load_policy_data()
         # update the UI elements
         self._refresh_ui()
 
     def _refresh_ui(self):
         """Refresh the UI elements."""
         if not self._content_defined:
+            log.info("OSCAP Addon: Content not defined")
             # hide the control buttons
             really_hide(self._control_buttons)
 
@@ -1156,7 +1161,9 @@ class OSCAPSpoke(NormalSpoke):
         with self._fetch_flag_lock:
             if self._fetching:
                 # some other fetching/pre-processing running, give up
-                log.warn("Clicked the fetch button, although the GUI is in the fetching mode.")
+                log.warn(
+                    "OSCAP Addon: "
+                    "Clicked the fetch button, although the GUI is in the fetching mode.")
                 return
 
         # prevent user from changing the URL in the meantime
@@ -1197,4 +1204,5 @@ class OSCAPSpoke(NormalSpoke):
 
     def on_use_ssg_clicked(self, *args):
         self.content_bringer.use_system_content()
+        self._save_policy_data()
         self._fetch_data_and_initialize()

@@ -564,7 +564,7 @@ def get_content_name(data):
 def get_raw_preinst_content_path(data):
     """Path to the raw (unextracted, ...) pre-installation content file"""
     if data.content_type == "scap-security-guide":
-        log.debug("Using scap-security-guide, no single content file")
+        log.debug("OSCAP addon: Using scap-security-guide, no single content file")
         return None
 
     content_name = get_content_name(data)
@@ -667,7 +667,7 @@ def set_packages_data(data: PackagesConfigurationData):
     payload_proxy = get_payload_proxy()
 
     if payload_proxy.Type != PAYLOAD_TYPE_DNF:
-        log.debug("The payload doesn't support packages.")
+        log.debug("OSCAP addon: The payload doesn't support packages.")
         return
 
     return payload_proxy.SetPackages(
