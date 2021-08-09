@@ -393,7 +393,7 @@ class OSCAPdata(AddonData):
                 time.sleep(100000)
 
     def _handle_error(self, exception):
-        log.error("Failed to fetch and initialize SCAP content!")
+        log.error(f"Failed to fetch and initialize SCAP content: {str(exception)}")
 
         if isinstance(exception, ContentCheckError):
             msg = _("The integrity check of the security content failed.")
