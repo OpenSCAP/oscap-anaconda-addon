@@ -44,6 +44,7 @@ from pyanaconda.core.constants import PAYLOAD_TYPE_DNF
 from pyanaconda.modules.common.constants.namespaces import ADDONS_NAMESPACE
 from pyanaconda.modules.common.constants.services import NETWORK, PAYLOADS
 from pyanaconda.modules.common.structures.payload import PackagesSelectionData
+from pyanaconda.product import productVersion, shortProductName
 from pyanaconda.threading import threadMgr, AnacondaThread
 from org_fedora_oscap import utils
 from org_fedora_oscap.data_fetch import fetch_data
@@ -73,12 +74,12 @@ TARGET_CONTENT_DIR = "/root/openscap_data/"
 
 SSG_DIR = "/usr/share/xml/scap/ssg/content/"
 SSG_CONTENT = "ssg-rhel7-ds.xml"
-if constants.shortProductName != 'anaconda':
-    if constants.shortProductName == 'fedora':
+if shortProductName != 'anaconda':
+    if shortProductName == 'fedora':
         SSG_CONTENT  = "ssg-fedora-ds.xml"
     else:
-        SSG_CONTENT = "ssg-%s%s-ds.xml" % (constants.shortProductName,
-                                            constants.productVersion.strip(".")[0])
+        SSG_CONTENT = "ssg-%s%s-ds.xml" % (shortProductName,
+                                           productVersion.strip(".")[0])
 
 RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR,
                                 "eval_remediate_results.xml")
