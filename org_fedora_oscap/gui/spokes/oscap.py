@@ -204,6 +204,11 @@ class OSCAPSpoke(NormalSpoke):
     # as it is displayed inside the spoke as the spoke label,
     # and spoke labels are all uppercase by a convention.
 
+    @staticmethod
+    def get_screen_id():
+        """Return a unique id of this UI screen."""
+        return "security-policy-selection"
+
     @classmethod
     def should_run(cls, environment, data):
         return is_module_available(OSCAP)
