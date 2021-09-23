@@ -178,6 +178,7 @@ packages="
 	openscap-scanner
 	python3-cpio
 	python3-pycurl
+	xmlsec1-openssl
 	oscap-anaconda-addon
 	xmlsec1
 	xmlsec1-openssl

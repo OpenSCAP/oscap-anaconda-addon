@@ -38,6 +38,12 @@ For further reading, see the https://fedoraproject.org/wiki/Anaconda/Updates#How
 ./create_update_image.sh download_rpms
 ----
 
+Or install `podman` and create the update image with dependencies in a container using:
+
+----
+make container-update-image
+----
+
 If you want to see what was packed, you can extract the image.
 
 ----
