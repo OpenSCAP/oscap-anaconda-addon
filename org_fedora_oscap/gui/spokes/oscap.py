@@ -244,7 +244,7 @@ class OSCAPSpoke(NormalSpoke):
         self.__old_root_pw = None
 
         # used to check if the profile was changed or not
-        self._active_profile = None
+        self._active_profile = ""
 
         # prevent multiple simultaneous data fetches
         self._fetching = False
@@ -719,7 +719,7 @@ class OSCAPSpoke(NormalSpoke):
             self._revert_rootpw_changes()
             self._rule_data = None
 
-        self._active_profile = None
+        self._active_profile = ""
 
     @async_action_wait
     def _select_profile(self, profile_id):
