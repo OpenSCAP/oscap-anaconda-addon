@@ -140,7 +140,7 @@ class OSCAPKickstartData(AddonData):
             msg = "Unsupported fingerprint"
             raise KickstartValueError(msg)
 
-        self.fingerprint = value
+        self.policy_data.fingerprint = value
 
     def _parse_certificates(self, value):
         self.policy_data.certificates = value
