@@ -225,7 +225,8 @@ class ContentBringer:
             if not dest_filename:  # using scap-security-guide
                 fpaths = [self.DEFAULT_SSG_DATA_STREAM_PATH]
             else:  # Using downloaded XCCDF/OVAL/DS/tailoring
-                fpaths = glob(str(self.CONTENT_DOWNLOAD_LOCATION / "*.xml"))
+                fpaths = pathlib.Path(self.CONTENT_DOWNLOAD_LOCATION).rglob("*")
+                fpaths = [str(p) for p in fpaths if p.is_file()]
         else:
             dest_filename = pathlib.Path(dest_filename)
             # RPM is an archive at this phase
