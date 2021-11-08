@@ -18,9 +18,8 @@
 # Red Hat Author(s): Vratislav Podzimek <vpodzime@redhat.com>
 #
 
-"""Module with unit tests for the common.py module"""
 
-import mock
+from unittest import mock
 import os
 from collections import namedtuple
 

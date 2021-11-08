@@ -28,11 +28,16 @@ import shlex
 import logging
 
 from pyanaconda.modules.common.util import is_module_available
-from pyanaconda.pwpolicy import F22_PwPolicyData
 from pyanaconda.core.constants import (
-    FIREWALL_ENABLED, FIREWALL_DISABLED, FIREWALL_USE_SYSTEM_DEFAULTS)
-from pyanaconda.modules.common.constants.objects import FIREWALL, BOOTLOADER, DEVICE_TREE
-from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS
+    FIREWALL_ENABLED, FIREWALL_DISABLED, FIREWALL_USE_SYSTEM_DEFAULTS,
+    PASSWORD_POLICY_ROOT
+    )
+from pyanaconda.modules.common.constants.objects import (
+    FIREWALL, BOOTLOADER, DEVICE_TREE,
+    USER_INTERFACE
+    )
+from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS, BOSS
+from pyanaconda.modules.common.structures.policy import PasswordPolicy
 
 from org_fedora_oscap import common
 from org_fedora_oscap.common import OSCAPaddonError, RuleMessage, KDUMP, get_packages_data, \
@@ -42,18 +47,43 @@ from org_fedora_oscap.common import OSCAPaddonError, RuleMessage, KDUMP, get_pac
 __all__ = ["RuleData"]
 
 
+# Mapping of packages to package environments and/or groups that depends on them
+# See also https://access.redhat.com/solutions/1201413 how to get group IDs.
+# on RHEL8, use e.g. grep -R "<id>" /var/cache/dnf/*
 ESSENTIAL_PACKAGES = {
     "xorg-x11-server-common": {
         "env": ["graphical-server-environment", "workstation-product-environment"],
+        "groups": ["workstation-product-environment"],
     },
     "nfs-utils": {
         "env": ["graphical-server-environment", "workstation-product-environment"],
+        "groups": ["workstation-product-environment"],
+    },
+    "tftp": {
+        "groups": ["network-server"],
+    },
+    "abrt": {
+        "groups": ["debugging"],
+    },
+    "gssproxy": {
+        "groups": ["file-server"],
     },
 }
 
 log = logging.getLogger("anaconda")
 
 _ = common._
+
+
+def get_rule_data_from_content(profile_id, content_path, ds_id="", xccdf_id="", tailoring_path=""):
+    rules = common.get_fix_rules_pre(
+        profile_id, content_path, ds_id, xccdf_id, tailoring_path)
+
+    # parse and store rules with a clean RuleData instance
+    rule_data = RuleData()
+    for rule in rules.splitlines():
+        rule_data.new_rule(rule)
+    return rule_data
 
 
 # TODO: use set instead of list for mount options?
@@ -231,7 +261,7 @@ class RuleData(RuleHandler):
         try:
             actions[first_word](rule)
         except (ModifiedOptionParserException, KeyError) as e:
-            log.warning("Unknown OSCAP Addon rule '{}': {}".format(rule, e))
+            log.warning("OSCAP Addon: Unknown OSCAP Addon rule '{}': {}".format(rule, e))
 
     def eval_rules(self, ksdata, storage, report_only=False):
         """:see: RuleHandler.eval_rules"""
@@ -496,7 +526,6 @@ class PasswdRules(RuleHandler):
         """Constructor initializing attributes."""
 
         self._minlen = 0
-        self._created_policy = False
         self._orig_minlen = None
         self._orig_strict = None
 
@@ -536,7 +565,7 @@ class PasswdRules(RuleHandler):
             # root password set
             if users_proxy.IsRootPasswordCrypted:
                 msg = _("cannot check root password length (password is crypted)")
-                log.warning("cannot check root password length (password is crypted)")
+                log.warning("OSCAP Addon: cannot check root password length (password is crypted)")
                 return [RuleMessage(self.__class__,
                                     common.MESSAGE_TYPE_WARNING, msg)]
             elif len(users_proxy.RootPassword) < self._minlen:
@@ -552,37 +581,55 @@ class PasswdRules(RuleHandler):
             return ret
 
         # set the policy in any case (so that a weaker password is not entered)
-        pw_policy = ksdata.anaconda.pwpolicy.get_policy("root")
-        if pw_policy is None:
-            pw_policy = F22_PwPolicyData()
-            log.info("OSCAP addon: setting password policy %s" % pw_policy)
-            ksdata.anaconda.pwpolicy.policyList.append(pw_policy)
-            log.info("OSCAP addon: password policy list: %s" % ksdata.anaconda.pwpolicy.policyList)
-            self._created_policy = True
+        policies = self._get_password_policies()
+        policy = policies[PASSWORD_POLICY_ROOT]
 
-        self._orig_minlen = pw_policy.minlen
-        self._orig_strict = pw_policy.strict
-        pw_policy.minlen = self._minlen
-        pw_policy.strict = True
+        self._orig_minlen = policy.min_length
+        self._orig_strict = policy.is_strict
+        policy.min_length = self._minlen
+        policy.is_strict = True
 
+        self._set_password_policies(policies)
         return ret
 
     def revert_changes(self, ksdata, storage):
         """:see: RuleHander.revert_changes"""
+        policies = self._get_password_policies()
+        policy = policies[PASSWORD_POLICY_ROOT]
 
-        pw_policy = ksdata.anaconda.pwpolicy.get_policy("root")
-        if self._created_policy:
-            log.info("OSCAP addon: removing password policy: %s" % pw_policy)
-            ksdata.anaconda.pwpolicy.policyList.remove(pw_policy)
-            log.info("OSCAP addon: password policy list: %s" % ksdata.anaconda.pwpolicy.policyList)
-            self._created_policy = False
-        else:
-            if self._orig_minlen is not None:
-                pw_policy.minlen = self._orig_minlen
-                self._orig_minlen = None
-            if self._orig_strict is not None:
-                pw_policy.strict = self._orig_strict
-                self._orig_strict = None
+        if self._orig_minlen is not None:
+            policy.min_length = self._orig_minlen
+            self._orig_minlen = None
+        if self._orig_strict is not None:
+            policy.is_strict = self._orig_strict
+            self._orig_strict = None
+
+        self._set_password_policies(policies)
+
+    def _get_password_policies(self):
+        """Get the password policies from the installer.
+
+        :return: a dictionary of password policies
+        """
+        proxy = BOSS.get_proxy(USER_INTERFACE)
+        policies = PasswordPolicy.from_structure_dict(proxy.PasswordPolicies)
+
+        if PASSWORD_POLICY_ROOT not in policies:
+            policy = PasswordPolicy.from_defaults(PASSWORD_POLICY_ROOT)
+            policies[PASSWORD_POLICY_ROOT] = policy
+
+        return policies
+
+    def _set_password_policies(self, policies):
+        """Set the password policies for the installer.
+
+        :param policies: a dictionary of password policies
+        """
+        proxy = BOSS.get_proxy(USER_INTERFACE)
+
+        proxy.SetPasswordPolicies(
+            PasswordPolicy.to_structure_dict(policies)
+        )
 
 
 class PackageRules(RuleHandler):
@@ -646,7 +693,7 @@ class PackageRules(RuleHandler):
             return True
 
         selected_install_env = packages_data.environment
-        if selected_install_env in ESSENTIAL_PACKAGES[package_name].get("env"):
+        if selected_install_env in ESSENTIAL_PACKAGES[package_name].get("env", []):
             return True
 
         for g in ESSENTIAL_PACKAGES[package_name].get("groups", []):
@@ -833,7 +880,7 @@ class KdumpRules(RuleHandler):
 
                 kdump_proxy.KdumpEnabled = self._kdump_enabled
             else:
-                log.warning("com_redhat_kdump is not installed. "
+                log.warning("OSCAP Addon: com_redhat_kdump is not installed. "
                             "Skipping kdump configuration")
 
         return messages
@@ -847,7 +894,7 @@ class KdumpRules(RuleHandler):
             if self._kdump_enabled is not None:
                 kdump_proxy.KdumpEnabled = self._kdump_default_enabled
         else:
-            log.warning("com_redhat_kdump is not installed. "
+            log.warning("OSCAP Addon: com_redhat_kdump is not installed. "
                         "Skipping reverting kdump configuration")
 
         self._kdump_enabled = None

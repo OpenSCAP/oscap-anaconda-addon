@@ -1,13 +1,17 @@
 import pytest
-import mock
+from unittest import mock
 from collections import defaultdict
 
 from pyanaconda.core.constants import PAYLOAD_TYPE_DNF
+from pyanaconda.core.constants import PASSWORD_POLICY_ROOT
 from pyanaconda.modules.common.constants.objects import FIREWALL, DEVICE_TREE, BOOTLOADER
+from pyanaconda.modules.common.constants.objects import USER_INTERFACE
 from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS, BOSS, PAYLOADS
 from pyanaconda.modules.common.structures.payload import PackagesConfigurationData
+from pyanaconda.modules.common.structures.policy import PasswordPolicy
 
 from org_fedora_oscap.common import KDUMP
+
 
 try:
     from org_fedora_oscap import rule_handling, common
@@ -117,7 +121,7 @@ def ksdata_mock():
 
 @pytest.fixture()
 def storage_mock():
-    return mock.Mock()
+    return None
 
 
 # monkeypatch is a predefined fixture that is used to perform per-test case changes in the test env.
@@ -148,6 +152,9 @@ def set_dbus_defaults():
 
     kdump = KDUMP.get_proxy()
     kdump.KdumpEnabled = True
+
+    user_interface = BOSS.get_proxy(USER_INTERFACE)
+    user_interface.PasswordPolicies = {}
 
     network = NETWORK.get_proxy()
     network.Connected.return_value = True
@@ -541,12 +548,6 @@ def test_evaluation_passwd_minlen_report_only_not_ignored(
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=False)
 
-    # Mock pw_policy returned by anaconda.pwpolicy.get_policy()
-    pw_policy_mock = mock.Mock()
-    pw_policy_mock.minlen = 6
-    pw_policy_mock.strict = False
-    ksdata_mock.anaconda.pwpolicy.get_policy.return_value = pw_policy_mock
-
     # call eval_rules with report_only=False
     # should set password minimal length to 8
     messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=False)
@@ -555,9 +556,19 @@ def test_evaluation_passwd_minlen_report_only_not_ignored(
     assert not messages
     assert rule_data._passwd_rules._orig_minlen == 6
     assert not rule_data._passwd_rules._orig_strict
-    assert pw_policy_mock.minlen == 8
-    assert pw_policy_mock.strict
     assert rule_data._passwd_rules._minlen == 8
+
+    policy = PasswordPolicy.from_defaults(PASSWORD_POLICY_ROOT)
+    policy.min_length = 8
+    policy.is_strict = True
+
+    policies = {PASSWORD_POLICY_ROOT: policy}
+
+    ui_mock = BOSS.get_proxy(USER_INTERFACE)
+    ui_mock.SetPasswordPolicies.assert_called_with(
+        PasswordPolicy.to_structure_dict(policies)
+    )
+    ui_mock.SetPasswordPolicies.reset_mock()
 
     # call of eval_rules with report_only=True
     # should not change anything
@@ -567,9 +578,9 @@ def test_evaluation_passwd_minlen_report_only_not_ignored(
 
     assert rule_data._passwd_rules._orig_minlen == 6
     assert not rule_data._passwd_rules._orig_strict
-    assert pw_policy_mock.minlen == 8
-    assert pw_policy_mock.strict
     assert rule_data._passwd_rules._minlen == 8
+
+    ui_mock.SetPasswordPolicies.assert_not_called()
 
 
 def _occurences_not_seen_in_strings(seeked, strings):
@@ -589,8 +600,9 @@ def _quoted_keywords_not_seen_in_messages(keywords, messages):
     )
 
 
+# Problem with this test: Package order in lists can lead to false positives
 def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock):
-    rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables --add=vim")
+    rule_data.new_rule("package --add=firewalld --remove=telnet --add=vim")
 
     packages_data = PackagesConfigurationData()
     packages_data.packages = ["vim"]
@@ -601,18 +613,18 @@ def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
     # one info message for each (really) added/removed package
-    assert len(messages) == 3
+    assert len(messages) == 2
     assert all(message.type == common.MESSAGE_TYPE_INFO for message in messages)
 
     # all packages should appear in the messages
     not_seen = _quoted_keywords_not_seen_in_messages(
-        {"firewalld", "telnet", "iptables"},
+        {"firewalld", "telnet"},
         messages,
     )
     assert not not_seen
 
     packages_data = PackagesConfigurationData()
-    packages_data.packages = ["vim", "firewalld", "iptables"]
+    packages_data.packages = ["vim", "firewalld"]
     packages_data.excluded_packages = ["telnet"]
 
     dnf_payload_mock.SetPackages.assert_called_once_with(
@@ -671,7 +683,8 @@ def test_evaluation_various_rules(proxy_getter, rule_data, ksdata_mock, storage_
                  "package --add=firewalld", ]:
         rule_data.new_rule(rule)
 
-    storage_mock.mountpoints = dict()
+    ksdata_mock.packages.packageList = []
+    ksdata_mock.packages.excludedList = []
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
@@ -681,24 +694,35 @@ def test_evaluation_various_rules(proxy_getter, rule_data, ksdata_mock, storage_
 
 def test_revert_mount_options_nonexistent(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("part /tmp --mountoptions=nodev")
-    storage_mock.mountpoints = dict()
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
     # mount point doesn't exist -> one message, nothing done
     assert len(messages) == 1
-    assert storage_mock.mountpoints == dict()
+
+    device_tree_mock = STORAGE.get_proxy(DEVICE_TREE)
+    device_tree_mock.SetDeviceMountOptions.assert_not_called()
 
     # mount point doesn't exist -> shouldn't do anything
     rule_data.revert_changes(ksdata_mock, storage_mock)
-    assert storage_mock.mountpoints == dict()
+
+    device_tree_mock.SetDeviceMountOptions.assert_not_called()
 
 
 def test_revert_mount_options(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("part /tmp --mountoptions=nodev")
-    storage_mock.mountpoints = dict()
-    storage_mock.mountpoints["/tmp"] = mock.Mock()
-    storage_mock.mountpoints["/tmp"].format.options = "defaults"
+
+    device_tree_mock = STORAGE.get_proxy(DEVICE_TREE)
+    device_tree_mock.GetMountPoints.return_value = {
+        "/tmp": "/dev/sda1",
+    }
+
+    def set_mount_options(device_name, mount_options):
+        assert device_name == "/dev/sda1"
+        device_tree_mock.GetDeviceMountOptions.return_value = mount_options
+
+    device_tree_mock.SetDeviceMountOptions.side_effect = set_mount_options
+    device_tree_mock.GetDeviceMountOptions.return_value = "defaults"
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
@@ -706,12 +730,16 @@ def test_revert_mount_options(proxy_getter, rule_data, ksdata_mock, storage_mock
     assert len(messages) == 1
 
     # "nodev" option should be added
-    assert storage_mock.mountpoints["/tmp"].format.options, "defaults == nodev"
+    device_tree_mock.SetDeviceMountOptions.assert_called_once_with(
+        "/dev/sda1", "defaults,nodev"
+    )
 
     rule_data.revert_changes(ksdata_mock, storage_mock)
 
     # should be reverted to the original value
-    assert storage_mock.mountpoints["/tmp"].format.options == "defaults"
+    device_tree_mock.SetDeviceMountOptions.assert_called_with(
+        "/dev/sda1", "defaults"
+    )
 
     # another cycle of the same #
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
@@ -720,12 +748,16 @@ def test_revert_mount_options(proxy_getter, rule_data, ksdata_mock, storage_mock
     assert len(messages) == 1
 
     # "nodev" option should be added
-    assert storage_mock.mountpoints["/tmp"].format.options, "defaults == nodev"
+    device_tree_mock.SetDeviceMountOptions.assert_called_with(
+        "/dev/sda1", "defaults,nodev"
+    )
 
     rule_data.revert_changes(ksdata_mock, storage_mock)
 
     # should be reverted to the original value
-    assert storage_mock.mountpoints["/tmp"].format.options == "defaults"
+    device_tree_mock.SetDeviceMountOptions.assert_called_with(
+        "/dev/sda1", "defaults"
+    )
 
 
 def test_revert_password_policy_changes(proxy_getter, rule_data, ksdata_mock, storage_mock):
