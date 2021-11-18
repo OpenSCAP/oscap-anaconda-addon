@@ -13,7 +13,7 @@ jobs:
       image: fedora:35
     steps:
       - name: Install Deps
-        run: dnf install -y make anaconda python3-pytest python3-pycurl
+        run: dnf install -y make anaconda python3-pytest python3-pycurl openscap-scanner
       - name: Checkout
         uses: actions/checkout@v2
       - name: Test
