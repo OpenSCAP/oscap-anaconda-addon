@@ -184,7 +184,7 @@ def set_dbus_defaults():
     dnf_payload.Type = PAYLOAD_TYPE_DNF
 
     packages_data = PackagesConfigurationData()
-    dnf_payload.Packages = PackagesConfigurationData.to_structure(packages_data)
+    dnf_payload.PackagesSelection = PackagesConfigurationData.to_structure(packages_data)
 
 
 def test_evaluation_existing_part_must_exist_rules(
@@ -608,7 +608,7 @@ def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_
     packages_data.packages = ["vim"]
 
     dnf_payload_mock = PAYLOADS.get_proxy("/fake/payload/1")
-    dnf_payload_mock.Packages = PackagesConfigurationData.to_structure(packages_data)
+    dnf_payload_mock.PackagesSelection = PackagesConfigurationData.to_structure(packages_data)
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
@@ -627,7 +627,7 @@ def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_
     packages_data.packages = ["vim", "firewalld"]
     packages_data.excluded_packages = ["telnet"]
 
-    dnf_payload_mock.SetPackages.assert_called_once_with(
+    dnf_payload_mock.SetPackagesSelection.assert_called_once_with(
         PackagesConfigurationData.to_structure(packages_data)
     )
 
@@ -650,7 +650,7 @@ def test_evaluation_package_rules_report_only(proxy_getter, rule_data, ksdata_mo
 
     # report_only --> no packages should be added or excluded
     dnf_payload_mock = PAYLOADS.get_proxy("/fake/payload/1")
-    dnf_payload_mock.SetPackages.assert_not_called()
+    dnf_payload_mock.SetPackagesSelection.assert_not_called()
 
 
 def test_evaluation_bootloader_passwd_not_set(proxy_getter, rule_data, ksdata_mock, storage_mock):
@@ -793,12 +793,12 @@ def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock
     packages_data.packages = ["vim"]
 
     dnf_payload_mock = PAYLOADS.get_proxy("/fake/payload/1")
-    dnf_payload_mock.Packages = PackagesConfigurationData.to_structure(packages_data)
+    dnf_payload_mock.PackagesSelection = PackagesConfigurationData.to_structure(packages_data)
 
     def set_packages(structure):
-        dnf_payload_mock.Packages = structure
+        dnf_payload_mock.PackagesSelection = structure
 
-    dnf_payload_mock.SetPackages.side_effect = set_packages
+    dnf_payload_mock.SetPackagesSelection.side_effect = set_packages
 
     # run twice --> nothing should be different in the second run
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
@@ -811,7 +811,7 @@ def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock
 
     # (only) added and excluded packages should have been removed from the
     # list
-    dnf_payload_mock.SetPackages.assert_called_with(
+    dnf_payload_mock.SetPackagesSelection.assert_called_with(
         PackagesConfigurationData.to_structure(packages_data)
     )
 
@@ -825,6 +825,6 @@ def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock
 
     # (only) added and excluded packages should have been removed from the
     # list
-    dnf_payload_mock.SetPackages.assert_called_with(
+    dnf_payload_mock.SetPackagesSelection.assert_called_with(
         PackagesConfigurationData.to_structure(packages_data)
     )

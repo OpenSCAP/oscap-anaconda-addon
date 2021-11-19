@@ -655,7 +655,7 @@ def get_packages_data() -> PackagesSelectionData:
         return PackagesSelectionData()
 
     return PackagesSelectionData.from_structure(
-        payload_proxy.Packages
+        payload_proxy.PackagesSelection
     )
 
 
@@ -670,6 +670,6 @@ def set_packages_data(data: PackagesSelectionData):
         log.debug("OSCAP addon: The payload doesn't support packages.")
         return
 
-    return payload_proxy.SetPackages(
+    return payload_proxy.SetPackagesSelection(
         PackagesSelectionData.to_structure(data)
     )
