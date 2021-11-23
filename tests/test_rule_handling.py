@@ -7,7 +7,7 @@ from pyanaconda.core.constants import PASSWORD_POLICY_ROOT
 from pyanaconda.modules.common.constants.objects import FIREWALL, DEVICE_TREE, BOOTLOADER
 from pyanaconda.modules.common.constants.objects import USER_INTERFACE
 from pyanaconda.modules.common.constants.services import NETWORK, STORAGE, USERS, BOSS, PAYLOADS
-from pyanaconda.modules.common.structures.payload import PackagesConfigurationData
+from pyanaconda.modules.common.structures.packages import PackagesSelectionData
 from pyanaconda.modules.common.structures.policy import PasswordPolicy
 
 from org_fedora_oscap.common import KDUMP
@@ -183,8 +183,8 @@ def set_dbus_defaults():
     dnf_payload = PAYLOADS.get_proxy("/fake/payload/1")
     dnf_payload.Type = PAYLOAD_TYPE_DNF
 
-    packages_data = PackagesConfigurationData()
-    dnf_payload.PackagesSelection = PackagesConfigurationData.to_structure(packages_data)
+    packages_data = PackagesSelectionData()
+    dnf_payload.PackagesSelection = PackagesSelectionData.to_structure(packages_data)
 
 
 def test_evaluation_existing_part_must_exist_rules(
@@ -604,11 +604,11 @@ def _quoted_keywords_not_seen_in_messages(keywords, messages):
 def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("package --add=firewalld --remove=telnet --add=vim")
 
-    packages_data = PackagesConfigurationData()
+    packages_data = PackagesSelectionData()
     packages_data.packages = ["vim"]
 
     dnf_payload_mock = PAYLOADS.get_proxy("/fake/payload/1")
-    dnf_payload_mock.PackagesSelection = PackagesConfigurationData.to_structure(packages_data)
+    dnf_payload_mock.PackagesSelection = PackagesSelectionData.to_structure(packages_data)
 
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
 
@@ -623,12 +623,12 @@ def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_
     )
     assert not not_seen
 
-    packages_data = PackagesConfigurationData()
+    packages_data = PackagesSelectionData()
     packages_data.packages = ["vim", "firewalld"]
     packages_data.excluded_packages = ["telnet"]
 
     dnf_payload_mock.SetPackagesSelection.assert_called_once_with(
-        PackagesConfigurationData.to_structure(packages_data)
+        PackagesSelectionData.to_structure(packages_data)
     )
 
 
@@ -789,11 +789,11 @@ def test_revert_password_policy_changes(proxy_getter, rule_data, ksdata_mock, st
 def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock):
     rule_data.new_rule("package --add=firewalld --remove=telnet --add=iptables --add=vim")
 
-    packages_data = PackagesConfigurationData()
+    packages_data = PackagesSelectionData()
     packages_data.packages = ["vim"]
 
     dnf_payload_mock = PAYLOADS.get_proxy("/fake/payload/1")
-    dnf_payload_mock.PackagesSelection = PackagesConfigurationData.to_structure(packages_data)
+    dnf_payload_mock.PackagesSelection = PackagesSelectionData.to_structure(packages_data)
 
     def set_packages(structure):
         dnf_payload_mock.PackagesSelection = structure
@@ -812,7 +812,7 @@ def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock
     # (only) added and excluded packages should have been removed from the
     # list
     dnf_payload_mock.SetPackagesSelection.assert_called_with(
-        PackagesConfigurationData.to_structure(packages_data)
+        PackagesSelectionData.to_structure(packages_data)
     )
 
     # now do the same again #
@@ -826,5 +826,5 @@ def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock
     # (only) added and excluded packages should have been removed from the
     # list
     dnf_payload_mock.SetPackagesSelection.assert_called_with(
-        PackagesConfigurationData.to_structure(packages_data)
+        PackagesSelectionData.to_structure(packages_data)
     )
