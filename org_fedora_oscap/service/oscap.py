@@ -221,7 +221,7 @@ class OSCAPService(KickstartService):
                 sysroot=conf.target.system_root,
                 policy_data=self.policy_data,
                 target_content_path=common.get_postinst_content_path(self.policy_data),
-                target_tailoring_path=common.get_preinst_tailoring_path(self.policy_data)
+                target_tailoring_path=common.get_postinst_tailoring_path(self.policy_data)
             )
         ]
 
