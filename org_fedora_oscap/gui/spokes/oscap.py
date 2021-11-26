@@ -21,6 +21,7 @@
 import threading
 import logging
 from functools import wraps
+import pathlib
 
 # the path to addons is in sys.path so we can import things
 # from org_fedora_oscap
@@ -28,6 +29,8 @@ from org_fedora_oscap import common
 from org_fedora_oscap import data_fetch
 from org_fedora_oscap import rule_handling
 from org_fedora_oscap import content_handling
+from org_fedora_oscap import scap_content_handler
+from org_fedora_oscap import content_discovery
 from org_fedora_oscap import utils
 from org_fedora_oscap.constants import OSCAP
 from org_fedora_oscap.structures import PolicyData
@@ -224,18 +227,13 @@ class OSCAPSpoke(NormalSpoke):
         # the first status provided
         self._unitialized_status = _("Not ready")
 
-        self._content_handler = None
-        self._content_handling_cls = None
         self._ds_checklists = None
 
         # the proxy to OSCAP DBus module
         self._oscap_module = OSCAP.get_proxy()
 
-        # the security policy data
-        self._policy_enabled = self._oscap_module.PolicyEnabled
-        self._policy_data = PolicyData.from_structure(
-            self._oscap_module.PolicyData
-        )
+        self._policy_data = PolicyData()
+        self._load_policy_data()
 
         # used for changing profiles
         self._rule_data = None
@@ -246,7 +244,7 @@ class OSCAPSpoke(NormalSpoke):
         self.__old_root_pw = None
 
         # used to check if the profile was changed or not
-        self._active_profile = None
+        self._active_profile = ""
 
         # prevent multiple simultaneous data fetches
         self._fetching = False
@@ -257,6 +255,9 @@ class OSCAPSpoke(NormalSpoke):
         # wait for all Anaconda spokes to initialiuze
         self._anaconda_spokes_initialized = threading.Event()
         self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
+
+        self.content_bringer = content_discovery.ContentBringer(self._policy_data)
+        self._content_handler = None
 
     def _all_anaconda_spokes_initialized(self):
         log.debug("OSCAP addon: Anaconda init_done signal triggered")
@@ -327,8 +328,10 @@ class OSCAPSpoke(NormalSpoke):
 
         # if no content was specified and SSG is available, use it
         if not self._policy_data.content_type and common.ssg_available():
+            log.info("OSCAP Addon: Defaulting to local content")
             self._policy_data.content_type = "scap-security-guide"
             self._policy_data.content_path = common.SSG_DIR + common.SSG_CONTENT
+            self._save_policy_data()
 
         if not self._content_defined:
             # nothing more to be done now, the spoke is ready
@@ -346,6 +349,34 @@ class OSCAPSpoke(NormalSpoke):
             # else fetch data
             self._fetch_data_and_initialize()
 
+    def _save_policy_data(self):
+        self._oscap_module.PolicyData = PolicyData.to_structure(self._policy_data)
+        self._oscap_module.PolicyEnabled = self._policy_enabled
+
+    def _load_policy_data(self):
+        self._policy_data.update_from(PolicyData.from_structure(
+            self._oscap_module.PolicyData
+        ))
+        self._policy_enabled = self._oscap_module.PolicyEnabled
+
+    def _handle_error(self, exception):
+        log.error("OSCAP Addon: " + str(exception))
+        if isinstance(exception, KickstartValueError):
+            self._invalid_url()
+        elif isinstance(exception, common.OSCAPaddonNetworkError):
+            self._network_problem()
+        elif isinstance(exception, data_fetch.DataFetchError):
+            self._data_fetch_failed()
+        elif isinstance(exception, common.ExtractionError):
+            self._extraction_failed(str(exception))
+        elif isinstance(exception, content_handling.ContentHandlingError):
+            self._invalid_content()
+        elif isinstance(exception, content_handling.ContentCheckError):
+            self._integrity_check_failed()
+        else:
+            log.exception("OSCAP Addon: Unknown exception occurred", exc_info=exception)
+            self._general_content_problem()
+
     def _render_selected(self, column, renderer, model, itr, user_data=None):
         if model[itr][2]:
             renderer.set_property("stock-id", "gtk-apply")
@@ -362,25 +393,10 @@ class OSCAPSpoke(NormalSpoke):
             self._fetching = True
 
         thread_name = None
-        if any(self._policy_data.content_url.startswith(net_prefix)
-               for net_prefix in data_fetch.NET_URL_PREFIXES):
-            # need to fetch data over network
-            try:
-                thread_name = common.wait_and_fetch_net_data(
-                    self._policy_data.content_url,
-                    common.get_raw_preinst_content_path(self._policy_data),
-                    self._policy_data.certificates
-                )
-            except common.OSCAPaddonNetworkError:
-                self._network_problem()
-                with self._fetch_flag_lock:
-                    self._fetching = False
-                return
-            except KickstartValueError:
-                self._invalid_url()
-                with self._fetch_flag_lock:
-                    self._fetching = False
-                return
+        if self._policy_data.content_url and self._policy_data.content_type != "scap-security-guide":
+            log.info(f"OSCAP Addon: Actually fetching content from somewhere")
+            thread_name = self.content_bringer.fetch_content(
+                self._handle_error, self._policy_data.certificates)
 
         # pylint: disable-msg=E1101
         hubQ.send_message(self.__class__.__name__,
@@ -402,66 +418,47 @@ class OSCAPSpoke(NormalSpoke):
         :type wait_for: str or None
 
         """
+        def update_progress_label(msg):
+            fire_gtk_action(self._progress_label.set_text(msg))
 
-        try:
-            threadMgr.wait(wait_for)
-        except data_fetch.DataFetchError:
-            self._data_fetch_failed()
+        content_path = None
+        actually_fetched_content = wait_for is not None
+
+        if actually_fetched_content:
+            content_path = common.get_raw_preinst_content_path(self._policy_data)
+
+        content = self.content_bringer.finish_content_fetch(
+            wait_for, self._policy_data.fingerprint, update_progress_label,
+            content_path, self._handle_error)
+        if not content:
             with self._fetch_flag_lock:
                 self._fetching = False
             return
-        finally:
-            # stop the spinner in any case
-            fire_gtk_action(self._progress_spinner.stop)
 
-        if self._policy_data.fingerprint:
-            hash_obj = utils.get_hashing_algorithm(self._policy_data.fingerprint)
-            digest = utils.get_file_fingerprint(self._policy_data.raw_preinst_content_path,
-                                                hash_obj)
-            if digest != self._policy_data.fingerprint:
-                self._integrity_check_failed()
-                # fetching done
-                with self._fetch_flag_lock:
-                    self._fetching = False
-                return
-
-        # RPM is an archive at this phase
-        if self._policy_data.content_type in ("archive", "rpm"):
-            # extract the content
-            try:
-                fpaths = common.extract_data(
-                    common.get_raw_preinst_content_path(self._policy_data),
-                    common.INSTALLATION_CONTENT_DIR,
-                    [self._policy_data.content_path]
-                )
-            except common.ExtractionError as err:
-                self._extraction_failed(str(err))
-                # fetching done
-                with self._fetch_flag_lock:
-                    self._fetching = False
-                return
-
-            # and populate missing fields
-            self._content_handling_cls, files = content_handling.explore_content_files(fpaths)
-            files = common.strip_content_dir(files)
-
-            # pylint: disable-msg=E1103
-            self._policy_data.content_path = self._policy_data.content_path or files.xccdf
-            self._policy_data.cpe_path = self._policy_data.cpe_path or files.cpe
-            self._policy_data.tailoring_path = self._policy_data.tailoring_path or files.tailoring
-        elif self._policy_data.content_type == "datastream":
-            self._content_handling_cls = content_handling.DataStreamHandler
-        elif self._policy_data.content_type == "scap-security-guide":
-            self._content_handling_cls = content_handling.BenchmarkHandler
-        else:
-            raise common.OSCAPaddonError("Unsupported content type")
+        fire_gtk_action(self._progress_spinner.stop)
+        fire_gtk_action(
+            self._progress_label.set_text,
+            _("Fetch complete, analyzing data."))
 
         try:
-            self._content_handler = self._content_handling_cls(
-                common.get_preinst_content_path(self._policy_data),
-                common.get_preinst_tailoring_path(self._policy_data)
-            )
-        except content_handling.ContentHandlingError:
+            if actually_fetched_content:
+                self.content_bringer.use_downloaded_content(content)
+
+            preinst_content_path = common.get_preinst_content_path(self._policy_data)
+            preinst_tailoring_path = common.get_preinst_tailoring_path(self._policy_data)
+
+            msg = f"Opening SCAP content at {preinst_content_path}"
+            if self._policy_data.tailoring_path:
+                msg += f" with tailoring {preinst_tailoring_path}"
+            else:
+                msg += " without considering tailoring"
+            log.info("OSCAP Addon: " + msg)
+
+            self._content_handler = scap_content_handler.SCAPContentHandler(
+                preinst_content_path,
+                preinst_tailoring_path)
+        except Exception as e:
+            log.error(str(e))
             self._invalid_content()
             # fetching done
             with self._fetch_flag_lock:
@@ -469,9 +466,11 @@ class OSCAPSpoke(NormalSpoke):
 
             return
 
+        log.info("OSCAP Addon: Done with analysis")
+
+        self._ds_checklists = self._content_handler.get_data_streams_checklists()
         if self._using_ds:
             # populate the stores from items from the content
-            self._ds_checklists = self._content_handler.get_data_streams_checklists()
             add_ds_ids = GtkActionList()
             add_ds_ids.add_action(self._ds_store.clear)
             for dstream in self._ds_checklists.keys():
@@ -518,7 +517,7 @@ class OSCAPSpoke(NormalSpoke):
 
     @property
     def _using_ds(self):
-        return self._content_handling_cls == content_handling.DataStreamHandler
+        return self._ds_checklists is not None
 
     @property
     def _current_ds_id(self):
@@ -594,18 +593,17 @@ class OSCAPSpoke(NormalSpoke):
             # not initialized, cannot do anything
             return
 
-        if self._using_ds and self._ds_checklists is None:
+        if self._using_ds and (
+                self._current_xccdf_id is None or self._current_ds_id is None):
             # not initialized, cannot do anything
             return
 
         self._profiles_store.clear()
-
-        if self._using_ds:
-            profiles = self._content_handler.get_profiles(self._current_ds_id,
-                                                          self._current_xccdf_id)
-        else:
-            # pylint: disable-msg=E1103
-            profiles = self._content_handler.profiles
+        try:
+            profiles = self._content_handler.get_profiles()
+        except scap_content_handler.SCAPContentHandlerError as e:
+            log.warning("OSCAP Addon: " + str(e))
+            self._invalid_content()
 
         for profile in profiles:
             profile_markup = '<span weight="bold">%s</span>\n%s' \
@@ -682,7 +680,8 @@ class OSCAPSpoke(NormalSpoke):
                     self.__class__, common.MESSAGE_TYPE_WARNING, msg.text)
                 messages.append(msg)
 
-            if not report_only:
+            passwords_can_be_fixed = False
+            if not report_only and passwords_can_be_fixed:
                 users_proxy = USERS.get_proxy()
 
                 self.__old_root_pw = users_proxy.RootPassword
@@ -720,7 +719,7 @@ class OSCAPSpoke(NormalSpoke):
             self._revert_rootpw_changes()
             self._rule_data = None
 
-        self._active_profile = None
+        self._active_profile = ""
 
     @async_action_wait
     def _select_profile(self, profile_id):
@@ -730,6 +729,8 @@ class OSCAPSpoke(NormalSpoke):
             # no profile specified, nothing to do
             return False
 
+        ds = None
+        xccdf = None
         if self._using_ds:
             ds = self._current_ds_id
             xccdf = self._current_xccdf_id
@@ -737,21 +738,15 @@ class OSCAPSpoke(NormalSpoke):
             if not all((ds, xccdf, profile_id)):
                 # something is not set -> do nothing
                 return False
-        else:
-            ds = None
-            xccdf = None
 
         # get pre-install fix rules from the content
         try:
-            rules = common.get_fix_rules_pre(
-                profile_id,
-                common.get_preinst_content_path(self._policy_data),
-                ds, xccdf,
-                common.get_preinst_tailoring_path(self._policy_data)
-            )
+            self._rule_data = rule_handling.get_rule_data_from_content(
+                profile_id, common.get_preinst_content_path(self._policy_data),
+                ds, xccdf, common.get_preinst_tailoring_path(self._policy_data))
         except common.OSCAPaddonError as exc:
             log.error(
-                "Failed to get rules for the profile '{}': {}"
+                "OSCAP Addon: Failed to get rules for the profile '{}': {}"
                 .format(profile_id, str(exc)))
             self._set_error(
                 "Failed to get rules for the profile '{}'"
@@ -763,11 +758,6 @@ class OSCAPSpoke(NormalSpoke):
             if self._profiles_store[itr][0] == profile_id:
                 self._profiles_store.set_value(itr, 2, True)
             itr = self._profiles_store.iter_next(itr)
-
-        # parse and store rules with a clean RuleData instance
-        self._rule_data = rule_handling.RuleData()
-        for rule in rules.splitlines():
-            self._rule_data.new_rule(rule)
 
         # remember the active profile
         self._active_profile = profile_id
@@ -807,6 +797,12 @@ class OSCAPSpoke(NormalSpoke):
         else:
             self._error = None
             self.clear_info()
+
+    @async_action_wait
+    def _general_content_problem(self):
+        msg = _("There was an unexpected problem with the supplied content.")
+        self._progress_label.set_markup("<b>%s</b>" % msg)
+        self._wrong_content(msg)
 
     @async_action_wait
     def _invalid_content(self):
@@ -860,13 +856,12 @@ class OSCAPSpoke(NormalSpoke):
 
     @async_action_wait
     def _wrong_content(self, msg):
-        self._policy_data = PolicyData()
+        content_discovery.clear_all(self._policy_data)
         really_hide(self._progress_spinner)
         self._fetch_button.set_sensitive(True)
         self._content_url_entry.set_sensitive(True)
         self._content_url_entry.grab_focus()
         self._content_url_entry.select_region(0, -1)
-        self._content_handling_cls = None
         self._set_error(msg)
 
     @async_action_wait
@@ -910,18 +905,14 @@ class OSCAPSpoke(NormalSpoke):
         :see: pyanaconda.ui.common.UIObject.refresh
 
         """
-        # update the security policy data
-        self._policy_enabled = self._oscap_module.PolicyEnabled
-        self._policy_data = PolicyData.from_structure(
-            self._oscap_module.PolicyData
-        )
-
+        self._load_policy_data()
         # update the UI elements
         self._refresh_ui()
 
     def _refresh_ui(self):
         """Refresh the UI elements."""
         if not self._content_defined:
+            log.info("OSCAP Addon: Content not defined")
             # hide the control buttons
             really_hide(self._control_buttons)
 
@@ -1115,6 +1106,8 @@ class OSCAPSpoke(NormalSpoke):
 
     def on_xccdf_combo_changed(self, *args):
         """Handler for the XCCDF ID change."""
+        self._content_handler.select_checklist(
+            self._current_ds_id, self._current_xccdf_id)
 
         # may take a while
         self._update_profiles_store()
@@ -1139,6 +1132,7 @@ class OSCAPSpoke(NormalSpoke):
             return
 
         # if a profile is double-clicked, we should switch to it
+        # pylint: disable = E1101
         if event.type == Gdk.EventType._2BUTTON_PRESS:
             self._switch_profile()
 
@@ -1167,6 +1161,9 @@ class OSCAPSpoke(NormalSpoke):
         with self._fetch_flag_lock:
             if self._fetching:
                 # some other fetching/pre-processing running, give up
+                log.warn(
+                    "OSCAP Addon: "
+                    "Clicked the fetch button, although the GUI is in the fetching mode.")
                 return
 
         # prevent user from changing the URL in the meantime
@@ -1202,11 +1199,10 @@ class OSCAPSpoke(NormalSpoke):
 
     def on_change_content_clicked(self, *args):
         self._unselect_profile(self._active_profile)
-        self._policy_data = PolicyData()
+        content_discovery.clear_all(self._policy_data)
         self._refresh_ui()
 
     def on_use_ssg_clicked(self, *args):
-        self._policy_data = PolicyData()
-        self._policy_data.content_type = "scap-security-guide"
-        self._policy_data.content_path = common.SSG_DIR + common.SSG_CONTENT
+        self.content_bringer.use_system_content()
+        self._save_policy_data()
         self._fetch_data_and_initialize()

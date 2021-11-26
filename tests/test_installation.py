@@ -18,8 +18,9 @@
 import logging
 import tempfile
 import pytest
-
 from unittest.mock import Mock
+
+from pyanaconda.modules.common.errors.installation import NonCriticalInstallationError
 
 from org_fedora_oscap.service import installation
 from org_fedora_oscap.structures import PolicyData
@@ -60,35 +61,19 @@ def rule_evaluator(monkeypatch):
 
 def test_fetch_content_task(caplog, file_path, content_path):
     data = PolicyData()
-    task = installation.FetchContentTask(
+    task = installation.PrepareValidContent(
         policy_data=data,
         file_path=file_path,
         content_path=content_path,
     )
 
-    assert task.name == "Fetch the content"
+    assert task.name == "Fetch the content, and optionally perform check or archive extraction"
 
-    with caplog.at_level(logging.DEBUG):
+    with pytest.raises(NonCriticalInstallationError, match="Couldn't find a valid datastream"):
         task.run()
 
-    assert "Content is already available. Skip." in caplog.text
 
-
-def test_check_fingerprint_task(caplog, file_path):
-    data = PolicyData()
-    task = installation.CheckFingerprintTask(
-        policy_data=data,
-        file_path=file_path
-    )
-
-    assert task.name == "Check the fingerprint"
-
-    with caplog.at_level(logging.DEBUG):
-        task.run()
-
-    assert "No fingerprint is provided. Skip." in caplog.text
-
-
+@pytest.mark.skip(reason="Test seems to require Anaconda listening on dbus")
 def test_evaluate_rules_task(rule_evaluator, content_path, tailoring_path):
     data = PolicyData()
     task = installation.EvaluateRulesTask(

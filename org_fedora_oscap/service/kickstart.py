@@ -23,8 +23,9 @@ from pyanaconda.core.kickstart.addon import AddonData
 from pykickstart.errors import KickstartValueError, KickstartParseError
 
 from org_fedora_oscap import common, utils
+from org_fedora_oscap.structures import PolicyData
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("anaconda")
 
 __all__ = ["OSCAPKickstartSpecification"]
 
@@ -37,30 +38,15 @@ def key_value_pair(key, value, indent=4):
 
 
 class OSCAPKickstartData(AddonData):
-    """The kickstart data for the org_fedora_oscap add-on."""
+    """The kickstart data for the add-on."""
 
     def __init__(self):
         super().__init__()
-        # values specifying the content
-        self.content_type = ""
-        self.content_url = ""
-        self.datastream_id = ""
-        self.xccdf_id = ""
-        self.profile_id = ""
-        self.content_path = ""
-        self.cpe_path = ""
-        self.tailoring_path = ""
+        self.policy_data = PolicyData()
 
-        # additional values
-        self.fingerprint = ""
-
-        # certificate to verify HTTPS connection or signed data
-        self.certificates = ""
-
-    @property
-    def name(self):
         """The name of the %addon section."""
-        return "org_fedora_oscap"
+        self.name = common.ADDON_NAMES[0]
+        self.addon_section_present = False
 
     def handle_header(self, args, line_number=None):
         """Handle the arguments of the %addon line.
@@ -69,7 +55,7 @@ class OSCAPKickstartData(AddonData):
         :param line_number: a line number
         :raise: KickstartParseError for invalid arguments
         """
-        pass
+        self.addon_section_present = True
 
     def handle_line(self, line, line_number=None):
         """Handle one line of the section.
@@ -107,7 +93,7 @@ class OSCAPKickstartData(AddonData):
     def _parse_content_type(self, value):
         value_low = value.lower()
         if value_low in common.SUPPORTED_CONTENT_TYPES:
-            self.content_type = value_low
+            self.policy_data.content_type = value_low
         else:
             msg = "Unsupported content type '%s' in the %s addon" % (value,
                                                                      self.name)
@@ -116,34 +102,34 @@ class OSCAPKickstartData(AddonData):
     def _parse_content_url(self, value):
         if any(value.startswith(prefix)
                for prefix in common.SUPPORTED_URL_PREFIXES):
-            self.content_url = value
+            self.policy_data.content_url = value
         else:
             msg = "Unsupported url '%s' in the %s addon" % (value, self.name)
             raise KickstartValueError(msg)
 
     def _parse_datastream_id(self, value):
         # need to be checked?
-        self.datastream_id = value
+        self.policy_data.datastream_id = value
 
     def _parse_xccdf_id(self, value):
         # need to be checked?
-        self.xccdf_id = value
+        self.policy_data.xccdf_id = value
 
     def _parse_profile_id(self, value):
         # need to be checked?
-        self.profile_id = value
+        self.policy_data.profile_id = value
 
     def _parse_content_path(self, value):
         # need to be checked?
-        self.content_path = value
+        self.policy_data.content_path = value
 
     def _parse_cpe_path(self, value):
         # need to be checked?
-        self.cpe_path = value
+        self.policy_data.cpe_path = value
 
     def _parse_tailoring_path(self, value):
         # need to be checked?
-        self.tailoring_path = value
+        self.policy_data.tailoring_path = value
 
     def _parse_fingerprint(self, value):
         if FINGERPRINT_REGEX.match(value) is None:
@@ -154,52 +140,58 @@ class OSCAPKickstartData(AddonData):
             msg = "Unsupported fingerprint"
             raise KickstartValueError(msg)
 
-        self.fingerprint = value
+        self.policy_data.fingerprint = value
 
     def _parse_certificates(self, value):
-        self.certificates = value
+        self.policy_data.certificates = value
 
     def handle_end(self):
         """Handle the end of the section."""
         tmpl = "%s missing for the %s addon"
 
         # check provided data
-        if not self.content_type:
+        if not self.policy_data.content_type:
             raise KickstartValueError(tmpl % ("content-type", self.name))
 
-        if self.content_type != "scap-security-guide" and not self.content_url:
+        if (
+                self.policy_data.content_type != "scap-security-guide"
+                and not self.policy_data.content_url):
             raise KickstartValueError(tmpl % ("content-url", self.name))
 
-        if not self.profile_id:
-            self.profile_id = "default"
+        if not self.policy_data.profile_id:
+            self.policy_data.profile_id = "default"
 
-        if self.content_type in ("rpm", "archive") and not self.content_path:
+        if (
+                self.policy_data.content_type in ("rpm", "archive")
+                and not self.policy_data.content_path):
             msg = "Path to the XCCDF file has to be given if content in RPM "\
                   "or archive is used"
             raise KickstartValueError(msg)
 
-        if self.content_type == "rpm" and not self.content_url.endswith(".rpm"):
+        if (
+                self.policy_data.content_type == "rpm"
+                and not self.policy_data.content_url.endswith(".rpm")):
             msg = "Content type set to RPM, but the content URL doesn't end "\
                   "with '.rpm'"
             raise KickstartValueError(msg)
 
-        if self.content_type == "archive":
+        if self.policy_data.content_type == "archive":
             supported_archive = any(
-                self.content_url.endswith(arch_type)
+                self.policy_data.content_url.endswith(arch_type)
                 for arch_type in common.SUPPORTED_ARCHIVES
             )
             if not supported_archive:
                 msg = "Unsupported archive type of the content "\
-                      "file '%s'" % self.content_url
+                      "file '%s'" % self.policy_data.content_url
                 raise KickstartValueError(msg)
 
         # do some initialization magic in case of SSG
-        if self.content_type == "scap-security-guide":
+        if self.policy_data.content_type == "scap-security-guide":
             if not common.ssg_available():
                 msg = "SCAP Security Guide not found on the system"
                 raise KickstartValueError(msg)
 
-            self.content_path = common.SSG_DIR + common.SSG_CONTENT
+            self.policy_data.content_path = common.SSG_DIR + common.SSG_CONTENT
 
     def __str__(self):
         """Generate the kickstart representation.
@@ -209,45 +201,56 @@ class OSCAPKickstartData(AddonData):
 
         :return: a string
         """
-        if not self.profile_id:
+        if not self.policy_data.profile_id:
             return ""
 
         ret = "%%addon %s" % self.name
-        ret += "\n%s" % key_value_pair("content-type", self.content_type)
+        ret += "\n%s" % key_value_pair("content-type", self.policy_data.content_type)
 
-        if self.content_url:
-            ret += "\n%s" % key_value_pair("content-url", self.content_url)
+        if self.policy_data.content_url:
+            ret += "\n%s" % key_value_pair("content-url", self.policy_data.content_url)
 
-        if self.datastream_id:
-            ret += "\n%s" % key_value_pair("datastream-id", self.datastream_id)
+        if self.policy_data.datastream_id:
+            ret += "\n%s" % key_value_pair("datastream-id", self.policy_data.datastream_id)
 
-        if self.xccdf_id:
-            ret += "\n%s" % key_value_pair("xccdf-id", self.xccdf_id)
+        if self.policy_data.xccdf_id:
+            ret += "\n%s" % key_value_pair("xccdf-id", self.policy_data.xccdf_id)
 
-        if self.content_path and self.content_type != "scap-security-guide":
-            ret += "\n%s" % key_value_pair("content-path", self.content_path)
+        if (
+                self.policy_data.content_path
+                and self.policy_data.content_type != "scap-security-guide"):
+            ret += "\n%s" % key_value_pair("content-path", self.policy_data.content_path)
 
-        if self.cpe_path:
-            ret += "\n%s" % key_value_pair("cpe-path", self.cpe_path)
+        if self.policy_data.cpe_path:
+            ret += "\n%s" % key_value_pair("cpe-path", self.policy_data.cpe_path)
 
-        if self.tailoring_path:
-            ret += "\n%s" % key_value_pair("tailoring-path", self.tailoring_path)
+        if self.policy_data.tailoring_path:
+            ret += "\n%s" % key_value_pair("tailoring-path", self.policy_data.tailoring_path)
 
-        ret += "\n%s" % key_value_pair("profile", self.profile_id)
+        ret += "\n%s" % key_value_pair("profile", self.policy_data.profile_id)
 
-        if self.fingerprint:
-            ret += "\n%s" % key_value_pair("fingerprint", self.fingerprint)
+        if self.policy_data.fingerprint:
+            ret += "\n%s" % key_value_pair("fingerprint", self.policy_data.fingerprint)
 
-        if self.certificates:
-            ret += "\n%s" % key_value_pair("certificates", self.certificates)
+        if self.policy_data.certificates:
+            ret += "\n%s" % key_value_pair("certificates", self.policy_data.certificates)
 
         ret += "\n%end\n\n"
         return ret
+
+
+def get_oscap_kickstart_data(name):
+    class NamedOSCAPKickstartData(OSCAPKickstartData):
+        def __init__(self):
+            super().__init__()
+            self.name = name
+
+    return NamedOSCAPKickstartData
 
 
 class OSCAPKickstartSpecification(KickstartSpecification):
     """The kickstart specification of the OSCAP service."""
 
     addons = {
-        "org_fedora_oscap": OSCAPKickstartData
+        name: get_oscap_kickstart_data(name) for name in common.ADDON_NAMES
     }

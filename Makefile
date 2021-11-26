@@ -1,6 +1,6 @@
 NAME = oscap-anaconda-addon
 
-VERSION = 3.0.0
+VERSION = 0.35.0
 
 ADDON = org_fedora_oscap
 TESTS = tests \
@@ -8,8 +8,13 @@ TESTS = tests \
 
 DEFAULT_INSTALL_OF_PO_FILES ?= yes
 
+PYVERSION = -3
+
+TRANSLATIONS_DIR ?= po
+
 FILES = $(ADDON) \
 	$(TESTS) \
+	data \
 	po \
 	COPYING \
 	Makefile \
@@ -86,7 +91,8 @@ potfile:
 po-pull:
 	TEMP_DIR=$$(mktemp --tmpdir -d oscap-anaconda-addon-l10n-XXXXXXXXXX) && \
 	git clone --depth 1 -b $(GIT_L10N_BRANCH) -- $(L10N_REPOSITORY) $$TEMP_DIR && \
-	cp $$TEMP_DIR/$(OAA_PARENT_BRANCH)/*.po po/ && \
+	mkdir -p $(TRANSLATIONS_DIR) && \
+	cp $$TEMP_DIR/$(OAA_PARENT_BRANCH)/*.po $(TRANSLATIONS_DIR)/ && \
 	rm -rf $$TEMP_DIR
 
 # This algorithm will make these steps:
@@ -104,6 +110,7 @@ update-pot:
 	$(MAKE) -C po potfile
 	TEMP_DIR=$$(mktemp --tmpdir -d oscap-anaconda-addon-l10n-XXXXXXXXXX) || exit 1 ; \
 	git clone --depth 1 -b $(GIT_L10N_BRANCH) -- $(L10N_REPOSITORY_RW) $$TEMP_DIR || exit 2 ; \
+	mkdir -p $$TEMP_DIR/$(OAA_PARENT_BRANCH) ; \
 	cp po/$(POTFILE_BASENAME) $$TEMP_DIR/$(OAA_PARENT_BRANCH)/ || exit 3 ; \
 	pushd $$TEMP_DIR/$(OAA_PARENT_BRANCH) ; \
 	git difftool --trust-exit-code -y -x "diff -u -I '^\"POT-Creation-Date: .*$$'" HEAD ./$(POTFILE_BASENAME) &>/dev/null ; \
@@ -128,7 +135,7 @@ container-test:
 	podman build --tag $(CONTAINER_NAME) --file tests/Dockerfile
 	podman run --volume .:/oscap-anaconda-addon:Z $(CONTAINER_NAME) make test
 
-test: runpylint unittest
+test: unittest runpylint
 
 runpylint:
 	@echo "***Running pylint checks***"

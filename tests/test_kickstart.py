@@ -18,6 +18,7 @@
 import pytest
 from textwrap import dedent
 from org_fedora_oscap.service.oscap import OSCAPService
+from org_fedora_oscap import common
 
 
 @pytest.fixture()
@@ -37,8 +38,11 @@ def check_ks_input(ks_service, ks_in, errors=None, warnings=None):
     warnings = warnings or []
     report = ks_service.read_kickstart(ks_in)
 
-    assert [i.message for i in report.error_messages] == errors
-    assert [i.message for i in report.warning_messages] == warnings
+    for index, error in enumerate(report.error_messages):
+        assert errors[index] in error.message
+
+    for index, warning in enumerate(report.warning_messages):
+        assert warnings[index] in warning.message
 
 
 def check_ks_output(ks_service, ks_out):
@@ -57,7 +61,7 @@ def test_default(service):
 
 def test_data(service):
     ks_in = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-type = datastream
         content-url = "https://example.com/hardening.xml"
     %end
@@ -70,7 +74,7 @@ def test_data(service):
 
 def test_datastream(service):
     ks_in = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-type = datastream
         content-url = "https://example.com/hardening.xml"
         datastream-id = id_datastream_1
@@ -84,7 +88,7 @@ def test_datastream(service):
     check_ks_input(service, ks_in)
 
     ks_out = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-type = datastream
         content-url = https://example.com/hardening.xml
         datastream-id = id_datastream_1
@@ -100,31 +104,31 @@ def test_datastream(service):
 
 def test_no_content_type(service):
     ks_in = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-url = http://example.com/test_ds.xml
         profile = Web Server
     %end
     """
     check_ks_input(service, ks_in, errors=[
-        "content-type missing for the org_fedora_oscap addon"
+        "content-type missing for the com_redhat_oscap addon"
     ])
 
 
 def test_no_content_url(service):
     ks_in = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-type = datastream
         profile = Web Server
     %end
     """
     check_ks_input(service, ks_in, errors=[
-        "content-url missing for the org_fedora_oscap addon"
+        "content-url missing for the com_redhat_oscap addon"
     ])
 
 
 def test_no_profile(service):
     ks_in = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-url = http://example.com/test_ds.xml
         content-type = datastream
     %end
@@ -132,7 +136,7 @@ def test_no_profile(service):
     check_ks_input(service, ks_in)
 
     ks_out = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-type = datastream
         content-url = http://example.com/test_ds.xml
         profile = default
@@ -145,7 +149,7 @@ def test_no_profile(service):
 
 def test_rpm(service):
     ks_in = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-url = http://example.com/oscap_content.rpm
         content-type = RPM
         profile = Web Server
@@ -155,7 +159,7 @@ def test_rpm(service):
     check_ks_input(service, ks_in)
 
     ks_out = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-type = rpm
         content-url = http://example.com/oscap_content.rpm
         content-path = /usr/share/oscap/xccdf.xml
@@ -167,7 +171,7 @@ def test_rpm(service):
 
 def test_rpm_without_path(service):
     ks_in = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-url = http://example.com/oscap_content.rpm
         content-type = RPM
         profile = Web Server
@@ -180,7 +184,7 @@ def test_rpm_without_path(service):
 
 def test_rpm_with_wrong_suffix(service):
     ks_in = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-url = http://example.com/oscap_content.xml
         content-type = RPM
         profile = Web Server
@@ -194,7 +198,7 @@ def test_rpm_with_wrong_suffix(service):
 
 def test_archive(service):
     ks_in = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-url = http://example.com/oscap_content.tar
         content-type = archive
         profile = Web Server
@@ -204,7 +208,7 @@ def test_archive(service):
     check_ks_input(service, ks_in)
 
     ks_out = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-type = archive
         content-url = http://example.com/oscap_content.tar
         content-path = oscap/xccdf.xml
@@ -216,7 +220,7 @@ def test_archive(service):
 
 def test_archive_without_path(service):
     ks_in = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-url = http://example.com/oscap_content.tar
         content-type = archive
         profile = Web Server
@@ -227,9 +231,41 @@ def test_archive_without_path(service):
     ])
 
 
-def test_scap_security_guide(service):
+def test_org_fedora_oscap(service):
     ks_in = """
     %addon org_fedora_oscap
+        content-type = datastream
+        content-url = "https://example.com/hardening.xml"
+    %end
+    """
+    check_ks_input(service, ks_in, warnings=[
+        "org_fedora_oscap"
+    ])
+
+
+def test_section_confusion(service):
+    ks_in = """
+    %addon org_fedora_oscap
+        content-type = datastream
+        content-url = "https://example.com/hardening.xml"
+    %end
+
+    %addon com_redhat_oscap
+        content-type = datastream
+        content-url = "https://example.com/hardening.xml"
+    %end
+    """
+    check_ks_input(service, ks_in, errors=[
+        "You have used more than one oscap addon sections in the kickstart."
+    ])
+
+
+def test_scap_security_guide(service):
+    if common.ssg_available():
+        pytest.skip("Test works only if scap-security-guide is not installed")
+
+    ks_in = """
+    %addon com_redhat_oscap
         content-type = scap-security-guide
         profile = Web Server
     %end
@@ -241,7 +277,7 @@ def test_scap_security_guide(service):
 
 def test_fingerprints(service):
     ks_template = """
-    %addon org_fedora_oscap
+    %addon com_redhat_oscap
         content-url = http://example.com/test_ds.xml
         content-type = datastream
         fingerprint = {}

@@ -157,12 +157,11 @@ def test_configure_with_tasks(service: OSCAPService, interface: OSCAPInterface):
     service.policy_data = data
 
     object_paths = interface.ConfigureWithTasks()
-    assert len(object_paths) == 3
+    assert len(object_paths) == 2
 
     tasks = TaskContainer.from_object_path_list(object_paths)
-    assert isinstance(tasks[0], installation.FetchContentTask)
-    assert isinstance(tasks[1], installation.CheckFingerprintTask)
-    assert isinstance(tasks[2], installation.EvaluateRulesTask)
+    assert isinstance(tasks[0], installation.PrepareValidContent)
+    assert isinstance(tasks[1], installation.EvaluateRulesTask)
 
 
 def test_install_with_no_tasks(interface: OSCAPInterface):
