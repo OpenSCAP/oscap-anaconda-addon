@@ -36,6 +36,7 @@ from org_fedora_oscap.constants import OSCAP
 from org_fedora_oscap.structures import PolicyData
 
 from pyanaconda.modules.common.constants.services import USERS
+from pyanaconda.modules.common.util import is_module_available
 from pyanaconda.threading import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
@@ -202,6 +203,10 @@ class OSCAPSpoke(NormalSpoke):
     # The string "SECURITY PROFILE" in oscap.glade is meant to be uppercase,
     # as it is displayed inside the spoke as the spoke label,
     # and spoke labels are all uppercase by a convention.
+
+    @classmethod
+    def should_run(cls, environment, data):
+        return is_module_available(OSCAP)
 
     # methods defined by API and helper methods #
     def __init__(self, data, storage, payload):
