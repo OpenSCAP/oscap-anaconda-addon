@@ -185,9 +185,6 @@ class OSCAPSpoke(NormalSpoke):
     # name of the .glade file in the same directory as this source
     uiFile = "oscap.glade"
 
-    # id of the help content for this spoke
-    help_id = "SecurityPolicySpoke"
-
     # domain of oscap-anaconda-addon translations
     translationDomain = "oscap-anaconda-addon"
 
@@ -203,6 +200,11 @@ class OSCAPSpoke(NormalSpoke):
     # The string "SECURITY PROFILE" in oscap.glade is meant to be uppercase,
     # as it is displayed inside the spoke as the spoke label,
     # and spoke labels are all uppercase by a convention.
+
+    @staticmethod
+    def get_screen_id():
+        """Return a unique id of this UI screen."""
+        return "security-policy-selection"
 
     @classmethod
     def should_run(cls, environment, data):
