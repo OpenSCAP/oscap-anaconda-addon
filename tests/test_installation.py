@@ -59,6 +59,13 @@ def rule_evaluator(monkeypatch):
     return mock
 
 
+@pytest.fixture()
+def mock_payload(monkeypatch):
+    proxy = Mock()
+    monkeypatch.setattr("org_fedora_oscap.common.get_payload_proxy", proxy)
+    return proxy
+
+
 def test_fetch_content_task(caplog, file_path, content_path):
     data = PolicyData()
     task = installation.PrepareValidContent(
@@ -73,8 +80,7 @@ def test_fetch_content_task(caplog, file_path, content_path):
         task.run()
 
 
-@pytest.mark.skip(reason="Test seems to require Anaconda listening on dbus")
-def test_evaluate_rules_task(rule_evaluator, content_path, tailoring_path):
+def test_evaluate_rules_task(rule_evaluator, content_path, tailoring_path, mock_payload):
     data = PolicyData()
     task = installation.EvaluateRulesTask(
         policy_data=data,
