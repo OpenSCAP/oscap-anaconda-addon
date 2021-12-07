@@ -56,7 +56,7 @@ _arg_start_with="install_rpms"
 _arg_languages="off"
 _arg_rpm_dir="$build_dir/rpm"
 _arg_tmp_root="$(mktemp -d)"
-_arg_releasever="28"
+_arg_releasever="rawhide"
 
 
 print_help()
@@ -66,7 +66,7 @@ print_help()
 	printf '\t%s\n' "-l, --languages, --no-languages: Include languages in the image. The increased image size may cause problems. (off by default)"
 	printf '\t%s\n' "--rpm-dir: Where to put/take from RPMs to install (default: '$build_dir/rpm')"
 	printf '\t%s\n' "--tmp-root: Fake temp root (default: '$(mktemp -d)')"
-	printf '\t%s\n' "-r, --releasever: Version of the target OS (default: '28')"
+	printf '\t%s\n' "-r, --releasever: Version of the target OS (default: 'rawhide')"
 	printf '\t%s\n' "-h, --help: Prints help"
 }
 
