@@ -513,8 +513,9 @@ class OSCAPdata(AddonData):
             ret = util.execInSysroot("yum", ["-y", "--nogpg", "install",
                                              self.raw_postinst_content_path])
             if ret != 0:
-                raise common.ExtractionError("Failed to install content "
-                                             "RPM to the target system")
+                msg = _(f"Failed to install content RPM to the target system.")
+                self._terminate(msg)
+                return
         elif self.content_type == "scap-security-guide":
             # nothing needed
             pass
@@ -525,10 +526,15 @@ class OSCAPdata(AddonData):
         if os.path.exists(self.preinst_tailoring_path):
             shutil.copy2(self.preinst_tailoring_path, target_content_dir)
 
-        common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
-                                   self.datastream_id, self.xccdf_id,
-                                   self.postinst_tailoring_path,
-                                   chroot=conf.target.system_root)
+        try:
+            common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
+                                       self.datastream_id, self.xccdf_id,
+                                       self.postinst_tailoring_path,
+                                       chroot=conf.target.system_root)
+        except Exception as exc:
+            msg = _(f"Something went wrong during the final hardening: {str(exc)}.")
+            self._terminate(msg)
+            return
 
     def clear_all(self):
         """Clear all the stored values."""
