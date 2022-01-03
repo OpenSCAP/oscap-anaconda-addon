@@ -488,6 +488,17 @@ class OSCAPdata(AddonData):
             # selected
             return
 
+        try:
+            common.assert_scanner_works(
+                chroot=conf.target.system_root, executable="oscap")
+        except Exception as exc:
+            msg_lines = [_(
+                "The 'oscap' scanner doesn't work in the installed system: {error}"
+                .format(error=str(exc)))]
+            msg_lines.append(_("As a result, the installed system can't be hardened."))
+            self._terminate("\n".join(msg_lines))
+            return
+
         target_content_dir = utils.join_paths(conf.target.system_root,
                                               common.TARGET_CONTENT_DIR)
         utils.ensure_dir_exists(target_content_dir)

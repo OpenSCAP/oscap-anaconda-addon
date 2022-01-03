@@ -77,6 +77,14 @@ def _run_oscap(mock_subprocess, additional_args):
     return expected_args, kwargs
 
 
+def test_oscap_works():
+    assert common.assert_scanner_works(chroot="/")
+    with pytest.raises(common.OSCAPaddonError, match="No such file"):
+        common.assert_scanner_works(chroot="/", executable="i_dont_exist")
+    with pytest.raises(common.OSCAPaddonError, match="non-zero"):
+        common.assert_scanner_works(chroot="/", executable="false")
+
+
 def test_run_oscap_remediate_profile_only(mock_subprocess, monkeypatch):
     return run_oscap_remediate_profile(
         mock_subprocess, monkeypatch,

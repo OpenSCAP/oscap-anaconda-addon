@@ -139,7 +139,8 @@ class SubprocessLauncher(object):
             proc = subprocess.Popen(self.args, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, ** kwargs)
         except OSError as oserr:
-            msg = "Failed to run the oscap tool: %s" % oserr
+            msg = ("Failed to execute command '{command_string}': {oserr}"
+                   .format(command_string=command_string, oserr=oserr))
             raise OSCAPaddonError(msg)
 
         (stdout, stderr) = proc.communicate()
@@ -215,6 +216,34 @@ def _run_oscap_gen_fix(profile, fpath, template, ds_id="", xccdf_id="",
     return proc.stdout
 
 
+def do_chroot(chroot):
+    """Helper function doing the chroot if requested."""
+    if chroot and chroot != "/":
+        os.chroot(chroot)
+        os.chdir("/")
+
+
+def assert_scanner_works(chroot, executable="oscap"):
+    args = [executable, "--version"]
+    command = " ".join(args)
+
+    try:
+        proc = subprocess.Popen(
+            args, preexec_fn=lambda: do_chroot(chroot),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (stdout, stderr) = proc.communicate()
+        stderr = stderr.decode(errors="replace")
+    except OSError as exc:
+        msg = _(f"Basic invocation '{command}' fails: {str(exc)}")
+        raise OSCAPaddonError(msg)
+    if proc.returncode != 0:
+        msg = _(
+            f"Basic scanner invocation '{command}' exited "
+            "with non-zero error code {proc.returncode}: {stderr}")
+        raise OSCAPaddonError(msg)
+    return True
+
+
 def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
                         chroot=""):
     """
@@ -244,12 +273,6 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     if not profile:
         return ""
 
-    def do_chroot():
-        """Helper function doing the chroot if requested."""
-        if chroot and chroot != "/":
-            os.chroot(chroot)
-            os.chdir("/")
-
     # make sure the directory for the results exists
     results_dir = os.path.dirname(RESULTS_PATH)
     if chroot:
@@ -274,7 +297,7 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     args.append(fpath)
 
     proc = SubprocessLauncher(args)
-    proc.execute(preexec_fn=do_chroot)
+    proc.execute(preexec_fn=lambda: do_chroot(chroot))
     proc.log_messages()
 
     if proc.returncode not in (0, 2):
