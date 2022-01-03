@@ -372,13 +372,14 @@ class OSCAPdata(AddonData):
                                 self.tailoring_path)
 
     def _terminate(self, message):
-        message += "\n" + _("The installation should be aborted.")
-        message += " " + _("Do you wish to continue anyway?")
         if flags.flags.automatedInstall and not flags.flags.ksprompt:
             # cannot have ask in a non-interactive kickstart
             # installation
+            message += "\n" + _("Aborting the installation.")
             raise errors.CmdlineError(message)
 
+        message += "\n" + _("The installation should be aborted.")
+        message += " " + _("Do you wish to continue anyway?")
         answ = errors.errorHandler.ui.showYesNoQuestion(message)
         if answ == errors.ERROR_CONTINUE:
             # prevent any futher actions here by switching to the dry
