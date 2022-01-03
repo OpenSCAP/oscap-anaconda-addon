@@ -239,6 +239,17 @@ class RemediateSystemTask(Task):
 
     def run(self):
         """Run the task."""
+        try:
+            common.assert_scanner_works(
+                chroot=self._sysroot, executable="oscap")
+        except Exception as exc:
+            msg_lines = [_(
+                "The 'oscap' scanner doesn't work in the installed system: {error}"
+                .format(error=str(exc)))]
+            msg_lines.append(_("As a result, the installed system can't be hardened."))
+            terminate("\n".join(msg_lines))
+            return
+
         common.run_oscap_remediate(
             self._policy_data.profile_id,
             self._target_content_path,

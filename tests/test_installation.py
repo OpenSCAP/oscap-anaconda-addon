@@ -115,4 +115,5 @@ def test_remediate_system_task(sysroot_path, content_path, tailoring_path):
     )
 
     assert task.name == "Remediate the system"
-    task.run()
+    with pytest.raises(installation.NonCriticalInstallationError, match="No such file"):
+        task.run()
