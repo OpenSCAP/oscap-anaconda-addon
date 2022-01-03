@@ -9,7 +9,7 @@ actions=(download_rpms install_rpms install_addon_from_repo create_image cleanup
 # ARG_OPTIONAL_BOOLEAN([languages],[l],[Include languages in the image. The increased image size may cause problems.])
 # ARG_OPTIONAL_SINGLE([rpm-dir],[],[Where to put/take from RPMs to install],[$build_dir/rpm])
 # ARG_OPTIONAL_SINGLE([tmp-root],[],[Fake temp root],[$(mktemp -d)])
-# ARG_OPTIONAL_SINGLE([releasever],[r],[Version of the target OS],[28])
+# ARG_OPTIONAL_SINGLE([releasever],[r],[Version of the target OS],[9])
 # ARG_TYPE_GROUP_SET([action],[ACTION],[start-with],[download_rpms,install_rpms,install_addon_from_repo,create_image,cleanup],[index])
 # ARG_HELP([])
 # ARGBASH_GO()
@@ -56,7 +56,7 @@ _arg_start_with="install_rpms"
 _arg_languages="off"
 _arg_rpm_dir="$build_dir/rpm"
 _arg_tmp_root="$(mktemp -d)"
-_arg_releasever="rawhide"
+_arg_releasever="9"
 
 
 print_help()
