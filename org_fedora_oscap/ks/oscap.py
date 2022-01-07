@@ -372,13 +372,14 @@ class OSCAPdata(AddonData):
                                 self.tailoring_path)
 
     def _terminate(self, message):
-        message += "\n" + _("The installation should be aborted.")
-        message += " " + _("Do you wish to continue anyway?")
         if flags.flags.automatedInstall and not flags.flags.ksprompt:
             # cannot have ask in a non-interactive kickstart
             # installation
+            message += "\n" + _("Aborting the installation.")
             raise errors.CmdlineError(message)
 
+        message += "\n" + _("The installation should be aborted.")
+        message += " " + _("Do you wish to continue anyway?")
         answ = errors.errorHandler.ui.showYesNoQuestion(message)
         if answ == errors.ERROR_CONTINUE:
             # prevent any futher actions here by switching to the dry
@@ -488,6 +489,17 @@ class OSCAPdata(AddonData):
             # selected
             return
 
+        try:
+            common.assert_scanner_works(
+                chroot=conf.target.system_root, executable="oscap")
+        except Exception as exc:
+            msg_lines = [_(
+                "The 'oscap' scanner doesn't work in the installed system: {error}"
+                .format(error=str(exc)))]
+            msg_lines.append(_("As a result, the installed system can't be hardened."))
+            self._terminate("\n".join(msg_lines))
+            return
+
         target_content_dir = utils.join_paths(conf.target.system_root,
                                               common.TARGET_CONTENT_DIR)
         utils.ensure_dir_exists(target_content_dir)
@@ -502,8 +514,9 @@ class OSCAPdata(AddonData):
             ret = util.execInSysroot("yum", ["-y", "--nogpg", "install",
                                              self.raw_postinst_content_path])
             if ret != 0:
-                raise common.ExtractionError("Failed to install content "
-                                             "RPM to the target system")
+                msg = _(f"Failed to install content RPM to the target system.")
+                self._terminate(msg)
+                return
         elif self.content_type == "scap-security-guide":
             # nothing needed
             pass
@@ -514,10 +527,15 @@ class OSCAPdata(AddonData):
         if os.path.exists(self.preinst_tailoring_path):
             shutil.copy2(self.preinst_tailoring_path, target_content_dir)
 
-        common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
-                                   self.datastream_id, self.xccdf_id,
-                                   self.postinst_tailoring_path,
-                                   chroot=conf.target.system_root)
+        try:
+            common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
+                                       self.datastream_id, self.xccdf_id,
+                                       self.postinst_tailoring_path,
+                                       chroot=conf.target.system_root)
+        except Exception as exc:
+            msg = _(f"Something went wrong during the final hardening: {str(exc)}.")
+            self._terminate(msg)
+            return
 
     def clear_all(self):
         """Clear all the stored values."""
