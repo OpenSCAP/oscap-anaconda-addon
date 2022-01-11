@@ -210,9 +210,9 @@ class InstallContentTask(Task):
             )
 
             if ret != 0:
-                raise common.ExtractionError(
-                    "Failed to install content RPM to the target system"
-                )
+                msg = _(f"Failed to install content RPM to the target system.")
+                terminate(msg)
+                return
         else:
             pattern = utils.join_paths(common.INSTALLATION_CONTENT_DIR, "*")
             utils.universal_copy(pattern, target_content_dir)
@@ -239,11 +239,27 @@ class RemediateSystemTask(Task):
 
     def run(self):
         """Run the task."""
-        common.run_oscap_remediate(
-            self._policy_data.profile_id,
-            self._target_content_path,
-            self._policy_data.datastream_id,
-            self._policy_data.xccdf_id,
-            self._target_tailoring_path,
-            chroot=self._sysroot
-        )
+        try:
+            common.assert_scanner_works(
+                chroot=self._sysroot, executable="oscap")
+        except Exception as exc:
+            msg_lines = [_(
+                "The 'oscap' scanner doesn't work in the installed system: {error}"
+                .format(error=str(exc)))]
+            msg_lines.append(_("As a result, the installed system can't be hardened."))
+            terminate("\n".join(msg_lines))
+            return
+
+        try:
+            common.run_oscap_remediate(
+                self._policy_data.profile_id,
+                self._target_content_path,
+                self._policy_data.datastream_id,
+                self._policy_data.xccdf_id,
+                self._target_tailoring_path,
+                chroot=self._sysroot
+            )
+        except Exception as exc:
+            msg = _(f"Something went wrong during the final hardening: {str(exc)}.")
+            terminate(msg)
+            return
