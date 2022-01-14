@@ -31,7 +31,8 @@ from org_fedora_oscap import content_discovery
 log = logging.getLogger("anaconda")
 
 
-REQUIRED_PACKAGES = ("openscap", "openscap-scanner",)
+# scanner is useful for the post remediation, utils for the firstboot remediation
+REQUIRED_PACKAGES = ("openscap", "openscap-scanner", "openscap-utils",)
 
 
 def _handle_error(exception):
@@ -261,5 +262,51 @@ class RemediateSystemTask(Task):
             )
         except Exception as exc:
             msg = _(f"Something went wrong during the final hardening: {str(exc)}.")
+            terminate(msg)
+            return
+
+
+class ScheduleFirstbootRemediationTask(Task):
+    """The installation task for running the remediation."""
+
+    def __init__(self, sysroot, policy_data, target_content_path,
+                 target_tailoring_path):
+        """Create a task."""
+        super().__init__()
+        self._sysroot = sysroot
+        self._policy_data = policy_data
+        self._target_content_path = target_content_path
+        self._target_tailoring_path = target_tailoring_path
+
+    @property
+    def name(self):
+        return "Schedule first-boot remediation"
+
+    def run(self):
+        """Run the task."""
+        try:
+            common.assert_scanner_works(
+                chroot=self._sysroot, executable="oscap")
+        except Exception as exc:
+            msg_lines = [_(
+                "The 'oscap' scanner doesn't work in the installed system: {error}"
+                .format(error=str(exc)))]
+            msg_lines.append(_("As a result, the installed system can't be hardened."))
+            terminate("\n".join(msg_lines))
+            return
+
+        try:
+            common.schedule_firstboot_remediation(
+                self._sysroot,
+                self._policy_data.profile_id,
+                self._target_content_path,
+                self._policy_data.datastream_id,
+                self._policy_data.xccdf_id,
+                self._target_tailoring_path,
+            )
+        except Exception as exc:
+            msg = _(
+                "Something went wrong when scheduling the first-boot remediation: {exc}."
+                .format(exc=str(exc)))
             terminate(msg)
             return
