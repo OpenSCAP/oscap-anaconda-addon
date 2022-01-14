@@ -36,6 +36,7 @@ class PolicyData(DBusData):
         self._tailoring_path = ""
         self._fingerprint = ""
         self._certificates = ""
+        self._remediate = ""
 
     def update_from(self, rhs):
         self._content_type = rhs._content_type
@@ -48,6 +49,7 @@ class PolicyData(DBusData):
         self._tailoring_path = rhs._tailoring_path
         self._fingerprint = rhs._fingerprint
         self._certificates = rhs._certificates
+        self._remediate = rhs._remediate
 
     @property
     def content_type(self) -> Str:
@@ -190,3 +192,15 @@ class PolicyData(DBusData):
     @certificates.setter
     def certificates(self, value: Str):
         self._certificates = value
+
+    @property
+    def remediate(self) -> Str:
+        """What remediations to perform
+
+        :return: a remediation mode
+        """
+        return self._remediate
+
+    @remediate.setter
+    def remediate(self, value: Str):
+        self._remediate = value
