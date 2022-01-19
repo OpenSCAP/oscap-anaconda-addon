@@ -627,9 +627,8 @@ class PasswdRules(RuleHandler):
         """
         proxy = BOSS.get_proxy(USER_INTERFACE)
 
-        proxy.SetPasswordPolicies(
+        proxy.PasswordPolicies = \
             PasswordPolicy.to_structure_dict(policies)
-        )
 
 
 class PackageRules(RuleHandler):
@@ -1027,14 +1026,14 @@ class FirewallRules(RuleHandler):
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
             if not report_only:
-                firewall_proxy.SetFirewallMode(FIREWALL_DISABLED)
+                firewall_proxy.FirewallMode = FIREWALL_DISABLED
 
         elif self._firewall_enabled is True:
             msg = _("Firewall will be enabled on startup")
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
             if not report_only:
-                firewall_proxy.SetFirewallMode(FIREWALL_ENABLED)
+                firewall_proxy.FirewallMode = FIREWALL_ENABLED
 
         # add messages for the already added services
         for svc in self._added_svcs:
@@ -1083,7 +1082,7 @@ class FirewallRules(RuleHandler):
                                         common.MESSAGE_TYPE_INFO, msg))
         if not report_only:
             all_services = list(self._add_svcs.union(set(firewall_proxy.EnabledServices)))
-            firewall_proxy.SetEnabledServices(all_services)
+            firewall_proxy.EnabledServices = all_services
 
         for port in self._new_ports_to_add:
             # add the port unless already added
@@ -1096,7 +1095,7 @@ class FirewallRules(RuleHandler):
                                         common.MESSAGE_TYPE_INFO, msg))
         if not report_only:
             all_ports = list(self._add_ports.union(set(firewall_proxy.EnabledPorts)))
-            firewall_proxy.SetEnabledPorts(all_ports)
+            firewall_proxy.EnabledPorts = all_ports
 
         for trust in self._new_trusts_to_add:
             # add the trust unless already added
@@ -1109,7 +1108,7 @@ class FirewallRules(RuleHandler):
                                         common.MESSAGE_TYPE_INFO, msg))
         if not report_only:
             all_trusts = list(self._add_trusts.union(set(firewall_proxy.Trusts)))
-            firewall_proxy.SetTrusts(all_trusts)
+            firewall_proxy.Trusts = all_trusts
 
         # now do the same for the services that should be excluded
 
@@ -1136,7 +1135,7 @@ class FirewallRules(RuleHandler):
                                         common.MESSAGE_TYPE_INFO, msg))
         if not report_only:
             all_services = list(self._remove_svcs.union(set(firewall_proxy.DisabledServices)))
-            firewall_proxy.SetDisabledServices(all_services)
+            firewall_proxy.DisabledServices = all_services
 
         return messages
 
@@ -1145,27 +1144,27 @@ class FirewallRules(RuleHandler):
         firewall_proxy = NETWORK.get_proxy(FIREWALL)
 
         if self._firewall_enabled is not None:
-            firewall_proxy.SetFirewallMode(self._firewall_default_state)
+            firewall_proxy.FirewallMode = self._firewall_default_state
 
         # remove all services this handler added
         all_services = firewall_proxy.EnabledServices
         orig_services = set(all_services).difference(self._new_services_to_add)
-        firewall_proxy.SetEnabledServices(list(orig_services))
+        firewall_proxy.EnabledServices = list(orig_services)
 
         # remove all ports this handler added
         all_ports = firewall_proxy.EnabledPorts
         orig_ports = set(all_ports).difference(self._new_ports_to_add)
-        firewall_proxy.SetEnabledPorts(list(orig_ports))
+        firewall_proxy.EnabledPorts = list(orig_ports)
 
         # remove all trusts this handler added
         all_trusts = firewall_proxy.Trusts
         orig_trusts = set(all_trusts).difference(self._new_trusts_to_add)
-        firewall_proxy.SetTrusts(list(orig_trusts))
+        firewall_proxy.Trusts = list(orig_trusts)
 
         # remove all services this handler excluded
         all_services = firewall_proxy.DisabledServices
         orig_services = set(all_services).difference(self._new_services_to_remove)
-        firewall_proxy.SetDisabledServices(list(orig_services))
+        firewall_proxy.DisabledServices = list(orig_services)
 
         self._added_svcs = set()
         self._added_ports = set()

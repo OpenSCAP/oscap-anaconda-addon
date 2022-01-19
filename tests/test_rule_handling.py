@@ -546,8 +546,6 @@ def test_evaluation_passwd_minlen_report_only_not_ignored(
 
     rule_data.new_rule("passwd --minlen=8")
 
-    messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=False)
-
     # call eval_rules with report_only=False
     # should set password minimal length to 8
     messages = rule_data.eval_rules(ksdata_mock, storage_mock, report_only=False)
@@ -565,10 +563,8 @@ def test_evaluation_passwd_minlen_report_only_not_ignored(
     policies = {PASSWORD_POLICY_ROOT: policy}
 
     ui_mock = BOSS.get_proxy(USER_INTERFACE)
-    ui_mock.SetPasswordPolicies.assert_called_with(
+    assert ui_mock.PasswordPolicies == \
         PasswordPolicy.to_structure_dict(policies)
-    )
-    ui_mock.SetPasswordPolicies.reset_mock()
 
     # call of eval_rules with report_only=True
     # should not change anything
@@ -580,7 +576,8 @@ def test_evaluation_passwd_minlen_report_only_not_ignored(
     assert not rule_data._passwd_rules._orig_strict
     assert rule_data._passwd_rules._minlen == 8
 
-    ui_mock.SetPasswordPolicies.assert_not_called()
+    assert ui_mock.PasswordPolicies == \
+        PasswordPolicy.to_structure_dict(policies)
 
 
 def _occurences_not_seen_in_strings(seeked, strings):
@@ -627,9 +624,8 @@ def test_evaluation_package_rules(proxy_getter, rule_data, ksdata_mock, storage_
     packages_data.packages = ["vim", "firewalld"]
     packages_data.excluded_packages = ["telnet"]
 
-    dnf_payload_mock.SetPackagesSelection.assert_called_once_with(
+    assert dnf_payload_mock.PackagesSelection == \
         PackagesSelectionData.to_structure(packages_data)
-    )
 
 
 def test_evaluation_package_rules_report_only(proxy_getter, rule_data, ksdata_mock, storage_mock):
@@ -650,7 +646,10 @@ def test_evaluation_package_rules_report_only(proxy_getter, rule_data, ksdata_mo
 
     # report_only --> no packages should be added or excluded
     dnf_payload_mock = PAYLOADS.get_proxy("/fake/payload/1")
-    dnf_payload_mock.SetPackagesSelection.assert_not_called()
+    packages_data = PackagesSelectionData()
+
+    assert dnf_payload_mock.PackagesSelection == \
+        PackagesSelectionData.to_structure(packages_data)
 
 
 def test_evaluation_bootloader_passwd_not_set(proxy_getter, rule_data, ksdata_mock, storage_mock):
@@ -795,11 +794,6 @@ def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock
     dnf_payload_mock = PAYLOADS.get_proxy("/fake/payload/1")
     dnf_payload_mock.PackagesSelection = PackagesSelectionData.to_structure(packages_data)
 
-    def set_packages(structure):
-        dnf_payload_mock.PackagesSelection = structure
-
-    dnf_payload_mock.SetPackagesSelection.side_effect = set_packages
-
     # run twice --> nothing should be different in the second run
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
@@ -811,9 +805,8 @@ def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock
 
     # (only) added and excluded packages should have been removed from the
     # list
-    dnf_payload_mock.SetPackagesSelection.assert_called_with(
+    assert dnf_payload_mock.PackagesSelection == \
         PackagesSelectionData.to_structure(packages_data)
-    )
 
     # now do the same again #
     messages = rule_data.eval_rules(ksdata_mock, storage_mock)
@@ -825,6 +818,5 @@ def test_revert_package_rules(proxy_getter, rule_data, ksdata_mock, storage_mock
 
     # (only) added and excluded packages should have been removed from the
     # list
-    dnf_payload_mock.SetPackagesSelection.assert_called_with(
+    assert dnf_payload_mock.PackagesSelection == \
         PackagesSelectionData.to_structure(packages_data)
-    )
