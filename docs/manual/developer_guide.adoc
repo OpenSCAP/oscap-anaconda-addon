@@ -177,9 +177,8 @@ virt-install \
 --memory 2048 --vcpus 2 --disk size=8 \
 --os-variant rhel8.5 \
 --location INSTALLATION_URL \
--x inst.updates=http://gateway:8000/update.img  \
---initrd-inject /path/to/ks.cfg \
---extra-args="ks=file:/ks.cfg" \
+-x inst.updates=http://192.168.122.1:8000/update.img  \
+--extra-args=http://192.168.122.1:8000/ks.cfg \
 --network default
 ----
 
