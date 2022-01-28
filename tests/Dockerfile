@@ -5,7 +5,11 @@ RUN dnf update -y \
   'dnf-command(download)' \
   make \
   anaconda \
+  openscap \
+  openscap-scanner \
+  openscap-utils \
   openscap-python3 \
+  scap-security-guide \
   python3-cpio \
   python3-pycurl \
   python3-pip \

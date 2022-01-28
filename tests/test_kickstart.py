@@ -17,13 +17,20 @@
 #
 import pytest
 from textwrap import dedent
+from unittest.mock import Mock
 from org_fedora_oscap.service.oscap import OSCAPService
-from org_fedora_oscap import common
 
 
 @pytest.fixture()
 def service():
     return OSCAPService()
+
+
+@pytest.fixture()
+def mock_ssg_available(monkeypatch):
+    mocked_function = Mock(return_value=True)
+    monkeypatch.setattr("org_fedora_oscap.common.ssg_available", mocked_function)
+    return mocked_function
 
 
 def check_ks_input(ks_service, ks_in, errors=None, warnings=None):
@@ -260,19 +267,28 @@ def test_section_confusion(service):
     ])
 
 
-def test_scap_security_guide(service):
-    if common.ssg_available():
-        pytest.skip("Test works only if scap-security-guide is not installed")
-
+def test_scap_security_guide(service, mock_ssg_available):
     ks_in = """
     %addon com_redhat_oscap
         content-type = scap-security-guide
         profile = Web Server
     %end
     """
+
+    mock_ssg_available.return_value = False
     check_ks_input(service, ks_in, errors=[
         "SCAP Security Guide not found on the system"
     ])
+
+    ks_out = """
+    %addon com_redhat_oscap
+        content-type = scap-security-guide
+        profile = Web Server
+    %end
+    """
+
+    mock_ssg_available.return_value = True
+    check_ks_input(service, ks_in, ks_out)
 
 
 def test_fingerprints(service):
