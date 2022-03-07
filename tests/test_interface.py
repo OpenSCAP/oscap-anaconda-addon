@@ -85,7 +85,8 @@ def test_policy_data(interface: OSCAPInterface, callback):
         "cpe-path": get_variant(Str, "/usr/share/oscap/cpe.xml"),
         "tailoring-path": get_variant(Str, "/usr/share/oscap/tailoring.xml"),
         "fingerprint": get_variant(Str, "240f2f18222faa98856c3b4fc50c4195"),
-        "certificates": get_variant(Str, "/usr/share/oscap/cacert.pem")
+        "certificates": get_variant(Str, "/usr/share/oscap/cacert.pem"),
+        "remediate": get_variant(Str, "both"),
     }
     interface.PolicyData = policy_structure
 
@@ -178,11 +179,12 @@ def test_install_with_tasks(service: OSCAPService, interface: OSCAPInterface):
     service.policy_data = data
 
     object_paths = interface.InstallWithTasks()
-    assert len(object_paths) == 2
+    assert len(object_paths) == 3
 
     tasks = TaskContainer.from_object_path_list(object_paths)
     assert isinstance(tasks[0], installation.InstallContentTask)
     assert isinstance(tasks[1], installation.RemediateSystemTask)
+    assert isinstance(tasks[2], installation.ScheduleFirstbootRemediationTask)
 
 
 def test_cancel_tasks(service: OSCAPService):
