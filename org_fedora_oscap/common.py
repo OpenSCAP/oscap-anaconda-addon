@@ -310,8 +310,8 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
     return proc.stdout
 
 
-def _schedule_firstboot_remediation(
-        chroot, profile, ds_path, results_path, report_path, ds_id, xccdf_id, tailoring_path):
+def _create_firstboot_config_string(
+        profile, ds_path, results_path, report_path, ds_id, xccdf_id, tailoring_path):
     config = textwrap.dedent(f"""\
     OSCAP_REMEDIATE_DS='{ds_path}'
     OSCAP_REMEDIATE_PROFILE_ID='{profile}'
@@ -319,12 +319,18 @@ def _schedule_firstboot_remediation(
     OSCAP_REMEDIATE_HTML_REPORT='{report_path}'
     """)
     if ds_id:
-        config += "OSCAP_REMEDIATE_DATASTREAM_ID='{ds_id}'\n"
+        config += f"OSCAP_REMEDIATE_DATASTREAM_ID='{ds_id}'\n"
     if xccdf_id:
-        config += "OSCAP_REMEDIATE_XCCDF_ID='{xccdf_id}'\n"
+        config += f"OSCAP_REMEDIATE_XCCDF_ID='{xccdf_id}'\n"
     if tailoring_path:
-        config += "OSCAP_REMEDIATE_TAILORING='{tailoring_path}'\n"
+        config += f"OSCAP_REMEDIATE_TAILORING='{tailoring_path}'\n"
+    return config
 
+
+def _schedule_firstboot_remediation(
+        chroot, profile, ds_path, results_path, report_path, ds_id, xccdf_id, tailoring_path):
+    config = _create_firstboot_config_string(
+        profile, ds_path, results_path, report_path, ds_id, xccdf_id, tailoring_path)
     relative_filename = "var/tmp/oscap-remediate-offline.conf.sh"
     local_config_filename = f"/{relative_filename}"
     chroot_config_filename = os.path.join(chroot, relative_filename)
