@@ -29,6 +29,7 @@ import tempfile
 import subprocess
 import zipfile
 import tarfile
+import textwrap
 
 import re
 import logging
@@ -339,6 +340,52 @@ def run_oscap_remediate(profile, fpath, ds_id="", xccdf_id="", tailoring="",
         raise OSCAPaddonError(msg)
 
     return proc.stdout
+
+
+def _create_firstboot_config_string(
+        profile, ds_path, results_path, report_path, ds_id, xccdf_id, tailoring_path):
+    config = textwrap.dedent(f"""\
+    OSCAP_REMEDIATE_DS='{ds_path}'
+    OSCAP_REMEDIATE_PROFILE_ID='{profile}'
+    OSCAP_REMEDIATE_ARF_RESULT='{results_path}'
+    OSCAP_REMEDIATE_HTML_REPORT='{report_path}'
+    """)
+    if ds_id:
+        config += f"OSCAP_REMEDIATE_DATASTREAM_ID='{ds_id}'\n"
+    if xccdf_id:
+        config += f"OSCAP_REMEDIATE_XCCDF_ID='{xccdf_id}'\n"
+    if tailoring_path:
+        config += f"OSCAP_REMEDIATE_TAILORING='{tailoring_path}'\n"
+    return config
+
+
+def _schedule_firstboot_remediation(
+        chroot, profile, ds_path, results_path, report_path, ds_id, xccdf_id, tailoring_path):
+    config = _create_firstboot_config_string(
+        profile, ds_path, results_path, report_path, ds_id, xccdf_id, tailoring_path)
+    relative_filename = "var/tmp/oscap-remediate-offline.conf.sh"
+    local_config_filename = f"/{relative_filename}"
+    chroot_config_filename = os.path.join(chroot, relative_filename)
+    with open(chroot_config_filename, "w") as f:
+        f.write(config)
+    os.symlink(local_config_filename,
+               os.path.join(chroot, "system-update"))
+
+
+def schedule_firstboot_remediation(chroot, profile, fpath, ds_id="", xccdf_id="", tailoring=""):
+    if not profile:
+        return ""
+
+    # make sure the directory for the results exists
+    results_dir = os.path.dirname(RESULTS_PATH)
+    results_dir = os.path.normpath(chroot + "/" + results_dir)
+    utils.ensure_dir_exists(results_dir)
+
+    log.info("OSCAP addon: Scheduling firstboot remediation")
+    _schedule_firstboot_remediation(
+        chroot, profile, fpath, RESULTS_PATH, REPORT_PATH, ds_id, xccdf_id, tailoring)
+
+    return ""
 
 
 def extract_data(archive, out_dir, ensure_has_files=None):

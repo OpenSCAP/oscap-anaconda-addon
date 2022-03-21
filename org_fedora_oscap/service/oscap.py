@@ -29,7 +29,7 @@ from pyanaconda.modules.common.structures.requirement import Requirement
 from org_fedora_oscap import common
 from org_fedora_oscap.constants import OSCAP
 from org_fedora_oscap.service.installation import PrepareValidContent, \
-    EvaluateRulesTask, InstallContentTask, RemediateSystemTask
+    EvaluateRulesTask, InstallContentTask, RemediateSystemTask, ScheduleFirstbootRemediationTask
 from org_fedora_oscap.service.kickstart import OSCAPKickstartSpecification, KickstartParseError
 from org_fedora_oscap.service.oscap_interface import OSCAPInterface
 from org_fedora_oscap.structures import PolicyData
@@ -208,22 +208,30 @@ class OSCAPService(KickstartService):
             log.debug("OSCAP Addon: The installation is disabled. Skip the installation.")
             return []
 
-        tasks = [
-            InstallContentTask(
-                sysroot=conf.target.system_root,
-                policy_data=self.policy_data,
-                file_path=common.get_raw_preinst_content_path(self.policy_data),
-                content_path=common.get_preinst_content_path(self.policy_data),
-                tailoring_path=common.get_preinst_tailoring_path(self.policy_data),
-                target_directory=common.TARGET_CONTENT_DIR,
-            ),
-            RemediateSystemTask(
-                sysroot=conf.target.system_root,
-                policy_data=self.policy_data,
-                target_content_path=common.get_postinst_content_path(self.policy_data),
-                target_tailoring_path=common.get_postinst_tailoring_path(self.policy_data)
-            )
-        ]
+        tasks = []
+        tasks.append(InstallContentTask(
+            sysroot=conf.target.system_root,
+            policy_data=self.policy_data,
+            file_path=common.get_raw_preinst_content_path(self.policy_data),
+            content_path=common.get_preinst_content_path(self.policy_data),
+            tailoring_path=common.get_preinst_tailoring_path(self.policy_data),
+            target_directory=common.TARGET_CONTENT_DIR
+        ))
+        if self.policy_data.remediate in ("", "post", "both"):
+            tasks.append(RemediateSystemTask(
+                    sysroot=conf.target.system_root,
+                    policy_data=self.policy_data,
+                    target_content_path=common.get_postinst_content_path(self.policy_data),
+                    target_tailoring_path=common.get_postinst_tailoring_path(self.policy_data)
+            ))
+
+        if self.policy_data.remediate in ("", "firstboot", "both"):
+            tasks.append(ScheduleFirstbootRemediationTask(
+                    sysroot=conf.target.system_root,
+                    policy_data=self.policy_data,
+                    target_content_path=common.get_postinst_content_path(self.policy_data),
+                    target_tailoring_path=common.get_postinst_tailoring_path(self.policy_data)
+            ))
 
         self._cancel_tasks_on_error(tasks)
         return tasks
