@@ -175,7 +175,7 @@ virt-install \
 --connect qemu:///system \
 --name oaa_test \
 --memory 2048 --vcpus 2 --disk size=8 \
---os-variant rhel8.5 \
+--os-variant fedora35 \
 --location INSTALLATION_URL \
 -x inst.updates=http://192.168.122.1:8000/update.img  \
 -x inst.ks=http://192.168.122.1:8000/ks.cfg \
