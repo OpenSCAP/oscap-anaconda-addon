@@ -161,9 +161,38 @@ Watch the console, as the VM is supposed to download the update image, and the P
 
 200 is the OK request status.
 
+==== Installing a VM using update image and kickstart
 
+You can also use the `virt-install` command, which is useful when you want to test kickstart installation.
 
+Some kickstarts (`.cfg` files) can be found in the `testing_files` directory.
+You will also need installation URL and the update image described above.
 
+For example:
+
+----
+virt-install \
+--connect qemu:///system \
+--name oaa_test \
+--memory 2048 --vcpus 2 --disk size=8 \
+--os-variant fedora35 \
+--location INSTALLATION_URL \
+-x inst.updates=http://192.168.122.1:8000/update.img  \
+-x inst.ks=http://192.168.122.1:8000/ks.cfg \
+--network default
+----
+
+Replace `INSTALLATION_URL` with correct URL and `ks.cfg` with the real kickstart file name.
+
+==== Testing with newer OpenSCAP
+
+If you have a new RPM in a repo, eg. in a COPR repository created by Packit, you can add a link to the repo to your kickstart.
+
+For example:
+
+----
+repo --name oscap --baseurl=https://download.copr.fedorainfracloud.org/results/packit/OpenSCAP-openscap-1838/epel-8-x86_64/
+----
 
 == Available make commands
 
