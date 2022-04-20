@@ -21,7 +21,7 @@ from unittest.mock import Mock
 from org_fedora_oscap.service.oscap import OSCAPService
 
 
-ADDON_NAME = "com_redhat_oscap"
+ADDON_NAME = "org_fedora_oscap"
 
 
 @pytest.fixture()
