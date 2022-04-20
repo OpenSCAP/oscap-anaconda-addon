@@ -6,11 +6,11 @@ on:
     branches: [ master ]
 jobs:
   validate-master:
-    name: Unit Tests on Fedora Rawhide (Container)
+    name: Unit Tests on Fedora (Container)
     if: github.ref == 'refs/heads/master' || github.event.pull_request.base.ref == 'master'
     runs-on: ubuntu-latest
     container:
-      image: fedora:35
+      image: fedora:latest
     steps:
       - name: Install Deps
         run: dnf install -y make anaconda python3-pytest python3-pycurl openscap-scanner
