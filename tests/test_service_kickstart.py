@@ -45,12 +45,11 @@ def test_parsing(filled_oscap_data):
     assert data.content_path == "/usr/share/oscap/testing_ds.xml"
     assert data.cpe_path == "/usr/share/oscap/cpe.xml"
     assert data.profile_id == "Web Server"
-    assert data.content_name == "hardening.xml"
     assert data.tailoring_path == "/usr/share/oscap/tailoring.xml"
 
 
 def test_properties(filled_oscap_data):
-    data = filled_oscap_data.policy_data
+    data = filled_oscap_data
     assert (data.preinst_content_path
             == common.INSTALLATION_CONTENT_DIR + data.content_name)
     assert (data.postinst_content_path
@@ -58,15 +57,15 @@ def test_properties(filled_oscap_data):
     assert (data.raw_preinst_content_path
             == common.INSTALLATION_CONTENT_DIR + data.content_name)
     assert (data.preinst_tailoring_path
-            == os.path.normpath(common.INSTALLATION_CONTENT_DIR + data.tailoring_path))
+            == os.path.normpath(common.INSTALLATION_CONTENT_DIR + data.policy_data.tailoring_path))
     assert (data.postinst_tailoring_path
-            == os.path.normpath(common.TARGET_CONTENT_DIR + data.tailoring_path))
+            == os.path.normpath(common.TARGET_CONTENT_DIR + data.policy_data.tailoring_path))
 
 
 def test_str(filled_oscap_data):
     str_ret = str(filled_oscap_data)
     assert (str_ret ==
-            "%addon org_fedora_oscap\n"
+            f"%addon {common.ADDON_NAMES[0]}\n"
             "    content-type = datastream\n"
             "    content-url = https://example.com/hardening.xml\n"
             "    datastream-id = id_datastream_1\n"
@@ -251,14 +250,13 @@ def test_archive_raw_content_paths(blank_oscap_data):
 
     # content path should end with the archive's name
     assert blank_oscap_data.raw_preinst_content_path.endswith("oscap_content.tar")
-    assert blank_oscap_data.raw_postinst_content_path.endswith("oscap_content.tar")
 
     # tailoring paths should be returned properly
     assert (blank_oscap_data.preinst_tailoring_path
-            == common.INSTALLATION_CONTENT_DIR + blank_oscap_data.tailoring_path)
+            == common.INSTALLATION_CONTENT_DIR + blank_oscap_data.policy_data.tailoring_path)
 
     assert (blank_oscap_data.postinst_tailoring_path
-            == common.TARGET_CONTENT_DIR + blank_oscap_data.tailoring_path)
+            == common.TARGET_CONTENT_DIR + blank_oscap_data.policy_data.tailoring_path)
 
 
 def test_rpm_raw_content_paths(blank_oscap_data):
@@ -277,15 +275,14 @@ def test_rpm_raw_content_paths(blank_oscap_data):
 
     # content path should end with the rpm's name
     assert blank_oscap_data.raw_preinst_content_path.endswith("oscap_content.rpm")
-    assert blank_oscap_data.raw_postinst_content_path.endswith("oscap_content.rpm")
 
     # content paths should be returned as expected
     assert (blank_oscap_data.preinst_content_path
-            == os.path.normpath(common.INSTALLATION_CONTENT_DIR + blank_oscap_data.content_path))
+            == os.path.normpath(common.INSTALLATION_CONTENT_DIR + blank_oscap_data.policy_data.content_path))
 
     # when using rpm, content_path doesn't change for the post-installation
     # phase
-    assert blank_oscap_data.postinst_content_path == blank_oscap_data.content_path
+    assert blank_oscap_data.postinst_content_path == blank_oscap_data.policy_data.content_path
 
 
 def test_ds_raw_content_paths(blank_oscap_data):
@@ -301,7 +298,6 @@ def test_ds_raw_content_paths(blank_oscap_data):
     # XML
     assert blank_oscap_data.content_name == "scap_content.xml"
     assert blank_oscap_data.raw_preinst_content_path.endswith("scap_content.xml")
-    assert blank_oscap_data.raw_postinst_content_path.endswith("scap_content.xml")
 
 
 def test_valid_fingerprints(blank_oscap_data):
