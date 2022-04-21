@@ -78,7 +78,7 @@ SSG_DIR = "/usr/share/xml/scap/ssg/content/"
 
 # Make it easy to change e.g. by sed substitution in spec files
 # First name is the canonical addon name, rest are adapters
-ADDON_NAMES = ["com_redhat_oscap", "org_fedora_oscap"]
+ADDON_NAMES = ["org_fedora_oscap", "com_redhat_oscap"]
 
 COMPLAIN_ABOUT_NON_CANONICAL_NAMES = True
 

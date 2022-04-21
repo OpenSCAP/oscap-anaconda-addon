@@ -21,6 +21,9 @@ from unittest.mock import Mock
 from org_fedora_oscap.service.oscap import OSCAPService
 
 
+ADDON_NAME = "org_fedora_oscap"
+
+
 @pytest.fixture()
 def service():
     return OSCAPService()
@@ -67,8 +70,8 @@ def test_default(service):
 
 
 def test_data(service):
-    ks_in = """
-    %addon com_redhat_oscap
+    ks_in = f"""
+    %addon {ADDON_NAME}
         content-type = datastream
         content-url = "https://example.com/hardening.xml"
     %end
@@ -80,8 +83,8 @@ def test_data(service):
 
 
 def test_datastream(service):
-    ks_in = """
-    %addon com_redhat_oscap
+    ks_in = f"""
+    %addon {ADDON_NAME}
         content-type = datastream
         content-url = "https://example.com/hardening.xml"
         datastream-id = id_datastream_1
@@ -94,8 +97,8 @@ def test_datastream(service):
     """
     check_ks_input(service, ks_in)
 
-    ks_out = """
-    %addon com_redhat_oscap
+    ks_out = f"""
+    %addon {ADDON_NAME}
         content-type = datastream
         content-url = https://example.com/hardening.xml
         datastream-id = id_datastream_1
@@ -110,40 +113,40 @@ def test_datastream(service):
 
 
 def test_no_content_type(service):
-    ks_in = """
-    %addon com_redhat_oscap
+    ks_in = f"""
+    %addon {ADDON_NAME}
         content-url = http://example.com/test_ds.xml
         profile = Web Server
     %end
     """
     check_ks_input(service, ks_in, errors=[
-        "content-type missing for the com_redhat_oscap addon"
+        f"content-type missing for the {ADDON_NAME} addon"
     ])
 
 
 def test_no_content_url(service):
-    ks_in = """
-    %addon com_redhat_oscap
+    ks_in = f"""
+    %addon {ADDON_NAME}
         content-type = datastream
         profile = Web Server
     %end
     """
     check_ks_input(service, ks_in, errors=[
-        "content-url missing for the com_redhat_oscap addon"
+        f"content-url missing for the {ADDON_NAME} addon"
     ])
 
 
 def test_no_profile(service):
-    ks_in = """
-    %addon com_redhat_oscap
+    ks_in = f"""
+    %addon {ADDON_NAME}
         content-url = http://example.com/test_ds.xml
         content-type = datastream
     %end
     """
     check_ks_input(service, ks_in)
 
-    ks_out = """
-    %addon com_redhat_oscap
+    ks_out = f"""
+    %addon {ADDON_NAME}
         content-type = datastream
         content-url = http://example.com/test_ds.xml
         profile = default
@@ -155,8 +158,8 @@ def test_no_profile(service):
 
 
 def test_rpm(service):
-    ks_in = """
-    %addon com_redhat_oscap
+    ks_in = f"""
+    %addon {ADDON_NAME}
         content-url = http://example.com/oscap_content.rpm
         content-type = RPM
         profile = Web Server
@@ -165,8 +168,8 @@ def test_rpm(service):
     """
     check_ks_input(service, ks_in)
 
-    ks_out = """
-    %addon com_redhat_oscap
+    ks_out = f"""
+    %addon {ADDON_NAME}
         content-type = rpm
         content-url = http://example.com/oscap_content.rpm
         content-path = /usr/share/oscap/xccdf.xml
@@ -177,8 +180,8 @@ def test_rpm(service):
 
 
 def test_rpm_without_path(service):
-    ks_in = """
-    %addon com_redhat_oscap
+    ks_in = f"""
+    %addon {ADDON_NAME}
         content-url = http://example.com/oscap_content.rpm
         content-type = RPM
         profile = Web Server
@@ -190,8 +193,8 @@ def test_rpm_without_path(service):
 
 
 def test_rpm_with_wrong_suffix(service):
-    ks_in = """
-    %addon com_redhat_oscap
+    ks_in = f"""
+    %addon {ADDON_NAME}
         content-url = http://example.com/oscap_content.xml
         content-type = RPM
         profile = Web Server
@@ -204,8 +207,8 @@ def test_rpm_with_wrong_suffix(service):
 
 
 def test_archive(service):
-    ks_in = """
-    %addon com_redhat_oscap
+    ks_in = f"""
+    %addon {ADDON_NAME}
         content-url = http://example.com/oscap_content.tar
         content-type = archive
         profile = Web Server
@@ -214,8 +217,8 @@ def test_archive(service):
     """
     check_ks_input(service, ks_in)
 
-    ks_out = """
-    %addon com_redhat_oscap
+    ks_out = f"""
+    %addon {ADDON_NAME}
         content-type = archive
         content-url = http://example.com/oscap_content.tar
         content-path = oscap/xccdf.xml
@@ -226,8 +229,8 @@ def test_archive(service):
 
 
 def test_archive_without_path(service):
-    ks_in = """
-    %addon com_redhat_oscap
+    ks_in = f"""
+    %addon {ADDON_NAME}
         content-url = http://example.com/oscap_content.tar
         content-type = archive
         profile = Web Server
@@ -268,8 +271,8 @@ def test_section_confusion(service):
 
 
 def test_scap_security_guide(service, mock_ssg_available):
-    ks_in = """
-    %addon com_redhat_oscap
+    ks_in = f"""
+    %addon {ADDON_NAME}
         content-type = scap-security-guide
         profile = Web Server
     %end
@@ -280,8 +283,8 @@ def test_scap_security_guide(service, mock_ssg_available):
         "SCAP Security Guide not found on the system"
     ])
 
-    ks_out = """
-    %addon com_redhat_oscap
+    ks_out = f"""
+    %addon {ADDON_NAME}
         content-type = scap-security-guide
         profile = Web Server
     %end
@@ -292,11 +295,11 @@ def test_scap_security_guide(service, mock_ssg_available):
 
 
 def test_fingerprints(service):
-    ks_template = """
-    %addon com_redhat_oscap
+    ks_template = f"""
+    %addon {ADDON_NAME}
         content-url = http://example.com/test_ds.xml
         content-type = datastream
-        fingerprint = {}
+        fingerprint = {{}}
     %end
     """
 
