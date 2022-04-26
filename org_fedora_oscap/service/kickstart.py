@@ -37,7 +37,33 @@ def key_value_pair(key, value, indent=4):
     return "%s%s = %s" % (indent * " ", key, value)
 
 
-class OSCAPKickstartData(AddonData):
+class AdditionalPropertiesMixin:
+    @property
+    def content_name(self) -> str:
+        return common.get_content_name(self.policy_data)
+
+    @property
+    def preinst_content_path(self) -> str:
+        return common.get_preinst_content_path(self.policy_data)
+
+    @property
+    def preinst_tailoring_path(self) -> str:
+        return common.get_preinst_tailoring_path(self.policy_data)
+
+    @property
+    def postinst_content_path(self) -> str:
+        return common.get_postinst_content_path(self.policy_data)
+
+    @property
+    def postinst_tailoring_path(self) -> str:
+        return common.get_postinst_tailoring_path(self.policy_data)
+
+    @property
+    def raw_preinst_content_path(self) -> str:
+        return common.get_raw_preinst_content_path(self.policy_data)
+
+
+class OSCAPKickstartData(AddonData, AdditionalPropertiesMixin):
     """The kickstart data for the add-on."""
 
     def __init__(self):
