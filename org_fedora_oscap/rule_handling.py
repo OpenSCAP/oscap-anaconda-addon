@@ -680,10 +680,11 @@ class PackageRules(RuleHandler):
 
         messages = []
 
+        msg_installed_template = _(
+            "package '%s' has been added to the list of to be installed packages")
         # add messages for the already added packages
         for pkg in self._added_pkgs:
-            msg = _("package '%s' has been added to the list of to be installed "
-                    "packages" % pkg)
+            msg = msg_installed_template % pkg
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
 
@@ -697,11 +698,12 @@ class PackageRules(RuleHandler):
                 self._added_pkgs.add(pkg)
                 ksdata.packages.packageList.append(pkg)
 
-            msg = _("package '%s' has been added to the list of to be installed "
-                    "packages" % pkg)
+            msg = msg_installed_template % pkg
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
 
+        msg_excluded_template = _(
+            "package '%s' has been added to the list of excluded packages")
         # now do the same for the packages that should be excluded
         # add messages for the already excluded packages
         for pkg in self._removed_pkgs:
@@ -709,13 +711,12 @@ class PackageRules(RuleHandler):
                 msg = _(
                     "package '{package}' has been added to the list "
                     "of excluded packages, but it can't be removed "
-                    "from the current software selection without breaking the installation."
-                    .format(package=pkg))
+                    "from the current software selection without breaking the installation.")
+                msg = msg.format(package=pkg)
                 messages.append(RuleMessage(self.__class__,
                                             common.MESSAGE_TYPE_FATAL, msg))
             else:
-                msg = _("package '%s' has been added to the list of excluded "
-                        "packages" % pkg)
+                msg = msg_excluded_template % pkg
                 messages.append(RuleMessage(self.__class__,
                                             common.MESSAGE_TYPE_INFO, msg))
 
@@ -729,8 +730,7 @@ class PackageRules(RuleHandler):
                 self._removed_pkgs.add(pkg)
                 ksdata.packages.excludedList.append(pkg)
 
-            msg = _("package '%s' has been added to the list of excluded "
-                    "packages" % pkg)
+            msg = msg_excluded_template % pkg
             messages.append(RuleMessage(self.__class__,
                                         common.MESSAGE_TYPE_INFO, msg))
 
