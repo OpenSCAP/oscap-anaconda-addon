@@ -31,8 +31,8 @@ from org_fedora_oscap import content_discovery
 log = logging.getLogger("anaconda")
 
 
-# scanner is useful for the post remediation, utils for the firstboot remediation
-REQUIRED_PACKAGES = ("openscap", "openscap-scanner", "openscap-utils",)
+# scanner is useful for the post remediation
+REQUIRED_PACKAGES = ("openscap", "openscap-scanner")
 
 
 def _handle_error(exception):
