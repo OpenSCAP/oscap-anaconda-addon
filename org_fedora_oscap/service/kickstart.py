@@ -102,7 +102,6 @@ class OSCAPKickstartData(AddonData, AdditionalPropertiesMixin):
             "tailoring-path": self._parse_tailoring_path,
             "fingerprint": self._parse_fingerprint,
             "certificates": self._parse_certificates,
-            "remediate": self._parse_remediate,
         }
 
         line = line.strip()
@@ -171,10 +170,6 @@ class OSCAPKickstartData(AddonData, AdditionalPropertiesMixin):
 
     def _parse_certificates(self, value):
         self.policy_data.certificates = value
-
-    def _parse_remediate(self, value):
-        assert value in ("none", "post", "firstboot", "both")
-        self.policy_data.remediate = value
 
     def handle_end(self):
         """Handle the end of the section."""
@@ -265,9 +260,6 @@ class OSCAPKickstartData(AddonData, AdditionalPropertiesMixin):
 
         if self.policy_data.certificates:
             ret += "\n%s" % key_value_pair("certificates", self.policy_data.certificates)
-
-        if self.policy_data.remediate:
-            ret += "\n%s" % key_value_pair("remediate", self.policy_data.remediate)
 
         ret += "\n%end\n\n"
         return ret
