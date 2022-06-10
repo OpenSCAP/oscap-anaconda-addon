@@ -174,6 +174,7 @@ def test_install_with_tasks(service: OSCAPService, interface: OSCAPInterface):
     data = PolicyData()
     data.content_type = "scap-security-guide"
     data.profile_id = "Web Server"
+    data.remediate = "both"
 
     service.policy_enabled = True
     service.policy_data = data
