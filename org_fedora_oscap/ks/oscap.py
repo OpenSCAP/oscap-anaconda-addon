@@ -100,9 +100,6 @@ class OSCAPdata(AddonData):
         # certificate to verify HTTPS connection or signed data
         self.certificates = ""
 
-        # What remediation(s) to execute
-        self.remediate = ""
-
         # internal values
         self.rule_data = rule_handling.RuleData()
         self.dry_run = False
@@ -147,9 +144,6 @@ class OSCAPdata(AddonData):
 
         if self.certificates:
             ret += "\n%s" % key_value_pair("certificates", self.certificates)
-
-        if self.remediate:
-            ret += "\n%s" % key_value_pair("remediate", self.remediate)
 
         ret += "\n%end\n\n"
         return ret
@@ -209,10 +203,6 @@ class OSCAPdata(AddonData):
     def _parse_certificates(self, value):
         self.certificates = value
 
-    def _parse_remediate(self, value):
-        assert value in ("none", "post", "firstboot", "both")
-        self.remediate = value
-
     def handle_line(self, line):
         """
         The handle_line method that is called with every line from this addon's
@@ -234,7 +224,6 @@ class OSCAPdata(AddonData):
                    "tailoring-path": self._parse_tailoring_path,
                    "fingerprint": self._parse_fingerprint,
                    "certificates": self._parse_certificates,
-                   "remediate": self._parse_remediate,
                    }
 
         line = line.strip()
@@ -538,32 +527,15 @@ class OSCAPdata(AddonData):
         if os.path.exists(self.preinst_tailoring_path):
             shutil.copy2(self.preinst_tailoring_path, target_content_dir)
 
-        if self.remediate in ("", "post", "both"):
-            try:
-                common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
-                                           self.datastream_id, self.xccdf_id,
-                                           self.postinst_tailoring_path,
-                                           chroot=conf.target.system_root)
-            except Exception as exc:
-                msg = _(f"Something went wrong during the final hardening: {str(exc)}.")
-                self._terminate(msg)
-                return
-
-        if self.remediate in ("", "firstboot", "both"):
-            try:
-                common.schedule_firstboot_remediation(
-                    conf.target.system_root,
-                    self.profile_id,
-                    self.postinst_content_path,
-                    self.datastream_id,
-                    self.xccdf_id,
-                    self.postinst_tailoring_path,
-                )
-            except Exception as exc:
-                msg = _("Something went wrong when scheduling the first-boot remediation: {exc}."
-                        .format(exc=str(exc)))
-                terminate(msg)
-                return
+        try:
+            common.run_oscap_remediate(self.profile_id, self.postinst_content_path,
+                                       self.datastream_id, self.xccdf_id,
+                                       self.postinst_tailoring_path,
+                                       chroot=conf.target.system_root)
+        except Exception as exc:
+            msg = _(f"Something went wrong during the final hardening: {str(exc)}.")
+            self._terminate(msg)
+            return
 
     def clear_all(self):
         """Clear all the stored values."""
