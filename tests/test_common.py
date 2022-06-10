@@ -274,18 +274,3 @@ def test_extract_tailoring_rpm_ensure_filename_there():
            in str(excinfo.value)
 
     shutil.rmtree(temp_path)
-
-
-def test_firstboot_config():
-    config_args = dict(
-        profile="@PROFILE@",
-        ds_path="@DS_PATH@",
-        results_path="@RES_PATH@",
-        report_path="@REP_PATH",
-        ds_id="@DS_ID@",
-        xccdf_id="@XCCDF_ID@",
-        tailoring_path="@TAIL_PATH@",
-    )
-    config_string = common._create_firstboot_config_string(** config_args)
-    for arg in config_args.values():
-        assert arg in config_string
