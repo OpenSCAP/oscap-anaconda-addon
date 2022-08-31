@@ -206,8 +206,9 @@ class InstallContentTask(Task):
             package_path = utils.join_paths(self._target_directory, content_name)
 
             # and install it with yum
-            ret = util.execInSysroot(
-                "yum", ["-y", "--nogpg", "install", package_path]
+            ret = util.execWithRedirect(
+                "yum", ["-y", "--nogpg", "install", package_path],
+                root=self._sysroot
             )
 
             if ret != 0:
