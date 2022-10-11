@@ -151,7 +151,6 @@ def set_ready(func):
         self._ready = True
         # pylint: disable-msg=E1101
         hubQ.send_ready(self.__class__.__name__)
-        hubQ.send_message(self.__class__.__name__, self.status)
 
         return ret
 
