@@ -12,6 +12,7 @@ from pykickstart.errors import KickstartValueError
 from org_fedora_oscap import data_fetch, utils
 from org_fedora_oscap import common
 from org_fedora_oscap import content_handling
+from org_fedora_oscap.content_handling import CONTENT_TYPES
 from org_fedora_oscap import rule_handling
 
 from org_fedora_oscap.common import _
@@ -191,6 +192,38 @@ class ContentBringer:
             raise content_handling.ContentCheckError(msg)
         log.info(f"Integrity check passed using {hash_obj.name} hash")
 
+    def filter_discovered_content(self, labelled_files):
+        expected_path = self._addon_data.content_path
+        categories = (CONTENT_TYPES["DATASTREAM"], CONTENT_TYPES["XCCDF_CHECKLIST"])
+        if expected_path:
+            labelled_files = self.reduce_files(labelled_files, expected_path, categories)
+
+        expected_path = self._addon_data.tailoring_path
+        categories = (CONTENT_TYPES["TAILORING"], )
+        if expected_path:
+            labelled_files = self.reduce_files(labelled_files, expected_path, categories)
+
+        expected_path = self._addon_data.cpe_path
+        categories = (CONTENT_TYPES["CPE_DICT"], )
+        if expected_path:
+            labelled_files = self.reduce_files(labelled_files, expected_path, categories)
+
+        return labelled_files
+
+    def reduce_files(self, labelled_files, expected_path, categories):
+        reduced_files = dict()
+        if expected_path not in labelled_files:
+            msg = (
+                f"Expected a file {expected_path} to be part of the supplied content, "
+                f"but it was not the case, got only {list(labelled_files.keys())}"
+            )
+            raise RuntimeError(msg)
+        for path, label in labelled_files.items():
+            if label in categories and path != expected_path:
+                continue
+            reduced_files[path] = label
+        return reduced_files
+
     def _finish_actual_fetch(self, wait_for, fingerprint, report_callback, dest_filename):
         if wait_for:
             log.info(f"OSCAP Addon: Waiting for thread {wait_for}")
@@ -210,6 +243,8 @@ class ContentBringer:
             structured_content.add_content_archive(dest_filename)
 
         labelled_files = content_handling.identify_files(fpaths)
+        labelled_files = self.filter_discovered_content(labelled_files)
+
         for fname, label in labelled_files.items():
             structured_content.add_file(fname, label)
 
