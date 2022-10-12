@@ -2,6 +2,7 @@ import threading
 import logging
 import pathlib
 import shutil
+import os
 from glob import glob
 from typing import List
 
@@ -242,11 +243,15 @@ class ContentBringer:
         if content_type in ("archive", "rpm"):
             structured_content.add_content_archive(dest_filename)
 
-        labelled_files = content_handling.identify_files(fpaths)
-        labelled_files = self.filter_discovered_content(labelled_files)
+        labelled_filenames = content_handling.identify_files(fpaths)
+        labelled_relative_filenames = {
+            os.path.relpath(path, self.CONTENT_DOWNLOAD_LOCATION): label
+            for path, label in labelled_filenames.items()}
+        labelled_relative_filenames = self.filter_discovered_content(labelled_relative_filenames)
 
-        for fname, label in labelled_files.items():
-            structured_content.add_file(fname, label)
+        for rel_fname, label in labelled_relative_filenames.items():
+            fname = self.CONTENT_DOWNLOAD_LOCATION / rel_fname
+            structured_content.add_file(str(fname), label)
 
         if fingerprint and dest_filename:
             structured_content.record_verification(dest_filename)
