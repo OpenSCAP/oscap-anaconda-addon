@@ -122,6 +122,11 @@ def get_doc_type(file_path):
             if line.startswith("Document type:"):
                 _prefix, _sep, type_info = line.partition(":")
                 content_type = type_info.strip()
+                if content_type not in CONTENT_TYPES.values():
+                    log.info(
+                        f"File {file_path} labelled by oscap as {content_type}, "
+                        "which is an unexpected type.")
+                    content_type = f"unknown - {content_type}"
                 break
     except OSError:
         # 'oscap info' exitted with a non-zero exit code -> unknown doc
