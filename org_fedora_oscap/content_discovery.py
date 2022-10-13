@@ -169,16 +169,25 @@ class ContentBringer:
             msg = _(f"Integrity check of the content failed - {hash_obj.name} hash didn't match")
             raise content_handling.ContentCheckError(msg)
 
+    def allow_one_expected_tailoring_or_no_tailoring(self, labelled_files):
+        expected_tailoring = self._addon_data.tailoring_path
+        tailoring_label = CONTENT_TYPES["TAILORING"]
+        if expected_tailoring:
+            labelled_files = self.reduce_files(labelled_files, expected_tailoring, [tailoring_label])
+        else:
+            labelled_files = {
+                path: label for path, label in labelled_files.items()
+                if label != tailoring_label
+            }
+        return labelled_files
+
     def filter_discovered_content(self, labelled_files):
         expected_path = self._addon_data.content_path
         categories = (CONTENT_TYPES["DATASTREAM"], CONTENT_TYPES["XCCDF_CHECKLIST"])
         if expected_path:
             labelled_files = self.reduce_files(labelled_files, expected_path, categories)
 
-        expected_path = self._addon_data.tailoring_path
-        categories = (CONTENT_TYPES["TAILORING"], )
-        if expected_path:
-            labelled_files = self.reduce_files(labelled_files, expected_path, categories)
+        labelled_files = self.allow_one_expected_tailoring_or_no_tailoring(labelled_files)
 
         expected_path = self._addon_data.cpe_path
         categories = (CONTENT_TYPES["CPE_DICT"], )
