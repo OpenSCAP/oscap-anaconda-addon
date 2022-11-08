@@ -23,6 +23,7 @@
 import shutil
 import re
 import os
+import io
 import time
 import logging
 import pathlib
@@ -473,6 +474,33 @@ class OSCAPdata(AddonData):
             if pkg not in ksdata.packages.packageList:
                 ksdata.packages.packageList.append(pkg)
 
+    def _attempt_rpm_installation(self):
+        log.info("OSCAP addon: Installing the security content RPM to the installed system.")
+        stdout = io.StringIO()
+        ret = util.execWithRedirect(
+                "yum", ["-y", "--nogpg", "install", self.raw_postinst_content_path],
+                stdout=stdout, root=conf.target.system_root)
+        stdout.seek(0)
+        if ret != 0:
+            log.error(
+                "OSCAP addon: Error installing security content RPM using yum: {0}",
+                stdout.read())
+
+            stdout = io.StringIO()
+            ret = util.execWithRedirect(
+                    "rpm", ["--install", "--nodeps", self.raw_postinst_content_path],
+                    stdout=stdout, root=conf.target.system_root)
+            if ret != 0:
+                log.error(
+                    "OSCAP addon: Error installing security content RPM using rpm: {0}",
+                    stdout.read())
+                msg = _(f"Failed to install content RPM to the target system.")
+                raise RuntimeError(msg)
+
+    def _copy_rpm_to_target_and_install(self, target_content_dir):
+        shutil.copy2(self.raw_preinst_content_path, target_content_dir)
+        self._attempt_rpm_installation()
+
     def execute(self, storage, ksdata, users, payload):
         """
         The execute method that should make changes to the installed system. It
@@ -507,15 +535,10 @@ class OSCAPdata(AddonData):
         if self.content_type == "datastream":
             shutil.copy2(self.preinst_content_path, target_content_dir)
         elif self.content_type == "rpm":
-            # copy the RPM to the target system
-            shutil.copy2(self.raw_preinst_content_path, target_content_dir)
-
-            # and install it with yum
-            ret = util.execInSysroot("yum", ["-y", "--nogpg", "install",
-                                             self.raw_postinst_content_path])
-            if ret != 0:
-                msg = _(f"Failed to install content RPM to the target system.")
-                self._terminate(msg)
+            try:
+                self._copy_rpm_to_target_and_install(target_content_dir)
+            except Exception as exc:
+                self._terminate(str(exc))
                 return
         elif self.content_type == "scap-security-guide":
             # nothing needed
