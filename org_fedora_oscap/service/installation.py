@@ -18,6 +18,7 @@
 import logging
 import os
 import shutil
+import io
 
 from pyanaconda.core import util
 from pyanaconda.modules.common.task import Task
@@ -198,21 +199,11 @@ class InstallContentTask(Task):
         elif self._policy_data.content_type == "datastream":
             shutil.copy2(self._content_path, target_content_dir)
         elif self._policy_data.content_type == "rpm":
-            # copy the RPM to the target system
-            shutil.copy2(self._file_path, target_content_dir)
+            try:
+                self._copy_rpm_to_target_and_install(target_content_dir)
 
-            # get the path of the RPM
-            content_name = common.get_content_name(self._policy_data)
-            package_path = utils.join_paths(self._target_directory, content_name)
-
-            # and install it with yum
-            ret = util.execInSysroot(
-                "yum", ["-y", "--nogpg", "install", package_path]
-            )
-
-            if ret != 0:
-                msg = _(f"Failed to install content RPM to the target system.")
-                terminate(msg)
+            except Exception as exc:
+                terminate(str(exc))
                 return
         else:
             pattern = utils.join_paths(common.INSTALLATION_CONTENT_DIR, "*")
@@ -220,6 +211,35 @@ class InstallContentTask(Task):
 
         if os.path.exists(self._tailoring_path):
             shutil.copy2(self._tailoring_path, target_content_dir)
+
+    def _attempt_rpm_installation(self, chroot_package_path):
+        log.info("OSCAP addon: Installing the security content RPM to the installed system.")
+        stdout = io.StringIO()
+        ret = util.execWithRedirect(
+                "dnf", ["-y", "--nogpg", "install", chroot_package_path],
+                stdout=stdout, root=self._sysroot)
+        stdout.seek(0)
+        if ret != 0:
+            log.error(
+                "OSCAP addon: Error installing security content RPM using yum: {0}",
+                stdout.read())
+
+            stdout = io.StringIO()
+            ret = util.execWithRedirect(
+                    "rpm", ["--install", "--nodeps", chroot_package_path],
+                    stdout=stdout, root=self._sysroot)
+            if ret != 0:
+                log.error(
+                    "OSCAP addon: Error installing security content RPM using rpm: {0}",
+                    stdout.read())
+                msg = _(f"Failed to install content RPM to the target system.")
+                raise RuntimeError(msg)
+
+    def _copy_rpm_to_target_and_install(self, target_content_dir):
+        shutil.copy2(self._file_path, target_content_dir)
+        content_name = common.get_content_name(self._policy_data)
+        chroot_package_path = utils.join_paths(self._target_directory, content_name)
+        self._attempt_rpm_installation(chroot_package_path)
 
 
 class RemediateSystemTask(Task):
