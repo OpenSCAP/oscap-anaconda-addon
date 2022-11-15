@@ -179,7 +179,11 @@ class OSCAPdata(AddonData):
         self.profile_id = value
 
     def _parse_content_path(self, value):
-        # need to be checked?
+        if self.content_type in ("archive", "rpm") and os.path.isabs(self.content_path):
+            msg = (
+                "When using archives-like content input, the corresponding content path "
+                "has to be relative, but got '{self.content_path}'.")
+            raise KickstartValueError(msg)
         self.content_path = value
 
     def _parse_cpe_path(self, value):
