@@ -25,10 +25,14 @@ def is_network(scheme):
         for net_prefix in data_fetch.NET_URL_PREFIXES)
 
 
+def paths_are_equivalent(p1, p2):
+    return os.path.abspath(p1) == os.path.abspath(p2)
+
+
 def path_is_present_among_paths(path, paths):
     absolute_path = os.path.abspath(path)
     for second_path in paths:
-        if absolute_path == os.path.abspath(second_path):
+        if paths_are_equivalent(path, second_path):
             return True
     return False
 
@@ -213,7 +217,7 @@ class ContentBringer:
             )
             raise RuntimeError(msg)
         for path, label in labelled_files.items():
-            if label in categories and path != expected_path:
+            if label in categories and not paths_are_equivalent(path, expected_path):
                 continue
             reduced_files[path] = label
         return reduced_files
