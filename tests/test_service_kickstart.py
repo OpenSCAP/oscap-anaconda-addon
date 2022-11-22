@@ -184,7 +184,7 @@ def test_enough_for_rpm(blank_oscap_data):
     for line in ["content-url = http://example.com/oscap_content.rpm",
                  "content-type = RPM",
                  "profile = Web Server",
-                 "xccdf-path = /usr/share/oscap/xccdf.xml"
+                 "xccdf-path = usr/share/oscap/xccdf.xml"
                  ]:
         blank_oscap_data.handle_line(line)
 
@@ -195,7 +195,7 @@ def test_enough_for_archive(blank_oscap_data):
     for line in ["content-url = http://example.com/oscap_content.tar",
                  "content-type = archive",
                  "profile = Web Server",
-                 "xccdf-path = /usr/share/oscap/xccdf.xml"
+                 "xccdf-path = usr/share/oscap/xccdf.xml"
                  ]:
         blank_oscap_data.handle_line(line)
 
@@ -259,12 +259,23 @@ def test_archive_raw_content_paths(blank_oscap_data):
             == common.TARGET_CONTENT_DIR + blank_oscap_data.policy_data.tailoring_path)
 
 
+def test_rpm_absolute_content_paths(blank_oscap_data):
+    with pytest.raises(KickstartValueError, match="relative"):
+        for line in ["content-url = http://example.com/oscap_content.rpm",
+                     "content-type = rpm",
+                     "profile = Web Server",
+                     "xccdf-path = /usr/share/oscap/xccdf.xml",
+                     "tailoring-path = /usr/share/oscap/tailoring.xml",
+                     ]:
+            blank_oscap_data.handle_line(line)
+
+
 def test_rpm_raw_content_paths(blank_oscap_data):
     for line in ["content-url = http://example.com/oscap_content.rpm",
                  "content-type = rpm",
                  "profile = Web Server",
-                 "xccdf-path = /usr/share/oscap/xccdf.xml",
-                 "tailoring-path = /usr/share/oscap/tailoring.xml",
+                 "xccdf-path = usr/share/oscap/xccdf.xml",
+                 "tailoring-path = usr/share/oscap/tailoring.xml",
                  ]:
         blank_oscap_data.handle_line(line)
 

@@ -239,7 +239,7 @@ class ContentBringer:
                 f"Expected a file {expected_path} to be part of the supplied content, "
                 f"but it was not the case, got only {list(labelled_files.keys())}"
             )
-            raise RuntimeError(msg)
+            raise content_handling.ContentHandlingError(msg)
         for path, label in labelled_files.items():
             if label in categories and not paths_are_equivalent(path, expected_path):
                 continue
