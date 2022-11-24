@@ -23,10 +23,11 @@ import io
 from pyanaconda.core import util
 from pyanaconda.modules.common.task import Task
 from pyanaconda.modules.common.errors.installation import NonCriticalInstallationError
+from pykickstart.errors import KickstartValueError
 
 from org_fedora_oscap import common, data_fetch, rule_handling, utils
 from org_fedora_oscap.common import _, get_packages_data, set_packages_data
-from org_fedora_oscap.content_handling import ContentCheckError
+from org_fedora_oscap.content_handling import ContentCheckError, ContentHandlingError
 from org_fedora_oscap import content_discovery
 
 log = logging.getLogger("anaconda")
@@ -46,6 +47,10 @@ def _handle_error(exception):
             isinstance(exception, common.OSCAPaddonError)
             or isinstance(exception, data_fetch.DataFetchError)):
         msg = _("There was an error fetching and loading the security content:\n" +
+                f"{str(exception)}")
+        terminate(msg)
+    elif isinstance(exception, ContentHandlingError):
+        msg = _("There was a problem with the supplied security content:\n" +
                 f"{str(exception)}")
         terminate(msg)
 

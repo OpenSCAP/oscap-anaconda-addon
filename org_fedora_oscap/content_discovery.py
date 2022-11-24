@@ -46,6 +46,18 @@ def clear_all(data):
     data.dry_run = False
 
 
+def paths_are_equivalent(p1, p2):
+    return os.path.abspath(p1) == os.path.abspath(p2)
+
+
+def path_is_present_among_paths(path, paths):
+    absolute_path = os.path.abspath(path)
+    for second_path in paths:
+        if paths_are_equivalent(path, second_path):
+            return True
+    return False
+
+
 class ContentBringer:
     CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
     DEFAULT_SSG_DATA_STREAM_PATH = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
@@ -194,7 +206,7 @@ class ContentBringer:
         log.info(f"Integrity check passed using {hash_obj.name} hash")
 
     def allow_one_expected_tailoring_or_no_tailoring(self, labelled_files):
-        expected_tailoring = self._addon_data.tailoring_path
+        expected_tailoring = common.get_preinst_tailoring_path(self._addon_data)
         tailoring_label = CONTENT_TYPES["TAILORING"]
         if expected_tailoring:
             labelled_files = self.reduce_files(labelled_files, expected_tailoring, [tailoring_label])
@@ -206,7 +218,7 @@ class ContentBringer:
         return labelled_files
 
     def filter_discovered_content(self, labelled_files):
-        expected_path = self._addon_data.content_path
+        expected_path = common.get_preinst_content_path(self._addon_data)
         categories = (CONTENT_TYPES["DATASTREAM"], CONTENT_TYPES["XCCDF_CHECKLIST"])
         if expected_path:
             labelled_files = self.reduce_files(labelled_files, expected_path, categories)
@@ -222,14 +234,14 @@ class ContentBringer:
 
     def reduce_files(self, labelled_files, expected_path, categories):
         reduced_files = dict()
-        if expected_path not in labelled_files:
+        if not path_is_present_among_paths(expected_path, labelled_files.keys()):
             msg = (
                 f"Expected a file {expected_path} to be part of the supplied content, "
                 f"but it was not the case, got only {list(labelled_files.keys())}"
             )
-            raise RuntimeError(msg)
+            raise content_handling.ContentHandlingError(msg)
         for path, label in labelled_files.items():
-            if label in categories and path != expected_path:
+            if label in categories and not paths_are_equivalent(path, expected_path):
                 continue
             reduced_files[path] = label
         return reduced_files
@@ -253,13 +265,9 @@ class ContentBringer:
             structured_content.add_content_archive(dest_filename)
 
         labelled_filenames = content_handling.identify_files(fpaths)
-        labelled_relative_filenames = {
-            os.path.relpath(path, self.CONTENT_DOWNLOAD_LOCATION): label
-            for path, label in labelled_filenames.items()}
-        labelled_relative_filenames = self.filter_discovered_content(labelled_relative_filenames)
+        labelled_filenames = self.filter_discovered_content(labelled_filenames)
 
-        for rel_fname, label in labelled_relative_filenames.items():
-            fname = self.CONTENT_DOWNLOAD_LOCATION / rel_fname
+        for fname, label in labelled_filenames.items():
             structured_content.add_file(str(fname), label)
 
         if fingerprint and dest_filename:
@@ -303,11 +311,18 @@ class ContentBringer:
         # We know that we have ended up with a datastream-like content,
         # but if we can't convert an archive to a datastream.
         # self._addon_data.content_type = "datastream"
-        self._addon_data.content_path = str(preferred_content.relative_to(content.root))
+        content_type = self._addon_data.content_type
+        if content_type in ("archive", "rpm"):
+            self._addon_data.content_path = str(preferred_content.relative_to(content.root))
+        else:
+            self._addon_data.content_path = str(preferred_content)
 
         preferred_tailoring = self.get_preferred_tailoring(content)
         if content.tailoring:
-            self._addon_data.tailoring_path = str(preferred_tailoring.relative_to(content.root))
+            if content_type in ("archive", "rpm"):
+                self._addon_data.tailoring_path = str(preferred_tailoring.relative_to(content.root))
+            else:
+                self._addon_data.tailoring_path = str(preferred_tailoring)
 
     def use_system_content(self, content=None):
         clear_all(self._addon_data)
@@ -403,6 +418,7 @@ class ObtainedContent:
 
     def find_expected_usable_content(self, relative_expected_content_path):
         content_path = self.root / relative_expected_content_path
+        content_path = content_path.resolve()
         eligible_main_content = (self._datastream_content(), self._xccdf_content())
 
         if content_path in eligible_main_content:

@@ -163,7 +163,7 @@ def test_rpm(service):
         content-url = http://example.com/oscap_content.rpm
         content-type = RPM
         profile = Web Server
-        xccdf-path = /usr/share/oscap/xccdf.xml
+        xccdf-path = usr/share/oscap/xccdf.xml
     %end
     """
     check_ks_input(service, ks_in)
@@ -172,7 +172,7 @@ def test_rpm(service):
     %addon {ADDON_NAME}
         content-type = rpm
         content-url = http://example.com/oscap_content.rpm
-        content-path = /usr/share/oscap/xccdf.xml
+        content-path = usr/share/oscap/xccdf.xml
         profile = Web Server
     %end
     """
@@ -198,7 +198,7 @@ def test_rpm_with_wrong_suffix(service):
         content-url = http://example.com/oscap_content.xml
         content-type = RPM
         profile = Web Server
-        xccdf-path = /usr/share/oscap/xccdf.xml
+        xccdf-path = usr/share/oscap/xccdf.xml
     %end
     """
     check_ks_input(service, ks_in, errors=[

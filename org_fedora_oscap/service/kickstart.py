@@ -17,6 +17,7 @@
 #
 import logging
 import re
+import os
 
 from pyanaconda.core.kickstart import KickstartSpecification
 from pyanaconda.core.kickstart.addon import AddonData
@@ -146,7 +147,14 @@ class OSCAPKickstartData(AddonData, AdditionalPropertiesMixin):
         self.policy_data.profile_id = value
 
     def _parse_content_path(self, value):
-        # need to be checked?
+        absolute_content_path_in_archive_like_file = (
+            self.policy_data.content_type in ("archive", "rpm")
+            and os.path.isabs(value))
+        if absolute_content_path_in_archive_like_file:
+            msg = (
+                "When using archives-like content input, the corresponding content path "
+                "has to be relative, but got '{value}'.")
+            raise KickstartValueError(msg)
         self.policy_data.content_path = value
 
     def _parse_cpe_path(self, value):

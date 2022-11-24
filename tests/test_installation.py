@@ -76,7 +76,7 @@ def test_fetch_content_task(caplog, file_path, content_path):
 
     assert task.name == "Fetch the content, and optionally perform check or archive extraction"
 
-    with pytest.raises(NonCriticalInstallationError, match="Couldn't find a valid datastream"):
+    with pytest.raises(NonCriticalInstallationError, match="Expected a file"):
         task.run()
 
 
