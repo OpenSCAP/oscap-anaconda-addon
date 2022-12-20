@@ -1,13 +1,13 @@
 name: Gating
 on:
   push:
-    branches: [ master ]
+    branches: [ rawhide ]
   pull_request:
-    branches: [ master ]
+    branches: [ rawhide ]
 jobs:
-  validate-master:
+  validate-rawhide:
     name: Unit Tests on Fedora (Container)
-    if: github.ref == 'refs/heads/master' || github.event.pull_request.base.ref == 'master'
+    if: github.ref == 'refs/heads/rawhide' || github.event.pull_request.base.ref == 'rawhide'
     runs-on: ubuntu-latest
     container:
       image: fedora:latest
