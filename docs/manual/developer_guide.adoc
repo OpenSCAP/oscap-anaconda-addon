@@ -20,7 +20,7 @@ What do you need to test your changes?
 
 === Clone repository & use required branch
 
-The rhel7-branch uses Python 2 and supports RHEL7 Anaconda, whereas the `master` uses Python 3, and supports Fedora.
+The rhel7-branch uses Python 2 and supports RHEL7 Anaconda, whereas the `rawhide` uses Python 3, and targets the Fedora Rawhide.
 
 
 === Build image

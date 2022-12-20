@@ -31,7 +31,7 @@ L10N_REPOSITORY_RW ?= git@github.com:$(L10N_REPO_RELATIVE_PATH)
 # This should be master all the time, unless you are testing translation PRs.
 GIT_L10N_BRANCH ?= master
 # The base branch, used to pair code with translations
-OAA_PARENT_BRANCH ?= master
+OAA_PARENT_BRANCH ?= rawhide
 
 all:
 
