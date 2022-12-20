@@ -215,8 +215,8 @@ unittest    - Run only unit tests
 Following packages are needed to manage translations:
 
 ----
-python2-zanata-client
 intltool
+git
 ----
 
 === Running Unit Tests
