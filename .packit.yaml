@@ -6,6 +6,9 @@ actions:
   get-current-version:
   - bash -c "grep '^\s*VERSION\s*=\s*' Makefile | sed 's/VERSION\s*=\s*//'"
 
+srpm_build_deps:
+  - bash
+
 jobs:
 - job: copr_build
   trigger: pull_request
