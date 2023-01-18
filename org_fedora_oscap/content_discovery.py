@@ -74,9 +74,14 @@ class ContentBringer:
 
     @content_uri.setter
     def content_uri(self, uri):
-        scheme, path = uri.split("://", 1)
-        self.content_uri_path = path
-        self.content_uri_scheme = scheme
+        scheme_and_maybe_path = uri.split("://")
+        if len(scheme_and_maybe_path) == 1:
+            msg = (
+                f"Invalid supplied content URL '{uri}', "
+                "use the 'scheme://path' form.")
+            raise KickstartValueError(msg)
+        self.content_uri_path = scheme_and_maybe_path[1]
+        self.content_uri_scheme = scheme_and_maybe_path[0]
 
     def fetch_content(self, what_if_fail, ca_certs_path=""):
         """
@@ -87,7 +92,10 @@ class ContentBringer:
                 should handle them in the calling layer.
             ca_certs_path: Path to the HTTPS certificate file
         """
-        self.content_uri = self._addon_data.content_url
+        try:
+            self.content_uri = self._addon_data.content_url
+        except Exception as exc:
+            what_if_fail(exc)
         shutil.rmtree(self.CONTENT_DOWNLOAD_LOCATION, ignore_errors=True)
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
         fetching_thread_name = self._fetch_files(
