@@ -503,6 +503,8 @@ class OSCAPSpoke(NormalSpoke):
         if self._policy_data.profile_id and not selected:
             # profile ID given, but it was impossible to select it -> invalid
             # profile ID given
+            with self._fetch_flag_lock:
+                self._fetching = False
             self._invalid_profile_id()
             return
 
