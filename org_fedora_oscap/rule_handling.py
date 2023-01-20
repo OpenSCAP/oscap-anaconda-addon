@@ -42,7 +42,9 @@ __all__ = ["RuleData"]
 
 # Mapping of packages to package environments and/or groups that depends on them
 # See also https://access.redhat.com/solutions/1201413 how to get group IDs.
-# on RHEL8, use e.g. grep -R "<id>" /var/cache/dnf/*
+# on RHEL8, use e.g. grep -R "<id>" /var/cache/dnf/* after running dnf grouplist,
+# and use repoquery --whatrequires to get to a package that is listed in a group -
+# low-level dependencies aren't.
 ESSENTIAL_PACKAGES = {
     "xorg-x11-server-common": {
         "env": ["graphical-server-environment", "workstation-product-environment"],
@@ -51,6 +53,10 @@ ESSENTIAL_PACKAGES = {
     "nfs-utils": {
         "env": ["graphical-server-environment", "workstation-product-environment"],
         "groups": ["workstation-product-environment"],
+    },
+    "libreport-plugin-rhtsupport": {
+        "env": ["graphical-server-environment", "workstation-product-environment"],
+        "groups": ["workstation-product-environment", "core"],
     },
     "tftp": {
         "groups": ["network-server"],
