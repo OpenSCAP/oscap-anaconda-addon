@@ -162,7 +162,7 @@ class ContentBringer:
         try:
             self._finish_actual_fetch(fetching_thread_name)
             if fingerprint and dest_filename:
-                self._verify_fingerprint(dest_filename, fingerprint)
+                self._verify_fingerprint(fingerprint)
             content = self._analyze_fetched_content(fetching_thread_name, fingerprint, dest_filename)
         except Exception as exc:
             what_if_fail(exc)
@@ -173,16 +173,17 @@ class ContentBringer:
 
         return content
 
-    def _verify_fingerprint(self, dest_filename, fingerprint=""):
+    def _verify_fingerprint(self, fingerprint=""):
         if not fingerprint:
             return
 
         hash_obj = utils.get_hashing_algorithm(fingerprint)
-        digest = utils.get_file_fingerprint(dest_filename,
+        digest = utils.get_file_fingerprint(self.dest_file_name,
                                             hash_obj)
         if digest != fingerprint:
             log.error(
-                f"File {dest_filename} failed integrity check - assumed a "
+                "OSCAP Addon: "
+                f"File {self.dest_file_name} failed integrity check - assumed a "
                 f"{hash_obj.name} hash and '{fingerprint}', got '{digest}'"
             )
             msg = _(f"Integrity check of the content failed - {hash_obj.name} hash didn't match")
