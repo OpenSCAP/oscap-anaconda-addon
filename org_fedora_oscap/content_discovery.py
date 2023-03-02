@@ -161,6 +161,8 @@ class ContentBringer:
         """
         try:
             self._finish_actual_fetch(fetching_thread_name)
+            if fingerprint and dest_filename:
+                self._verify_fingerprint(dest_filename, fingerprint)
             content = self._analyze_fetched_content(fetching_thread_name, fingerprint, dest_filename)
         except Exception as exc:
             what_if_fail(exc)
@@ -235,10 +237,6 @@ class ContentBringer:
 
     def _analyze_fetched_content(self, wait_for, fingerprint, dest_filename):
         actually_fetched_content = wait_for is not None
-
-        if fingerprint and dest_filename:
-            self._verify_fingerprint(dest_filename, fingerprint)
-
         fpaths = self._gather_available_files(actually_fetched_content, dest_filename)
 
         structured_content = ObtainedContent(self.CONTENT_DOWNLOAD_LOCATION)
