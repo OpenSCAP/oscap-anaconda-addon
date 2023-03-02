@@ -49,8 +49,7 @@ class ContentBringer:
     DEFAULT_SSG_DATA_STREAM_PATH = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
 
     def __init__(self, addon_data):
-        self.content_uri_scheme = ""
-        self.content_uri_path = ""
+        self._content_uri = ""
         self.fetched_content = ""
 
         self.activity_lock = threading.Lock()
@@ -70,13 +69,17 @@ class ContentBringer:
 
     @property
     def content_uri(self):
-        return self.content_uri_scheme + "://" + self.content_uri_path
+        return self._content_uri
 
     @content_uri.setter
     def content_uri(self, uri):
-        scheme, path = uri.split("://", 1)
-        self.content_uri_path = path
-        self.content_uri_scheme = scheme
+        scheme_and_maybe_path = uri.split("://")
+        if len(scheme_and_maybe_path) == 1:
+            msg = (
+                f"Invalid supplied content URL '{uri}', "
+                "use the 'scheme://path' form.")
+            raise KickstartValueError(msg)
+        self._content_uri = uri
 
     def fetch_content(self, what_if_fail, ca_certs_path=""):
         """
@@ -91,11 +94,10 @@ class ContentBringer:
         shutil.rmtree(self.CONTENT_DOWNLOAD_LOCATION, ignore_errors=True)
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
         fetching_thread_name = self._fetch_files(
-            self.content_uri_scheme, self.content_uri_path,
             self.CONTENT_DOWNLOAD_LOCATION, ca_certs_path, what_if_fail)
         return fetching_thread_name
 
-    def _fetch_files(self, scheme, path, destdir, ca_certs_path, what_if_fail):
+    def _fetch_files(self, destdir, ca_certs_path, what_if_fail):
         with self.activity_lock:
             if self.now_fetching_or_processing:
                 msg = "OSCAP Addon: Strange, it seems that we are already fetching something."
@@ -105,7 +107,7 @@ class ContentBringer:
 
         fetching_thread_name = None
         try:
-            fetching_thread_name = self._start_actual_fetch(scheme, path, destdir, ca_certs_path)
+            fetching_thread_name = self._start_actual_fetch(destdir, ca_certs_path)
         except Exception as exc:
             with self.activity_lock:
                 self.now_fetching_or_processing = False
@@ -128,21 +130,21 @@ class ContentBringer:
         dest = destdir / basename
         return dest
 
-    def _start_actual_fetch(self, scheme, path, destdir, ca_certs_path):
+    def _start_actual_fetch(self, destdir, ca_certs_path):
         fetching_thread_name = None
-        url = scheme + "://" + path
 
-        dest = ContentBringer.__get_dest_file_name(url, destdir)
+        dest = ContentBringer.__get_dest_file_name(self.content_uri, destdir)
 
+        scheme = self.content_uri.split("://")[0]
         if is_network(scheme):
             fetching_thread_name = data_fetch.wait_and_fetch_net_data(
-                url,
+                self.content_uri,
                 dest,
                 ca_certs_path
             )
         else:  # invalid schemes are handled down the road
             fetching_thread_name = data_fetch.fetch_local_data(
-                url,
+                self.content_uri,
                 dest,
             )
         return fetching_thread_name
