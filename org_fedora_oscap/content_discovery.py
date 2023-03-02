@@ -83,7 +83,7 @@ class ContentBringer:
         self._content_uri = uri
         self.dest_file_name = self.CONTENT_DOWNLOAD_LOCATION / basename
 
-    def fetch_content(self, what_if_fail, ca_certs_path=""):
+    def fetch_content(self, content_uri, what_if_fail, ca_certs_path=""):
         """
         Initiate fetch of the content into an appropriate directory
 
@@ -93,7 +93,7 @@ class ContentBringer:
             ca_certs_path: Path to the HTTPS certificate file
         """
         try:
-            self.content_uri = self._addon_data.content_url
+            self.content_uri = content_uri
         except Exception as exc:
             what_if_fail(exc)
         shutil.rmtree(self.CONTENT_DOWNLOAD_LOCATION, ignore_errors=True)

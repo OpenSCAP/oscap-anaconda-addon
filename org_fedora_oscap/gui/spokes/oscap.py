@@ -378,6 +378,7 @@ class OSCAPSpoke(NormalSpoke):
         thread_name = None
         if self._addon_data.content_url and self._addon_data.content_type != "scap-security-guide":
             thread_name = self.content_bringer.fetch_content(
+                self._addon_data.content_url,
                 self._handle_error, self._addon_data.certificates)
 
         # pylint: disable-msg=E1101

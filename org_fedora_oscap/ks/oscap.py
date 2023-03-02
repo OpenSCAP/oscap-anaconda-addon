@@ -436,7 +436,8 @@ class OSCAPdata(AddonData):
         thread_name = None
         if not os.path.exists(self.preinst_content_path) and not os.path.exists(self.raw_preinst_content_path):
             # content not available/fetched yet
-            thread_name = self.content_bringer.fetch_content(self._handle_error, self.certificates)
+            thread_name = self.content_bringer.fetch_content(
+                self.content_url, self._handle_error, self.certificates)
 
         content_dest = None
         if self.content_type != "scap-security-guide":
