@@ -193,6 +193,12 @@ class ContentBringer:
 
         return content
 
+    def _finish_actual_fetch(self, wait_for):
+        if wait_for:
+            log.info(f"OSCAP Addon: Waiting for thread {wait_for}")
+            threadMgr.wait(wait_for)
+            log.info(f"OSCAP Addon: Finished waiting for thread {wait_for}")
+
     def _verify_fingerprint(self, fingerprint=""):
         if not fingerprint:
             log.info("OSCAP Addon: No fingerprint provided, skipping integrity check")
@@ -251,12 +257,6 @@ class ContentBringer:
                 continue
             reduced_files[path] = label
         return reduced_files
-
-    def _finish_actual_fetch(self, wait_for):
-        if wait_for:
-            log.info(f"OSCAP Addon: Waiting for thread {wait_for}")
-            threadMgr.wait(wait_for)
-            log.info(f"OSCAP Addon: Finished waiting for thread {wait_for}")
 
     def _analyze_fetched_content(self, wait_for, fingerprint, dest_filename):
         actually_fetched_content = wait_for is not None
