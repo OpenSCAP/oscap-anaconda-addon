@@ -50,7 +50,6 @@ class ContentBringer:
 
     def __init__(self, addon_data):
         self._content_uri = ""
-        self.fetched_content = ""
         self.dest_file_name = ""
 
         self.activity_lock = threading.Lock()
