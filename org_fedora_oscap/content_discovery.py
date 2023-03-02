@@ -93,11 +93,10 @@ class ContentBringer:
         self.content_uri = self._addon_data.content_url
         shutil.rmtree(self.CONTENT_DOWNLOAD_LOCATION, ignore_errors=True)
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
-        fetching_thread_name = self._fetch_files(
-            self.CONTENT_DOWNLOAD_LOCATION, ca_certs_path, what_if_fail)
+        fetching_thread_name = self._fetch_files(ca_certs_path, what_if_fail)
         return fetching_thread_name
 
-    def _fetch_files(self, destdir, ca_certs_path, what_if_fail):
+    def _fetch_files(self, ca_certs_path, what_if_fail):
         with self.activity_lock:
             if self.now_fetching_or_processing:
                 msg = "OSCAP Addon: Strange, it seems that we are already fetching something."
@@ -107,7 +106,7 @@ class ContentBringer:
 
         fetching_thread_name = None
         try:
-            fetching_thread_name = self._start_actual_fetch(destdir, ca_certs_path)
+            fetching_thread_name = self._start_actual_fetch(ca_certs_path)
         except Exception as exc:
             with self.activity_lock:
                 self.now_fetching_or_processing = False
@@ -130,10 +129,10 @@ class ContentBringer:
         dest = destdir / basename
         return dest
 
-    def _start_actual_fetch(self, destdir, ca_certs_path):
+    def _start_actual_fetch(self, ca_certs_path):
         fetching_thread_name = None
 
-        dest = ContentBringer.__get_dest_file_name(self.content_uri, destdir)
+        dest = ContentBringer.__get_dest_file_name(self.content_uri, self.CONTENT_DOWNLOAD_LOCATION)
 
         scheme = self.content_uri.split("://")[0]
         if is_network(scheme):
