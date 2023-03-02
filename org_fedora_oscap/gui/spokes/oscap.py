@@ -403,6 +403,7 @@ class OSCAPSpoke(NormalSpoke):
         if self._policy_data.content_url and self._policy_data.content_type != "scap-security-guide":
             log.info(f"OSCAP Addon: Actually fetching content from somewhere")
             thread_name = self.content_bringer.fetch_content(
+                self._policy_data.content_url,
                 self._handle_error, self._policy_data.certificates)
 
         # pylint: disable-msg=E1101
