@@ -132,36 +132,34 @@ class ContentBringer:
         # We are not finished yet with the fetch
         return fetching_thread_name
 
-    @staticmethod
-    def __get_dest_file_name(url, destdir):
-        path = url.split("://")[1]
+    @property
+    def dest_file_name(self):
+        path = self.content_uri.split("://")[1]
         if "/" not in path:
-            msg = f"Missing the path component of the '{url}' URL"
+            msg = f"Missing the path component of the '{self.content_uri}' URL"
             raise KickstartValueError(msg)
         basename = path.rsplit("/", 1)[1]
         if not basename:
-            msg = f"Unable to deduce basename from the '{url}' URL"
+            msg = f"Unable to deduce basename from the '{self.content_uri}' URL"
             raise KickstartValueError(msg)
 
-        dest = destdir / basename
+        dest = self.CONTENT_DOWNLOAD_LOCATION / basename
         return dest
 
     def _start_actual_fetch(self, ca_certs_path):
         fetching_thread_name = None
 
-        dest = ContentBringer.__get_dest_file_name(self.content_uri, self.CONTENT_DOWNLOAD_LOCATION)
-
         scheme = self.content_uri.split("://")[0]
         if is_network(scheme):
             fetching_thread_name = data_fetch.wait_and_fetch_net_data(
                 self.content_uri,
-                dest,
+                self.dest_file_name,
                 ca_certs_path
             )
         else:  # invalid schemes are handled down the road
             fetching_thread_name = data_fetch.fetch_local_data(
                 self.content_uri,
-                dest,
+                self.dest_file_name,
             )
         return fetching_thread_name
 
