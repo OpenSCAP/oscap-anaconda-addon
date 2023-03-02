@@ -44,6 +44,7 @@ class ContentBringer:
     def __init__(self, addon_data):
         self._content_uri = ""
         self.fetched_content = ""
+        self.dest_file_name = ""
 
         self.activity_lock = threading.Lock()
         self.now_fetching_or_processing = False
@@ -72,7 +73,16 @@ class ContentBringer:
                 f"Invalid supplied content URL '{uri}', "
                 "use the 'scheme://path' form.")
             raise KickstartValueError(msg)
+        path = scheme_and_maybe_path[1]
+        if "/" not in path:
+            msg = f"Missing the path component of the '{uri}' URL"
+            raise KickstartValueError(msg)
+        basename = path.rsplit("/", 1)[1]
+        if not basename:
+            msg = f"Unable to deduce basename from the '{uri}' URL"
+            raise KickstartValueError(msg)
         self._content_uri = uri
+        self.dest_file_name = self.CONTENT_DOWNLOAD_LOCATION / basename
 
     def fetch_content(self, what_if_fail, ca_certs_path=""):
         """
@@ -110,20 +120,6 @@ class ContentBringer:
 
         # We are not finished yet with the fetch
         return fetching_thread_name
-
-    @property
-    def dest_file_name(self):
-        path = self.content_uri.split("://")[1]
-        if "/" not in path:
-            msg = f"Missing the path component of the '{self.content_uri}' URL"
-            raise KickstartValueError(msg)
-        basename = path.rsplit("/", 1)[1]
-        if not basename:
-            msg = f"Unable to deduce basename from the '{self.content_uri}' URL"
-            raise KickstartValueError(msg)
-
-        dest = self.CONTENT_DOWNLOAD_LOCATION / basename
-        return dest
 
     def _start_actual_fetch(self, ca_certs_path):
         fetching_thread_name = None
