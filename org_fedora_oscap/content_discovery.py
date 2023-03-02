@@ -164,7 +164,8 @@ class ContentBringer:
             Instance of ObtainedContent if everything went well, or None.
         """
         try:
-            content = self._finish_actual_fetch(fetching_thread_name, fingerprint, dest_filename)
+            self._finish_actual_fetch(fetching_thread_name)
+            content = self._analyze_fetched_content(fetching_thread_name, fingerprint, dest_filename)
         except Exception as exc:
             what_if_fail(exc)
             content = None
@@ -192,11 +193,13 @@ class ContentBringer:
             raise content_handling.ContentCheckError(msg)
         log.info(f"Integrity check passed using {hash_obj.name} hash")
 
-    def _finish_actual_fetch(self, wait_for, fingerprint, dest_filename):
+    def _finish_actual_fetch(self, wait_for):
         if wait_for:
             log.info(f"OSCAP Addon: Waiting for thread {wait_for}")
             threadMgr.wait(wait_for)
             log.info(f"OSCAP Addon: Finished waiting for thread {wait_for}")
+
+    def _analyze_fetched_content(self, wait_for, fingerprint, dest_filename):
         actually_fetched_content = wait_for is not None
 
         if fingerprint and dest_filename:
