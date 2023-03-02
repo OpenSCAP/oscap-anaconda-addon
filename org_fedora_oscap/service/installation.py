@@ -86,6 +86,7 @@ class PrepareValidContent(Task):
         if not os.path.exists(self._content_path):
             # content not available/fetched yet
             fetching_thread_name = self.content_bringer.fetch_content(
+                self._policy_data.content_url,
                 _handle_error, self._policy_data.certificates)
 
         content_dest = None
