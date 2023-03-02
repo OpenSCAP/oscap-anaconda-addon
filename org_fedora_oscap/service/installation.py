@@ -88,7 +88,7 @@ class PrepareValidContent(Task):
 
         content = self.content_bringer.finish_content_fetch(
             fetching_thread_name, self._policy_data.fingerprint,
-            lambda msg: log.info("OSCAP Addon: " + msg), content_dest, _handle_error)
+            content_dest, _handle_error)
 
         if not content:
             # this shouldn't happen because error handling is supposed to
