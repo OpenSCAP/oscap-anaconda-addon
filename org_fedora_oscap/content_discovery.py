@@ -136,10 +136,9 @@ class ContentBringer:
         # We are not finished yet with the fetch
         return fetching_thread_name
 
-    def _start_actual_fetch(self, scheme, path, destdir, ca_certs_path):
-        fetching_thread_name = None
-        url = scheme + "://" + path
-
+    @staticmethod
+    def __get_dest_file_name(url, destdir):
+        path = url.split("://")[1]
         if "/" not in path:
             msg = f"Missing the path component of the '{url}' URL"
             raise KickstartValueError(msg)
@@ -149,6 +148,13 @@ class ContentBringer:
             raise KickstartValueError(msg)
 
         dest = destdir / basename
+        return dest
+
+    def _start_actual_fetch(self, scheme, path, destdir, ca_certs_path):
+        fetching_thread_name = None
+        url = scheme + "://" + path
+
+        dest = ContentBringer.__get_dest_file_name(url, destdir)
 
         if is_network(scheme):
             fetching_thread_name = data_fetch.wait_and_fetch_net_data(
