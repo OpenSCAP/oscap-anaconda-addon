@@ -410,7 +410,7 @@ class OSCAPSpoke(NormalSpoke):
             content_path = self._addon_data.raw_preinst_content_path
 
         content = self.content_bringer.finish_content_fetch(
-            wait_for, self._addon_data.fingerprint, update_progress_label,
+            wait_for, self._addon_data.fingerprint,
             content_path, self._handle_error)
         if not content:
             with self._fetch_flag_lock:

@@ -443,7 +443,8 @@ class OSCAPdata(AddonData):
             content_dest = self.raw_preinst_content_path
 
         content = self.content_bringer.finish_content_fetch(
-            thread_name, self.fingerprint, lambda msg: log.info(msg), content_dest, self._handle_error)
+            thread_name, self.fingerprint,
+            content_dest, self._handle_error)
 
         if not content:
             return

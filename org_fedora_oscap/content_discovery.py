@@ -138,7 +138,7 @@ class ContentBringer:
             )
         return fetching_thread_name
 
-    def finish_content_fetch(self, fetching_thread_name, fingerprint, report_callback, dest_filename,
+    def finish_content_fetch(self, fetching_thread_name, fingerprint, dest_filename,
                              what_if_fail):
         """
         Finish any ongoing fetch and analyze what has been fetched.
@@ -160,7 +160,7 @@ class ContentBringer:
             Instance of ObtainedContent if everything went well, or None.
         """
         try:
-            content = self._finish_actual_fetch(fetching_thread_name, fingerprint, report_callback, dest_filename)
+            content = self._finish_actual_fetch(fetching_thread_name, fingerprint, dest_filename)
         except Exception as exc:
             what_if_fail(exc)
             content = None
@@ -226,8 +226,9 @@ class ContentBringer:
             reduced_files[path] = label
         return reduced_files
 
-    def _finish_actual_fetch(self, wait_for, fingerprint, report_callback, dest_filename):
+    def _finish_actual_fetch(self, wait_for, fingerprint, dest_filename):
         threadMgr.wait(wait_for)
+
         actually_fetched_content = wait_for is not None
 
         if fingerprint and dest_filename:
