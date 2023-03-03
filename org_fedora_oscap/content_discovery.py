@@ -198,7 +198,6 @@ class ContentBringer:
             raise content_handling.ContentCheckError(msg)
         log.info(f"Integrity check passed using {hash_obj.name} hash")
 
-
     def _analyze_fetched_content(
                 self, wait_for, fingerprint, dest_filename, expected_path,
                 expected_tailoring, expected_cpe_path):
