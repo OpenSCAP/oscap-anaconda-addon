@@ -104,7 +104,7 @@ class PrepareValidContent(Task):
 
         try:
             # just check that preferred content exists
-            _ = self.content_bringer.get_preferred_content(content)
+            _ = self.content_bringer.get_preferred_content(self._policy_data.content_path, content)
         except Exception as exc:
             terminate(str(exc))
 
