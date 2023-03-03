@@ -90,9 +90,10 @@ class PrepareValidContent(Task):
         expected_path = common.get_preinst_content_path(self._policy_data)
         expected_tailoring = common.get_preinst_tailoring_path(self._policy_data)
         expected_cpe_path = self._policy_data.cpe_path
-        self.content_bringer.finish_content_fetch(
-            fetching_thread_name, self._policy_data.fingerprint,
-            content_dest, _handle_error)
+        if fetching_thread_name is not None:
+            self.content_bringer.finish_content_fetch(
+                fetching_thread_name, self._policy_data.fingerprint,
+                content_dest, _handle_error)
         content = content_discovery.ContentAnalyzer.analyze(
             fetching_thread_name, self._policy_data.fingerprint,
             content_dest, _handle_error, expected_path, expected_tailoring,
