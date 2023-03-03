@@ -1,5 +1,6 @@
 import threading
 import logging
+import os
 import pathlib
 import shutil
 from glob import glob
@@ -12,7 +13,7 @@ from pykickstart.errors import KickstartValueError
 from org_fedora_oscap import data_fetch, utils
 from org_fedora_oscap import common
 from org_fedora_oscap import content_handling
-from org_fedora_oscap import rule_handling
+from org_fedora_oscap.content_handling import CONTENT_TYPES
 
 from org_fedora_oscap.common import _
 
@@ -25,23 +26,16 @@ def is_network(scheme):
         for net_prefix in data_fetch.NET_URL_PREFIXES)
 
 
-def clear_all(data):
-    data.content_type = ""
-    data.content_url = ""
-    data.datastream_id = ""
-    data.xccdf_id = ""
-    data.profile_id = ""
-    data.content_path = ""
-    data.cpe_path = ""
-    data.tailoring_path = ""
+def paths_are_equivalent(p1, p2):
+    return os.path.abspath(p1) == os.path.abspath(p2)
 
-    data.fingerprint = ""
 
-    data.certificates = ""
-
-    # internal values
-    data.rule_data = rule_handling.RuleData()
-    data.dry_run = False
+def path_is_present_among_paths(path, paths):
+    absolute_path = os.path.abspath(path)
+    for second_path in paths:
+        if paths_are_equivalent(path, second_path):
+            return True
+    return False
 
 
 class ContentBringer:
@@ -265,7 +259,7 @@ class ContentBringer:
             self._addon_data.tailoring_path = str(preferred_tailoring.relative_to(content.root))
 
     def use_system_content(self, content=None):
-        clear_all(self._addon_data)
+        self._addon_data.clear_all()
         self._addon_data.content_type = "scap-security-guide"
         self._addon_data.content_path = common.get_ssg_path()
 

@@ -864,7 +864,7 @@ class OSCAPSpoke(NormalSpoke):
 
     @async_action_wait
     def _wrong_content(self, msg):
-        content_discovery.clear_all(self._policy_data)
+        self._policy_data.clear_all()
         really_hide(self._progress_spinner)
         self._fetch_button.set_sensitive(True)
         self._content_url_entry.set_sensitive(True)
@@ -1207,7 +1207,7 @@ class OSCAPSpoke(NormalSpoke):
 
     def on_change_content_clicked(self, *args):
         self._unselect_profile(self._active_profile)
-        content_discovery.clear_all(self._policy_data)
+        self._policy_data.clear_all()
         self._refresh_ui()
 
     def on_use_ssg_clicked(self, *args):
