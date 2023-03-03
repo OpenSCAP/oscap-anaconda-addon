@@ -18,8 +18,6 @@
 from dasbus.structure import DBusData
 from dasbus.typing import *  # pylint: disable=wildcard-import
 
-from org_fedora_oscap import rule_handling
-
 __all__ = ["PolicyData"]
 
 
@@ -202,11 +200,5 @@ class PolicyData(DBusData):
         self.content_path = ""
         self.cpe_path = ""
         self.tailoring_path = ""
-
         self.fingerprint = ""
-
         self.certificates = ""
-
-        # internal values
-        self.rule_data = rule_handling.RuleData()
-        self.dry_run = False
