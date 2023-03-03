@@ -210,7 +210,8 @@ class ContentBringer:
             }
         return labelled_files
 
-    def filter_discovered_content(self, labelled_files, expected_path, expected_tailoring, expected_cpe_path):
+    @staticmethod
+    def __filter_discovered_content(labelled_files, expected_path, expected_tailoring, expected_cpe_path):
         categories = (CONTENT_TYPES["DATASTREAM"], CONTENT_TYPES["XCCDF_CHECKLIST"])
         if expected_path:
             labelled_files = ContentBringer.reduce_files(labelled_files, expected_path, categories)
@@ -251,7 +252,7 @@ class ContentBringer:
             structured_content.add_content_archive(dest_filename)
 
         labelled_filenames = content_handling.identify_files(fpaths)
-        labelled_filenames = self.filter_discovered_content(
+        labelled_filenames = ContentBringer.__filter_discovered_content(
             labelled_filenames, expected_path, expected_tailoring,
             expected_cpe_path)
 
