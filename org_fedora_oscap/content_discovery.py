@@ -50,7 +50,8 @@ class ContentBringer:
 
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
 
-    def get_content_type(self, url):
+    @staticmethod
+    def __get_content_type(url):
         if url.endswith(".rpm"):
             return "rpm"
         elif any(url.endswith(arch_type) for arch_type in common.SUPPORTED_ARCHIVES):
@@ -239,7 +240,7 @@ class ContentBringer:
         fpaths = self._gather_available_files(actually_fetched_content, dest_filename)
 
         structured_content = ObtainedContent(self.CONTENT_DOWNLOAD_LOCATION)
-        content_type = self.get_content_type(str(dest_filename))
+        content_type = ContentBringer.__get_content_type(str(dest_filename))
         if content_type in ("archive", "rpm"):
             structured_content.add_content_archive(dest_filename)
 
@@ -267,7 +268,7 @@ class ContentBringer:
         else:
             dest_filename = pathlib.Path(dest_filename)
             # RPM is an archive at this phase
-            content_type = self.get_content_type(str(dest_filename))
+            content_type = ContentBringer.__get_content_type(str(dest_filename))
             if content_type in ("archive", "rpm"):
                 try:
                     fpaths = common.extract_data(
