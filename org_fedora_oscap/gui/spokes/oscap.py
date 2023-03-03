@@ -441,8 +441,7 @@ class OSCAPSpoke(NormalSpoke):
 
         self.content_bringer.finish_content_fetch(
             wait_for, self._policy_data.fingerprint, content_path,
-            self._handle_error, expected_path, expected_tailoring,
-            expected_cpe_path)
+            self._handle_error)
         content = content_discovery.ContentAnalyzer.analyze(
             wait_for, self._policy_data.fingerprint, content_path,
             self._handle_error, expected_path, expected_tailoring,
