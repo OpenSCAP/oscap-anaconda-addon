@@ -73,7 +73,7 @@ class PrepareValidContent(Task):
         self._policy_data = policy_data
         self._file_path = file_path
         self._content_path = content_path
-        self.content_bringer = content_discovery.ContentBringer(policy_data)
+        self.content_bringer = content_discovery.ContentBringer()
 
     @property
     def name(self):
