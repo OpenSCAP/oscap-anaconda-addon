@@ -421,7 +421,7 @@ class OSCAPSpoke(NormalSpoke):
 
         try:
             if actually_fetched_content:
-                self.content_bringer.use_downloaded_content(content)
+                self._addon_data.use_downloaded_content(content)
 
             msg = f"Opening SCAP content at {self._addon_data.preinst_content_path}"
             if self._addon_data.tailoring_path:
