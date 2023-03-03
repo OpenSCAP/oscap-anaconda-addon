@@ -263,7 +263,7 @@ class OSCAPSpoke(NormalSpoke):
         self._anaconda_spokes_initialized = threading.Event()
         self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
 
-        self.content_bringer = content_discovery.ContentBringer(self._policy_data)
+        self.content_bringer = content_discovery.ContentBringer()
         self._content_handler = None
 
     def _all_anaconda_spokes_initialized(self):
