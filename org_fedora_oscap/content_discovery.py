@@ -207,9 +207,16 @@ class ContentBringer:
         if content_type in ("archive", "rpm"):
             structured_content.add_content_archive(dest_filename)
 
-        labelled_files = content_handling.identify_files(fpaths)
-        for fname, label in labelled_files.items():
-            structured_content.add_file(fname, label)
+        labelled_filenames = content_handling.identify_files(fpaths)
+        expected_path = common.get_preinst_content_path(self._addon_data)
+        expected_tailoring = common.get_preinst_tailoring_path(self._addon_data)
+        expected_cpe_path = self._addon_data.cpe_path
+        labelled_filenames = self.filter_discovered_content(
+            labelled_filenames, expected_path, expected_tailoring,
+            expected_cpe_path)
+
+        for fname, label in labelled_filenames.items():
+            structured_content.add_file(str(fname), label)
 
         if fingerprint and dest_filename:
             structured_content.record_verification(dest_filename)
