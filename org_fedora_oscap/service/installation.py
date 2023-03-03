@@ -93,9 +93,13 @@ class PrepareValidContent(Task):
         if self._policy_data.content_type != "scap-security-guide":
             content_dest = self._file_path
 
+        expected_path = common.get_preinst_content_path(self._policy_data)
+        expected_tailoring = common.get_preinst_tailoring_path(self._policy_data)
+        expected_cpe_path = self._policy_data.cpe_path
         content = self.content_bringer.finish_content_fetch(
             fetching_thread_name, self._policy_data.fingerprint,
-            content_dest, _handle_error)
+            content_dest, _handle_error, expected_path, expected_tailoring,
+            expected_cpe_path)
 
         if not content:
             # this shouldn't happen because error handling is supposed to
