@@ -217,10 +217,10 @@ class ContentBringer:
         expected_tailoring = common.get_preinst_tailoring_path(self._addon_data)
         labelled_files = self.allow_one_expected_tailoring_or_no_tailoring(labelled_files, expected_tailoring)
 
-        expected_path = self._addon_data.cpe_path
+        expected_cpe_path = self._addon_data.cpe_path
         categories = (CONTENT_TYPES["CPE_DICT"], )
-        if expected_path:
-            labelled_files = self.reduce_files(labelled_files, expected_path, categories)
+        if expected_cpe_path:
+            labelled_files = self.reduce_files(labelled_files, expected_cpe_path, categories)
 
         return labelled_files
 
