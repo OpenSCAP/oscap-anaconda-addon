@@ -436,14 +436,14 @@ class OSCAPSpoke(NormalSpoke):
 
         if actually_fetched_content:
             content_path = common.get_raw_preinst_content_path(self._policy_data)
+            self.content_bringer.finish_content_fetch(
+                wait_for, self._policy_data.fingerprint, content_path,
+                self._handle_error)
 
         expected_path = common.get_preinst_content_path(self._policy_data)
         expected_tailoring = common.get_preinst_tailoring_path(self._policy_data)
         expected_cpe_path = self._policy_data.cpe_path
 
-        self.content_bringer.finish_content_fetch(
-            wait_for, self._policy_data.fingerprint, content_path,
-            self._handle_error)
         content = content_discovery.ContentAnalyzer.analyze(
             wait_for, self._policy_data.fingerprint, content_path,
             self._handle_error, expected_path, expected_tailoring,
