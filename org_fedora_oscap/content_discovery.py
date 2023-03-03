@@ -290,7 +290,7 @@ class ContentBringer:
         return fpaths
 
     def use_downloaded_content(self, content):
-        preferred_content = self.get_preferred_content(content)
+        preferred_content = self.get_preferred_content(self._addon_data.content_path, content)
 
         # We know that we have ended up with a datastream-like content,
         # but if we can't convert an archive to a datastream.
@@ -309,9 +309,9 @@ class ContentBringer:
             else:
                 self._addon_data.tailoring_path = str(preferred_tailoring)
 
-    def get_preferred_content(self, content):
-        if self._addon_data.content_path:
-            preferred_content = content.find_expected_usable_content(self._addon_data.content_path)
+    def get_preferred_content(self, content_path, content):
+        if content_path:
+            preferred_content = content.find_expected_usable_content(content_path)
         else:
             preferred_content = content.select_main_usable_content()
         return preferred_content
