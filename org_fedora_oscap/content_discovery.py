@@ -208,16 +208,13 @@ class ContentBringer:
             }
         return labelled_files
 
-    def filter_discovered_content(self, labelled_files):
-        expected_path = common.get_preinst_content_path(self._addon_data)
+    def filter_discovered_content(self, labelled_files, expected_path, expected_tailoring, expected_cpe_path):
         categories = (CONTENT_TYPES["DATASTREAM"], CONTENT_TYPES["XCCDF_CHECKLIST"])
         if expected_path:
             labelled_files = self.reduce_files(labelled_files, expected_path, categories)
 
-        expected_tailoring = common.get_preinst_tailoring_path(self._addon_data)
         labelled_files = self.allow_one_expected_tailoring_or_no_tailoring(labelled_files, expected_tailoring)
 
-        expected_cpe_path = self._addon_data.cpe_path
         categories = (CONTENT_TYPES["CPE_DICT"], )
         if expected_cpe_path:
             labelled_files = self.reduce_files(labelled_files, expected_cpe_path, categories)
@@ -249,7 +246,12 @@ class ContentBringer:
             structured_content.add_content_archive(dest_filename)
 
         labelled_filenames = content_handling.identify_files(fpaths)
-        labelled_filenames = self.filter_discovered_content(labelled_filenames)
+        expected_path = common.get_preinst_content_path(self._addon_data)
+        expected_tailoring = common.get_preinst_tailoring_path(self._addon_data)
+        expected_cpe_path = self._addon_data.cpe_path
+        labelled_filenames = self.filter_discovered_content(
+            labelled_filenames, expected_path, expected_tailoring,
+            expected_cpe_path)
 
         for fname, label in labelled_filenames.items():
             structured_content.add_file(str(fname), label)
