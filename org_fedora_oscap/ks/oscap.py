@@ -105,7 +105,7 @@ class OSCAPdata(AddonData):
         self.rule_data = rule_handling.RuleData()
         self.dry_run = False
 
-        self.content_bringer = content_discovery.ContentBringer(self)
+        self.content_bringer = content_discovery.ContentBringer()
 
     def __str__(self):
         """

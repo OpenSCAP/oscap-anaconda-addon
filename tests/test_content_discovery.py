@@ -21,7 +21,7 @@ def labelled_files():
 
 
 def test_reduce(labelled_files):
-    bringer = tested_module.ContentBringer(None)
+    bringer = tested_module.ContentBringer()
 
     d_count = 0
     x_count = 0

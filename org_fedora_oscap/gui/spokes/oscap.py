@@ -251,7 +251,7 @@ class OSCAPSpoke(NormalSpoke):
         self._anaconda_spokes_initialized = threading.Event()
         self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
 
-        self.content_bringer = ContentBringer(self._addon_data)
+        self.content_bringer = ContentBringer()
 
     def _all_anaconda_spokes_initialized(self):
         log.debug("OSCAP addon: Anaconda init_done signal triggered")

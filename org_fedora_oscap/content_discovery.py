@@ -41,7 +41,7 @@ class ContentBringer:
     CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
     DEFAULT_SSG_DATA_STREAM_PATH = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
 
-    def __init__(self, addon_data):
+    def __init__(self):
         self._content_uri = ""
         self.dest_file_name = ""
 
@@ -49,8 +49,6 @@ class ContentBringer:
         self.now_fetching_or_processing = False
 
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
-
-        self._addon_data = addon_data
 
     def get_content_type(self, url):
         if url.endswith(".rpm"):
