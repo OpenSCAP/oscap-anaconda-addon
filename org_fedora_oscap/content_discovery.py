@@ -126,8 +126,9 @@ class ContentBringer:
             )
         return fetching_thread_name
 
-    def finish_content_fetch(self, fetching_thread_name, fingerprint, dest_filename,
-                             what_if_fail, expected_path, expected_tailoring, expected_cpe_path):
+    def finish_content_fetch(
+            self, fetching_thread_name, fingerprint, dest_filename,
+            what_if_fail):
         try:
             self._finish_actual_fetch(fetching_thread_name)
             if fingerprint and dest_filename:
