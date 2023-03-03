@@ -240,7 +240,7 @@ class ContentBringer:
                 self, wait_for, fingerprint, dest_filename, expected_path,
                 expected_tailoring, expected_cpe_path):
         actually_fetched_content = wait_for is not None
-        fpaths = self._gather_available_files(actually_fetched_content, dest_filename)
+        fpaths = ContentBringer.__gather_available_files(actually_fetched_content, dest_filename)
 
         structured_content = ObtainedContent(self.CONTENT_DOWNLOAD_LOCATION)
         content_type = ContentBringer.__get_content_type(str(dest_filename))
@@ -260,13 +260,14 @@ class ContentBringer:
 
         return structured_content
 
-    def _gather_available_files(self, actually_fetched_content, dest_filename):
+    @staticmethod
+    def __gather_available_files(actually_fetched_content, dest_filename):
         fpaths = []
         if not actually_fetched_content:
             if not dest_filename:  # using scap-security-guide
-                fpaths = [self.DEFAULT_SSG_DATA_STREAM_PATH]
+                fpaths = [ContentBringer.DEFAULT_SSG_DATA_STREAM_PATH]
             else:  # Using downloaded XCCDF/OVAL/DS/tailoring
-                fpaths = pathlib.Path(self.CONTENT_DOWNLOAD_LOCATION).rglob("*")
+                fpaths = pathlib.Path(ContentBringer.CONTENT_DOWNLOAD_LOCATION).rglob("*")
                 fpaths = [str(p) for p in fpaths if p.is_file()]
         else:
             dest_filename = pathlib.Path(dest_filename)
