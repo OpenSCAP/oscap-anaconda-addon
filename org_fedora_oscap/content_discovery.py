@@ -129,40 +129,15 @@ class ContentBringer:
 
     def finish_content_fetch(self, fetching_thread_name, fingerprint, dest_filename,
                              what_if_fail, expected_path, expected_tailoring, expected_cpe_path):
-        """
-        Finish any ongoing fetch and analyze what has been fetched.
-
-        After the fetch is completed, it analyzes verifies fetched content if applicable,
-        analyzes it and compiles into an instance of ObtainedContent.
-
-        Args:
-            fetching_thread_name: Name of the fetching thread
-                or None if we are only after the analysis
-            fingerprint: A checksum for downloaded file verification
-            report_callback: Means for the method to send user-relevant messages outside
-            dest_filename: The target of the fetch operation. Can be falsy -
-                in this case there is no content filename defined
-            what_if_fail: Callback accepting exception as an argument
-                that should handle them in the calling layer.
-
-        Returns:
-            Instance of ObtainedContent if everything went well, or None.
-        """
         try:
             self._finish_actual_fetch(fetching_thread_name)
             if fingerprint and dest_filename:
                 self._verify_fingerprint(fingerprint)
-            content = ContentAnalyzer.analyze_fetched_content(
-                fetching_thread_name, fingerprint, dest_filename,
-                expected_path, expected_tailoring, expected_cpe_path)
         except Exception as exc:
             what_if_fail(exc)
-            content = None
         finally:
             with self.activity_lock:
                 self.now_fetching_or_processing = False
-
-        return content
 
     def _finish_actual_fetch(self, wait_for):
         if wait_for:
@@ -203,7 +178,20 @@ class ContentAnalyzer:
             return "file"
 
     @staticmethod
-    def analyze_fetched_content(
+    def analyze(
+            fetching_thread_name, fingerprint, dest_filename, what_if_fail,
+            expected_path, expected_tailoring, expected_cpe_path):
+        try:
+            content = ContentAnalyzer.__analyze_fetched_content(
+                fetching_thread_name, fingerprint, dest_filename,
+                expected_path, expected_tailoring, expected_cpe_path)
+        except Exception as exc:
+            what_if_fail(exc)
+            content = None
+        return content
+
+    @staticmethod
+    def __analyze_fetched_content(
                 wait_for, fingerprint, dest_filename, expected_path,
                 expected_tailoring, expected_cpe_path):
         actually_fetched_content = wait_for is not None
