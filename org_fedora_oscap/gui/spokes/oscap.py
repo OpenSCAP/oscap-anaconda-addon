@@ -32,7 +32,7 @@ from org_fedora_oscap import content_handling
 from org_fedora_oscap import scap_content_handler
 from org_fedora_oscap import utils
 from org_fedora_oscap.common import dry_run_skip
-from org_fedora_oscap.content_discovery import ContentBringer
+from org_fedora_oscap.content_discovery import ContentBringer, ContentAnalyzer
 from pyanaconda.threading import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
@@ -414,7 +414,11 @@ class OSCAPSpoke(NormalSpoke):
         expected_tailoring = self._addon_data.preinst_tailoring_path
         expected_cpe_path = self._addon_data.cpe_path
 
-        content = self.content_bringer.finish_content_fetch(
+        self.content_bringer.finish_content_fetch(
+            wait_for, self._addon_data.fingerprint, content_path,
+            self._handle_error, expected_path, expected_tailoring,
+            expected_cpe_path)
+        content = ContentAnalyzer.analyze(
             wait_for, self._addon_data.fingerprint, content_path,
             self._handle_error, expected_path, expected_tailoring,
             expected_cpe_path)

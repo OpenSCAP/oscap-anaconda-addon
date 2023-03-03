@@ -446,7 +446,10 @@ class OSCAPdata(AddonData):
         expected_path = self.preinst_content_path
         expected_tailoring = self.preinst_tailoring_path
         expected_cpe_path = self.cpe_path
-        content = self.content_bringer.finish_content_fetch(
+        self.content_bringer.finish_content_fetch(
+            thread_name, self.fingerprint, content_dest, self._handle_error,
+            expected_path, expected_tailoring, expected_cpe_path)
+        content = content_discovery.ContentAnalyzer.analyze(
             thread_name, self.fingerprint, content_dest, self._handle_error,
             expected_path, expected_tailoring, expected_cpe_path)
 
