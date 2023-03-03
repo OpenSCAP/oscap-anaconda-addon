@@ -297,7 +297,7 @@ class ContentBringer:
             self._addon_data.content_path = str(preferred_content)
 
         tailoring_path = self._addon_data.tailoring_path
-        preferred_tailoring = self.get_preferred_tailoring(tailoring_path, content)
+        preferred_tailoring = content.get_preferred_tailoring(tailoring_path)
         if content.tailoring:
             if content_type in ("archive", "rpm"):
                 self._addon_data.tailoring_path = str(preferred_tailoring.relative_to(content.root))
@@ -310,13 +310,6 @@ class ContentBringer:
         else:
             preferred_content = content.select_main_usable_content()
         return preferred_content
-
-    def get_preferred_tailoring(self, tailoring_path, content):
-        if tailoring_path:
-            if tailoring_path != str(content.tailoring.relative_to(content.root)):
-                msg = f"Expected a tailoring {tailoring_path}, but it couldn't be found"
-                raise content_handling.ContentHandlingError(msg)
-        return content.tailoring
 
 
 class ObtainedContent:
@@ -414,3 +407,10 @@ class ObtainedContent:
                 "Couldn't find a valid datastream or a valid XCCDF-OVAL file tuple "
                 "among the available content")
             raise content_handling.ContentHandlingError(msg)
+
+    def get_preferred_tailoring(self, tailoring_path):
+        if tailoring_path:
+            if tailoring_path != str(self.tailoring.relative_to(self.root)):
+                msg = f"Expected a tailoring {tailoring_path}, but it couldn't be found"
+                raise content_handling.ContentHandlingError(msg)
+        return self.tailoring
