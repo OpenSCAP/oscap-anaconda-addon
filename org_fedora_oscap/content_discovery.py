@@ -138,7 +138,7 @@ class ContentBringer:
         return fetching_thread_name
 
     def finish_content_fetch(self, fetching_thread_name, fingerprint, dest_filename,
-                             what_if_fail):
+                             what_if_fail, expected_path, expected_tailoring, expected_cpe_path):
         """
         Finish any ongoing fetch and analyze what has been fetched.
 
@@ -162,9 +162,6 @@ class ContentBringer:
             self._finish_actual_fetch(fetching_thread_name)
             if fingerprint and dest_filename:
                 self._verify_fingerprint(fingerprint)
-            expected_path = self._addon_data.preinst_content_path
-            expected_tailoring = self._addon_data.preinst_tailoring_path
-            expected_cpe_path = self._addon_data.cpe_path
             content = self._analyze_fetched_content(
                 fetching_thread_name, fingerprint, dest_filename,
                 expected_path, expected_tailoring, expected_cpe_path)

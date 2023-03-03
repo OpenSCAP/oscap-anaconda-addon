@@ -443,9 +443,12 @@ class OSCAPdata(AddonData):
         if self.content_type != "scap-security-guide":
             content_dest = self.raw_preinst_content_path
 
+        expected_path = self.preinst_content_path
+        expected_tailoring = self.preinst_tailoring_path
+        expected_cpe_path = self.cpe_path
         content = self.content_bringer.finish_content_fetch(
-            thread_name, self.fingerprint,
-            content_dest, self._handle_error)
+            thread_name, self.fingerprint, content_dest, self._handle_error,
+            expected_path, expected_tailoring, expected_cpe_path)
 
         if not content:
             return

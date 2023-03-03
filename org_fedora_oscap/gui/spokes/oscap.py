@@ -410,9 +410,14 @@ class OSCAPSpoke(NormalSpoke):
         if actually_fetched_content:
             content_path = self._addon_data.raw_preinst_content_path
 
+        expected_path = self._addon_data.preinst_content_path
+        expected_tailoring = self._addon_data.preinst_tailoring_path
+        expected_cpe_path = self._addon_data.cpe_path
+
         content = self.content_bringer.finish_content_fetch(
-            wait_for, self._addon_data.fingerprint,
-            content_path, self._handle_error)
+            wait_for, self._addon_data.fingerprint, content_path,
+            self._handle_error, expected_path, expected_tailoring,
+            expected_cpe_path)
         if not content:
             with self._fetch_flag_lock:
                 self._fetching = False
