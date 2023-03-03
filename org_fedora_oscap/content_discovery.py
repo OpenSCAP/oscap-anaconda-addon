@@ -254,7 +254,8 @@ class ContentBringer:
         # self._addon_data.content_type = "datastream"
         self._addon_data.content_path = str(preferred_content.relative_to(content.root))
 
-        preferred_tailoring = self.get_preferred_tailoring(content)
+        tailoring_path = self._addon_data.tailoring_path
+        preferred_tailoring = self.get_preferred_tailoring(tailoring_path, content)
         if content.tailoring:
             self._addon_data.tailoring_path = str(preferred_tailoring.relative_to(content.root))
 
@@ -265,8 +266,7 @@ class ContentBringer:
             preferred_content = content.select_main_usable_content()
         return preferred_content
 
-    def get_preferred_tailoring(self, content):
-        tailoring_path = self._addon_data.tailoring_path
+    def get_preferred_tailoring(self, tailoring_path, content):
         if tailoring_path:
             if tailoring_path != str(content.tailoring.relative_to(content.root)):
                 msg = f"Expected a tailoring {tailoring_path}, but it couldn't be found"
