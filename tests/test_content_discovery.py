@@ -22,7 +22,7 @@ def labelled_files():
 
 
 def test_reduce(labelled_files):
-    bringer = tested_module.ContentBringer()
+    analyzer = tested_module.ContentAnalyzer()
 
     d_count = 0
     x_count = 0
@@ -32,22 +32,22 @@ def test_reduce(labelled_files):
         elif l == "X":
             x_count += 1
 
-    reduced = bringer.reduce_files(labelled_files, "dir/datastream", ["D"])
+    reduced = analyzer.reduce_files(labelled_files, "dir/datastream", ["D"])
     assert len(reduced) == len(labelled_files) - d_count + 1
     assert "dir/datastream" in reduced
 
-    reduced = bringer.reduce_files(labelled_files, "dir/datastream", ["D", "X"])
+    reduced = analyzer.reduce_files(labelled_files, "dir/datastream", ["D", "X"])
     assert len(reduced) == len(labelled_files) - d_count - x_count + 1
     assert "dir/datastream" in reduced
 
-    reduced = bringer.reduce_files(labelled_files, "dir/XCCDF", ["D", "X"])
+    reduced = analyzer.reduce_files(labelled_files, "dir/XCCDF", ["D", "X"])
     assert len(reduced) == len(labelled_files) - d_count - x_count + 1
     assert "dir/XCCDF" in reduced
 
     with pytest.raises(content_handling.ContentHandlingError, match="dir/datastream4"):
-        bringer.reduce_files(labelled_files, "dir/datastream4", ["D"])
+        analyzer.reduce_files(labelled_files, "dir/datastream4", ["D"])
 
-    reduced = bringer.reduce_files(labelled_files, "cpe", ["C"])
+    reduced = analyzer.reduce_files(labelled_files, "cpe", ["C"])
     assert reduced == labelled_files
 
 
