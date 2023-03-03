@@ -435,9 +435,14 @@ class OSCAPSpoke(NormalSpoke):
         if actually_fetched_content:
             content_path = common.get_raw_preinst_content_path(self._policy_data)
 
+        expected_path = common.get_preinst_content_path(self._policy_data)
+        expected_tailoring = common.get_preinst_tailoring_path(self._policy_data)
+        expected_cpe_path = self._policy_data.cpe_path
+
         content = self.content_bringer.finish_content_fetch(
-            wait_for, self._policy_data.fingerprint,
-            content_path, self._handle_error)
+            wait_for, self._policy_data.fingerprint, content_path,
+            self._handle_error, expected_path, expected_tailoring,
+            expected_cpe_path)
         if not content:
             with self._fetch_flag_lock:
                 self._fetching = False
