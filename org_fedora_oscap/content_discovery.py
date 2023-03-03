@@ -246,19 +246,6 @@ class ContentBringer:
                 raise common.OSCAPaddonError("Unsupported content type")
         return fpaths
 
-    def use_downloaded_content(self, content):
-        preferred_content = content.get_preferred_content(self._addon_data.content_path)
-
-        # We know that we have ended up with a datastream-like content,
-        # but if we can't convert an archive to a datastream.
-        # self._addon_data.content_type = "datastream"
-        self._addon_data.content_path = str(preferred_content.relative_to(content.root))
-
-        tailoring_path = self._addon_data.tailoring_path
-        preferred_tailoring = content.get_preferred_tailoring(tailoring_path)
-        if content.tailoring:
-            self._addon_data.tailoring_path = str(preferred_tailoring.relative_to(content.root))
-
 
 class ObtainedContent:
     """

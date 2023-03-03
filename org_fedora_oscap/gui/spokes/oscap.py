@@ -450,7 +450,7 @@ class OSCAPSpoke(NormalSpoke):
 
         try:
             if actually_fetched_content:
-                self.content_bringer.use_downloaded_content(content)
+                self._policy_data.use_downloaded_content(content)
 
             preinst_content_path = common.get_preinst_content_path(self._policy_data)
             preinst_tailoring_path = common.get_preinst_tailoring_path(self._policy_data)
