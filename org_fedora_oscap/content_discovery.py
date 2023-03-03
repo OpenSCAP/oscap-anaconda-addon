@@ -39,7 +39,6 @@ def path_is_present_among_paths(path, paths):
 
 class ContentBringer:
     CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
-    DEFAULT_SSG_DATA_STREAM_PATH = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
 
     def __init__(self):
         self._content_uri = ""
@@ -49,15 +48,6 @@ class ContentBringer:
         self.now_fetching_or_processing = False
 
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
-
-    @staticmethod
-    def __get_content_type(url):
-        if url.endswith(".rpm"):
-            return "rpm"
-        elif any(url.endswith(arch_type) for arch_type in common.SUPPORTED_ARCHIVES):
-            return "archive"
-        else:
-            return "file"
 
     @property
     def content_uri(self):
@@ -161,7 +151,7 @@ class ContentBringer:
             self._finish_actual_fetch(fetching_thread_name)
             if fingerprint and dest_filename:
                 self._verify_fingerprint(fingerprint)
-            content = ContentBringer.__analyze_fetched_content(
+            content = ContentAnalyzer.analyze_fetched_content(
                 fetching_thread_name, fingerprint, dest_filename,
                 expected_path, expected_tailoring, expected_cpe_path)
         except Exception as exc:
@@ -195,11 +185,25 @@ class ContentBringer:
             msg = _(f"Integrity check of the content failed - {hash_obj.name} hash didn't match")
             raise content_handling.ContentCheckError(msg)
 
+
+class ContentAnalyzer:
+    CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
+    DEFAULT_SSG_DATA_STREAM_PATH = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
+
+    @staticmethod
+    def __get_content_type(url):
+        if url.endswith(".rpm"):
+            return "rpm"
+        elif any(url.endswith(arch_type) for arch_type in common.SUPPORTED_ARCHIVES):
+            return "archive"
+        else:
+            return "file"
+
     @staticmethod
     def __allow_one_expected_tailoring_or_no_tailoring(labelled_files, expected_tailoring):
         tailoring_label = CONTENT_TYPES["TAILORING"]
         if expected_tailoring:
-            labelled_files = ContentBringer.reduce_files(labelled_files, expected_tailoring, [tailoring_label])
+            labelled_files = ContentAnalyzer.reduce_files(labelled_files, expected_tailoring, [tailoring_label])
         else:
             labelled_files = {
                 path: label for path, label in labelled_files.items()
@@ -211,13 +215,13 @@ class ContentBringer:
     def __filter_discovered_content(labelled_files, expected_path, expected_tailoring, expected_cpe_path):
         categories = (CONTENT_TYPES["DATASTREAM"], CONTENT_TYPES["XCCDF_CHECKLIST"])
         if expected_path:
-            labelled_files = ContentBringer.reduce_files(labelled_files, expected_path, categories)
+            labelled_files = ContentAnalyzer.reduce_files(labelled_files, expected_path, categories)
 
-        labelled_files = ContentBringer.__allow_one_expected_tailoring_or_no_tailoring(labelled_files, expected_tailoring)
+        labelled_files = ContentAnalyzer.__allow_one_expected_tailoring_or_no_tailoring(labelled_files, expected_tailoring)
 
         categories = (CONTENT_TYPES["CPE_DICT"], )
         if expected_cpe_path:
-            labelled_files = ContentBringer.reduce_files(labelled_files, expected_cpe_path, categories)
+            labelled_files = ContentAnalyzer.reduce_files(labelled_files, expected_cpe_path, categories)
 
         return labelled_files
 
@@ -237,19 +241,19 @@ class ContentBringer:
         return reduced_files
 
     @staticmethod
-    def __analyze_fetched_content(
+    def analyze_fetched_content(
                 wait_for, fingerprint, dest_filename, expected_path,
                 expected_tailoring, expected_cpe_path):
         actually_fetched_content = wait_for is not None
-        fpaths = ContentBringer.__gather_available_files(actually_fetched_content, dest_filename)
+        fpaths = ContentAnalyzer.__gather_available_files(actually_fetched_content, dest_filename)
 
-        structured_content = ObtainedContent(ContentBringer.CONTENT_DOWNLOAD_LOCATION)
-        content_type = ContentBringer.__get_content_type(str(dest_filename))
+        structured_content = ObtainedContent(ContentAnalyzer.CONTENT_DOWNLOAD_LOCATION)
+        content_type = ContentAnalyzer.__get_content_type(str(dest_filename))
         if content_type in ("archive", "rpm"):
             structured_content.add_content_archive(dest_filename)
 
         labelled_filenames = content_handling.identify_files(fpaths)
-        labelled_filenames = ContentBringer.__filter_discovered_content(
+        labelled_filenames = ContentAnalyzer.__filter_discovered_content(
             labelled_filenames, expected_path, expected_tailoring,
             expected_cpe_path)
 
@@ -266,14 +270,14 @@ class ContentBringer:
         fpaths = []
         if not actually_fetched_content:
             if not dest_filename:  # using scap-security-guide
-                fpaths = [ContentBringer.DEFAULT_SSG_DATA_STREAM_PATH]
+                fpaths = [ContentAnalyzer.DEFAULT_SSG_DATA_STREAM_PATH]
             else:  # Using downloaded XCCDF/OVAL/DS/tailoring
-                fpaths = pathlib.Path(ContentBringer.CONTENT_DOWNLOAD_LOCATION).rglob("*")
+                fpaths = pathlib.Path(ContentAnalyzer.CONTENT_DOWNLOAD_LOCATION).rglob("*")
                 fpaths = [str(p) for p in fpaths if p.is_file()]
         else:
             dest_filename = pathlib.Path(dest_filename)
             # RPM is an archive at this phase
-            content_type = ContentBringer.__get_content_type(str(dest_filename))
+            content_type = ContentAnalyzer.__get_content_type(str(dest_filename))
             if content_type in ("archive", "rpm"):
                 try:
                     fpaths = common.extract_data(
