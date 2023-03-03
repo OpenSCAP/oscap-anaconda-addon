@@ -18,6 +18,8 @@
 from dasbus.structure import DBusData
 from dasbus.typing import *  # pylint: disable=wildcard-import
 
+from org_fedora_oscap import common
+
 __all__ = ["PolicyData"]
 
 
@@ -202,3 +204,8 @@ class PolicyData(DBusData):
         self.tailoring_path = ""
         self.fingerprint = ""
         self.certificates = ""
+
+    def use_system_content(self):
+        self.clear_all()
+        self.content_type = "scap-security-guide"
+        self.content_path = common.get_ssg_path()

@@ -1215,6 +1215,6 @@ class OSCAPSpoke(NormalSpoke):
         self._refresh_ui()
 
     def on_use_ssg_clicked(self, *args):
-        self.content_bringer.use_system_content()
+        self._policy_data.use_system_content()
         self._save_policy_data()
         self._fetch_data_and_initialize()
