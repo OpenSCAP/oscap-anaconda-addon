@@ -258,11 +258,6 @@ class ContentBringer:
         if content.tailoring:
             self._addon_data.tailoring_path = str(preferred_tailoring.relative_to(content.root))
 
-    def use_system_content(self, content=None):
-        self._addon_data.clear_all()
-        self._addon_data.content_type = "scap-security-guide"
-        self._addon_data.content_path = common.get_ssg_path()
-
     def get_preferred_content(self, content):
         if self._addon_data.content_path:
             preferred_content = content.find_expected_usable_content(self._addon_data.content_path)
