@@ -162,7 +162,7 @@ class ContentBringer:
             self._finish_actual_fetch(fetching_thread_name)
             if fingerprint and dest_filename:
                 self._verify_fingerprint(fingerprint)
-            content = self._analyze_fetched_content(
+            content = ContentBringer.__analyze_fetched_content(
                 fetching_thread_name, fingerprint, dest_filename,
                 expected_path, expected_tailoring, expected_cpe_path)
         except Exception as exc:
@@ -239,13 +239,14 @@ class ContentBringer:
             reduced_files[path] = label
         return reduced_files
 
-    def _analyze_fetched_content(
-                self, wait_for, fingerprint, dest_filename, expected_path,
+    @staticmethod
+    def __analyze_fetched_content(
+                wait_for, fingerprint, dest_filename, expected_path,
                 expected_tailoring, expected_cpe_path):
         actually_fetched_content = wait_for is not None
         fpaths = ContentBringer.__gather_available_files(actually_fetched_content, dest_filename)
 
-        structured_content = ObtainedContent(self.CONTENT_DOWNLOAD_LOCATION)
+        structured_content = ObtainedContent(ContentBringer.CONTENT_DOWNLOAD_LOCATION)
         content_type = ContentBringer.__get_content_type(str(dest_filename))
         log.info(f"OSCAP Addon: started to look at the content")
         if content_type in ("archive", "rpm"):
