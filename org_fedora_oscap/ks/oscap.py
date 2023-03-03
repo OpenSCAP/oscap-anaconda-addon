@@ -570,3 +570,8 @@ class OSCAPdata(AddonData):
         """Clear all the stored values."""
 
         self.__init__(self.name, just_clear=True)
+
+    def use_system_content(self):
+        self.clear_all()
+        self.content_type = "scap-security-guide"
+        self.content_path = common.get_ssg_path()
