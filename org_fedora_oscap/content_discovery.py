@@ -163,7 +163,12 @@ class ContentBringer:
             self._finish_actual_fetch(fetching_thread_name)
             if fingerprint and dest_filename:
                 self._verify_fingerprint(fingerprint)
-            content = self._analyze_fetched_content(fetching_thread_name, fingerprint, dest_filename)
+            expected_path = common.get_preinst_content_path(self._addon_data)
+            expected_tailoring = common.get_preinst_tailoring_path(self._addon_data)
+            expected_cpe_path = self._addon_data.cpe_path
+            content = self._analyze_fetched_content(
+                fetching_thread_name, fingerprint, dest_filename,
+                expected_path, expected_tailoring, expected_cpe_path)
         except Exception as exc:
             what_if_fail(exc)
             content = None
@@ -235,7 +240,9 @@ class ContentBringer:
             reduced_files[path] = label
         return reduced_files
 
-    def _analyze_fetched_content(self, wait_for, fingerprint, dest_filename):
+    def _analyze_fetched_content(
+                self, wait_for, fingerprint, dest_filename, expected_path,
+                expected_tailoring, expected_cpe_path):
         actually_fetched_content = wait_for is not None
         fpaths = self._gather_available_files(actually_fetched_content, dest_filename)
 
@@ -246,9 +253,6 @@ class ContentBringer:
             structured_content.add_content_archive(dest_filename)
 
         labelled_filenames = content_handling.identify_files(fpaths)
-        expected_path = common.get_preinst_content_path(self._addon_data)
-        expected_tailoring = common.get_preinst_tailoring_path(self._addon_data)
-        expected_cpe_path = self._addon_data.cpe_path
         labelled_filenames = self.filter_discovered_content(
             labelled_filenames, expected_path, expected_tailoring,
             expected_cpe_path)
