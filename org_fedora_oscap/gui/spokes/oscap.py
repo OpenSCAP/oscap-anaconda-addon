@@ -426,9 +426,6 @@ class OSCAPSpoke(NormalSpoke):
         :type wait_for: str or None
 
         """
-        def update_progress_label(msg):
-            fire_gtk_action(self._progress_label.set_text(msg))
-
         content_path = None
         actually_fetched_content = wait_for is not None
 
