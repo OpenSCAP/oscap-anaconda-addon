@@ -94,7 +94,8 @@ class ContentBringer:
     def _fetch_files(self, ca_certs_path):
         with self.activity_lock:
             if self.now_fetching_or_processing:
-                msg = "OSCAP Addon: Strange, it seems that we are already fetching something."
+                msg = "OSCAP Addon: Strange, it seems that we are already " \
+                    "fetching something."
                 log.warn(msg)
                 return
             self.now_fetching_or_processing = True
@@ -146,7 +147,9 @@ class ContentBringer:
 
     def _verify_fingerprint(self, fingerprint=""):
         if not fingerprint:
-            log.info("OSCAP Addon: No fingerprint provided, skipping integrity check")
+            log.info(
+                "OSCAP Addon: No fingerprint provided, skipping integrity "
+                "check")
             return
 
         hash_obj = utils.get_hashing_algorithm(fingerprint)
@@ -155,10 +158,12 @@ class ContentBringer:
         if digest != fingerprint:
             log.error(
                 "OSCAP Addon: "
-                f"File {self.dest_file_name} failed integrity check - assumed a "
-                f"{hash_obj.name} hash and '{fingerprint}', got '{digest}'"
+                f"File {self.dest_file_name} failed integrity check - assumed "
+                f"a {hash_obj.name} hash and '{fingerprint}', got '{digest}'"
             )
-            msg = _(f"OSCAP Addon: Integrity check of the content failed - {hash_obj.name} hash didn't match")
+            msg = _(
+                f"OSCAP Addon: Integrity check of the content failed - "
+                f"{hash_obj.name} hash didn't match")
             raise content_handling.ContentCheckError(msg)
         log.info(f"Integrity check passed using {hash_obj.name} hash")
 
@@ -171,7 +176,9 @@ class ContentAnalyzer:
     def __get_content_type(url):
         if url.endswith(".rpm"):
             return "rpm"
-        elif any(url.endswith(arch_type) for arch_type in common.SUPPORTED_ARCHIVES):
+        elif any(
+                url.endswith(arch_type)
+                for arch_type in common.SUPPORTED_ARCHIVES):
             return "archive"
         else:
             return "file"
@@ -194,9 +201,11 @@ class ContentAnalyzer:
                 wait_for, fingerprint, dest_filename, expected_path,
                 expected_tailoring, expected_cpe_path):
         actually_fetched_content = wait_for is not None
-        fpaths = ContentAnalyzer.__gather_available_files(actually_fetched_content, dest_filename)
+        fpaths = ContentAnalyzer.__gather_available_files(
+            actually_fetched_content, dest_filename)
 
-        structured_content = ObtainedContent(ContentAnalyzer.CONTENT_DOWNLOAD_LOCATION)
+        structured_content = ObtainedContent(
+            ContentAnalyzer.CONTENT_DOWNLOAD_LOCATION)
         content_type = ContentAnalyzer.__get_content_type(str(dest_filename))
         log.info(f"OSCAP Addon: started to look at the content")
         if content_type in ("archive", "rpm"):
@@ -220,12 +229,14 @@ class ContentAnalyzer:
             if not dest_filename:  # using scap-security-guide
                 fpaths = [ContentAnalyzer.DEFAULT_SSG_DATA_STREAM_PATH]
             else:  # Using downloaded XCCDF/OVAL/DS/tailoring
-                fpaths = pathlib.Path(ContentAnalyzer.CONTENT_DOWNLOAD_LOCATION).rglob("*")
+                fpaths = pathlib.Path(
+                    ContentAnalyzer.CONTENT_DOWNLOAD_LOCATION).rglob("*")
                 fpaths = [str(p) for p in fpaths if p.is_file()]
         else:
             dest_filename = pathlib.Path(dest_filename)
             # RPM is an archive at this phase
-            content_type = ContentAnalyzer.__get_content_type(str(dest_filename))
+            content_type = ContentAnalyzer.__get_content_type(
+                str(dest_filename))
             if content_type in ("archive", "rpm"):
                 try:
                     fpaths = common.extract_data(
@@ -233,7 +244,9 @@ class ContentAnalyzer:
                         str(dest_filename.parent)
                     )
                 except common.ExtractionError as err:
-                    msg = f"Failed to extract the '{dest_filename}' archive: {str(err)}"
+                    msg = (
+                        f"Failed to extract the '{dest_filename}' "
+                        f"archive: {str(err)}")
                     log.error("OSCAP Addon: " + msg)
                     raise err
 
