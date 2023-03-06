@@ -263,7 +263,7 @@ class OSCAPSpoke(NormalSpoke):
         self._anaconda_spokes_initialized = threading.Event()
         self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
 
-        self.content_bringer = content_discovery.ContentBringer()
+        self.content_bringer = content_discovery.ContentBringer(self._handle_error)
         self._content_handler = None
 
     def _all_anaconda_spokes_initialized(self):
@@ -404,7 +404,7 @@ class OSCAPSpoke(NormalSpoke):
             log.info(f"OSCAP Addon: Actually fetching content from somewhere")
             thread_name = self.content_bringer.fetch_content(
                 self._policy_data.content_url,
-                self._handle_error, self._policy_data.certificates)
+                self._policy_data.certificates)
 
         # pylint: disable-msg=E1101
         hubQ.send_message(self.__class__.__name__,
@@ -432,8 +432,7 @@ class OSCAPSpoke(NormalSpoke):
         if actually_fetched_content:
             content_path = common.get_raw_preinst_content_path(self._policy_data)
             self.content_bringer.finish_content_fetch(
-                wait_for, self._policy_data.fingerprint,
-                self._handle_error)
+                wait_for, self._policy_data.fingerprint)
 
         expected_path = common.get_preinst_content_path(self._policy_data)
         expected_tailoring = common.get_preinst_tailoring_path(self._policy_data)

@@ -67,7 +67,7 @@ class PrepareValidContent(Task):
         self._policy_data = policy_data
         self._file_path = file_path
         self._content_path = content_path
-        self.content_bringer = content_discovery.ContentBringer()
+        self.content_bringer = content_discovery.ContentBringer(_handle_error)
 
     @property
     def name(self):
@@ -81,7 +81,7 @@ class PrepareValidContent(Task):
             # content not available/fetched yet
             fetching_thread_name = self.content_bringer.fetch_content(
                 self._policy_data.content_url,
-                _handle_error, self._policy_data.certificates)
+                self._policy_data.certificates)
 
         content_dest = None
         fingerprint = None
@@ -94,7 +94,7 @@ class PrepareValidContent(Task):
         expected_cpe_path = self._policy_data.cpe_path
         if fetching_thread_name is not None:
             self.content_bringer.finish_content_fetch(
-                fetching_thread_name, fingerprint, _handle_error)
+                fetching_thread_name, fingerprint)
         content = content_discovery.ContentAnalyzer.analyze(
             fetching_thread_name, self._policy_data.fingerprint,
             content_dest, _handle_error, expected_path, expected_tailoring,
