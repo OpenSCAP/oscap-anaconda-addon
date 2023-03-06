@@ -407,7 +407,7 @@ class OSCAPSpoke(NormalSpoke):
         if actually_fetched_content:
             content_path = self._addon_data.raw_preinst_content_path
             self.content_bringer.finish_content_fetch(
-                wait_for, self._addon_data.fingerprint, content_path,
+                wait_for, self._addon_data.fingerprint,
                 self._handle_error)
 
         expected_path = self._addon_data.preinst_content_path

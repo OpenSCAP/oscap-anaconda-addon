@@ -127,11 +127,10 @@ class ContentBringer:
         return fetching_thread_name
 
     def finish_content_fetch(
-            self, fetching_thread_name, fingerprint, dest_filename,
-            what_if_fail):
+            self, fetching_thread_name, fingerprint, what_if_fail):
         try:
             self._finish_actual_fetch(fetching_thread_name)
-            if fingerprint and dest_filename:
+            if fingerprint:
                 self._verify_fingerprint(fingerprint)
         except Exception as exc:
             what_if_fail(exc)

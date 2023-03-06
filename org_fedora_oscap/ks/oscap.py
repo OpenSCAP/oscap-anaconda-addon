@@ -440,16 +440,18 @@ class OSCAPdata(AddonData):
                 self.content_url, self._handle_error, self.certificates)
 
         content_dest = None
+        fingerprint = None
         if self.content_type != "scap-security-guide":
             content_dest = self.raw_preinst_content_path
+            fingerprint = self.fingerprint
 
         expected_path = self.preinst_content_path
         expected_tailoring = self.preinst_tailoring_path
         expected_cpe_path = self.cpe_path
         if thread_name is not None:
             self.content_bringer.finish_content_fetch(
-                thread_name, self.fingerprint,
-                content_dest, self._handle_error)
+                thread_name, fingerprint,
+                self._handle_error)
         content = content_discovery.ContentAnalyzer.analyze(
             thread_name, self.fingerprint, content_dest, self._handle_error,
             expected_path, expected_tailoring, expected_cpe_path)
