@@ -78,6 +78,7 @@ class ContentBringer:
         Initiate fetch of the content into an appropriate directory
 
         Args:
+            content_uri: URI location of the content to be fetched
             ca_certs_path: Path to the HTTPS certificate file
         """
         try:
