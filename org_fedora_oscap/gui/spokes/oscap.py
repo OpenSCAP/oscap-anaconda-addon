@@ -251,7 +251,7 @@ class OSCAPSpoke(NormalSpoke):
         self._anaconda_spokes_initialized = threading.Event()
         self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
 
-        self.content_bringer = ContentBringer()
+        self.content_bringer = ContentBringer(self._handle_error)
 
     def _all_anaconda_spokes_initialized(self):
         log.debug("OSCAP addon: Anaconda init_done signal triggered")
@@ -379,7 +379,7 @@ class OSCAPSpoke(NormalSpoke):
         if self._addon_data.content_url and self._addon_data.content_type != "scap-security-guide":
             thread_name = self.content_bringer.fetch_content(
                 self._addon_data.content_url,
-                self._handle_error, self._addon_data.certificates)
+                self._addon_data.certificates)
 
         # pylint: disable-msg=E1101
         hubQ.send_message(self.__class__.__name__,
@@ -407,8 +407,7 @@ class OSCAPSpoke(NormalSpoke):
         if actually_fetched_content:
             content_path = self._addon_data.raw_preinst_content_path
             self.content_bringer.finish_content_fetch(
-                wait_for, self._addon_data.fingerprint,
-                self._handle_error)
+                wait_for, self._addon_data.fingerprint)
 
         expected_path = self._addon_data.preinst_content_path
         expected_tailoring = self._addon_data.preinst_tailoring_path

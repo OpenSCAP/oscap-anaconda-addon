@@ -40,12 +40,13 @@ def path_is_present_among_paths(path, paths):
 class ContentBringer:
     CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
 
-    def __init__(self):
+    def __init__(self, what_if_fail):
         self._content_uri = ""
         self.dest_file_name = ""
 
         self.activity_lock = threading.Lock()
         self.now_fetching_or_processing = False
+        self.what_if_fail = what_if_fail
 
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
 
@@ -72,25 +73,23 @@ class ContentBringer:
         self._content_uri = uri
         self.dest_file_name = self.CONTENT_DOWNLOAD_LOCATION / basename
 
-    def fetch_content(self, content_uri, what_if_fail, ca_certs_path=""):
+    def fetch_content(self, content_uri, ca_certs_path=""):
         """
         Initiate fetch of the content into an appropriate directory
 
         Args:
-            what_if_fail: Callback accepting exception as an argument that
-                should handle them in the calling layer.
             ca_certs_path: Path to the HTTPS certificate file
         """
         try:
             self.content_uri = content_uri
         except Exception as exc:
-            what_if_fail(exc)
+            self.what_if_fail(exc)
         shutil.rmtree(self.CONTENT_DOWNLOAD_LOCATION, ignore_errors=True)
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
-        fetching_thread_name = self._fetch_files(ca_certs_path, what_if_fail)
+        fetching_thread_name = self._fetch_files(ca_certs_path)
         return fetching_thread_name
 
-    def _fetch_files(self, ca_certs_path, what_if_fail):
+    def _fetch_files(self, ca_certs_path):
         with self.activity_lock:
             if self.now_fetching_or_processing:
                 msg = "Strange, it seems that we are already fetching something."
@@ -104,7 +103,7 @@ class ContentBringer:
         except Exception as exc:
             with self.activity_lock:
                 self.now_fetching_or_processing = False
-            what_if_fail(exc)
+            self.what_if_fail(exc)
 
         # We are not finished yet with the fetch
         return fetching_thread_name
@@ -126,14 +125,13 @@ class ContentBringer:
             )
         return fetching_thread_name
 
-    def finish_content_fetch(
-            self, fetching_thread_name, fingerprint, what_if_fail):
+    def finish_content_fetch(self, fetching_thread_name, fingerprint):
         try:
             self._finish_actual_fetch(fetching_thread_name)
             if fingerprint:
                 self._verify_fingerprint(fingerprint)
         except Exception as exc:
-            what_if_fail(exc)
+            self.what_if_fail(exc)
         finally:
             with self.activity_lock:
                 self.now_fetching_or_processing = False

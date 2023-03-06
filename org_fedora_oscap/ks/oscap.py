@@ -105,7 +105,8 @@ class OSCAPdata(AddonData):
         self.rule_data = rule_handling.RuleData()
         self.dry_run = False
 
-        self.content_bringer = content_discovery.ContentBringer()
+        self.content_bringer = content_discovery.ContentBringer(
+            self._handle_error)
 
     def __str__(self):
         """
@@ -437,7 +438,7 @@ class OSCAPdata(AddonData):
         if not os.path.exists(self.preinst_content_path) and not os.path.exists(self.raw_preinst_content_path):
             # content not available/fetched yet
             thread_name = self.content_bringer.fetch_content(
-                self.content_url, self._handle_error, self.certificates)
+                self.content_url, self.certificates)
 
         content_dest = None
         fingerprint = None
@@ -450,8 +451,7 @@ class OSCAPdata(AddonData):
         expected_cpe_path = self.cpe_path
         if thread_name is not None:
             self.content_bringer.finish_content_fetch(
-                thread_name, fingerprint,
-                self._handle_error)
+                thread_name, fingerprint)
         content = content_discovery.ContentAnalyzer.analyze(
             thread_name, self.fingerprint, content_dest, self._handle_error,
             expected_path, expected_tailoring, expected_cpe_path)
