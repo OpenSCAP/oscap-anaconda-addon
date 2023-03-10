@@ -425,7 +425,7 @@ class OSCAPSpoke(NormalSpoke):
 
         try:
             if actually_fetched_content:
-                self._addon_data.use_downloaded_content(content)
+                self._use_downloaded_content(content)
 
             msg = f"Opening SCAP content at {self._addon_data.preinst_content_path}"
             if self._addon_data.tailoring_path:
@@ -1169,5 +1169,33 @@ class OSCAPSpoke(NormalSpoke):
         self.refresh()
 
     def on_use_ssg_clicked(self, *args):
-        self._addon_data.use_system_content()
+        self._use_system_content()
         self._fetch_data_and_initialize()
+
+    def _use_system_content(self):
+        self._addon_data.clear_all()
+        self._addon_data.content_type = "scap-security-guide"
+        self._addon_data.content_path = common.get_ssg_path()
+
+    def _use_downloaded_content(self, content):
+        preferred_content = content.get_preferred_content(
+            self._addon_data.content_path)
+
+        # We know that we have ended up with a datastream-like content,
+        # but if we can't convert an archive to a datastream.
+        # self._addon_data.content_type = "datastream"
+        content_type = self._addon_data.content_type
+        if content_type in ("archive", "rpm"):
+            self._addon_data.content_path = str(
+                preferred_content.relative_to(content.root))
+        else:
+            self._addon_data.content_path = str(preferred_content)
+
+        preferred_tailoring = content.get_preferred_tailoring(
+            self._addon_data.tailoring_path)
+        if content.tailoring:
+            if content_type in ("archive", "rpm"):
+                self._addon_data.tailoring_path = str(
+                    preferred_tailoring.relative_to(content.root))
+            else:
+                self._addon_data.tailoring_path = str(preferred_tailoring)
