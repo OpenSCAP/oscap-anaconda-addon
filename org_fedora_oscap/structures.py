@@ -218,27 +218,3 @@ class PolicyData(DBusData):
         self.tailoring_path = ""
         self.fingerprint = ""
         self.certificates = ""
-
-    def use_system_content(self):
-        self.clear_all()
-        self.content_type = "scap-security-guide"
-        self.content_path = common.get_ssg_path()
-
-    def use_downloaded_content(self, content):
-        preferred_content = content.get_preferred_content(self.content_path)
-
-        # We know that we have ended up with a datastream-like content,
-        # but if we can't convert an archive to a datastream.
-        # self.content_type = "datastream"
-        content_type = self.content_type
-        if content_type in ("archive", "rpm"):
-            self.content_path = str(preferred_content.relative_to(content.root))
-        else:
-            self.content_path = str(preferred_content)
-
-        preferred_tailoring = content.get_preferred_tailoring(self.tailoring_path)
-        if content.tailoring:
-            if content_type in ("archive", "rpm"):
-                self.tailoring_path = str(preferred_tailoring.relative_to(content.root))
-            else:
-                self.tailoring_path = str(preferred_tailoring)
