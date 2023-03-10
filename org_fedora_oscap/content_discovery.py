@@ -41,7 +41,7 @@ class ContentBringer:
     CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
 
     def __init__(self, what_if_fail):
-        self._content_uri = ""
+        self._valid_content_uri = ""
         self.dest_file_name = ""
 
         self.activity_lock = threading.Lock()
@@ -52,7 +52,7 @@ class ContentBringer:
 
     @property
     def content_uri(self):
-        return self._content_uri
+        return self._valid_content_uri
 
     @content_uri.setter
     def content_uri(self, uri):
@@ -70,7 +70,7 @@ class ContentBringer:
         if not basename:
             msg = f"Unable to deduce basename from the '{uri}' URL"
             raise KickstartValueError(msg)
-        self._content_uri = uri
+        self._valid_content_uri = uri
         self.dest_file_name = self.CONTENT_DOWNLOAD_LOCATION / basename
 
     def fetch_content(self, content_uri, ca_certs_path=""):
