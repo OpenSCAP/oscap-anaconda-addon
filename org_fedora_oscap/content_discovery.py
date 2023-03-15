@@ -14,7 +14,6 @@ from org_fedora_oscap import data_fetch, utils
 from org_fedora_oscap import common
 from org_fedora_oscap import content_handling
 from org_fedora_oscap.content_handling import CONTENT_TYPES
-from org_fedora_oscap import rule_handling
 
 from org_fedora_oscap.common import _
 
@@ -25,25 +24,6 @@ def is_network(scheme):
     return any(
         scheme.startswith(net_prefix)
         for net_prefix in data_fetch.NET_URL_PREFIXES)
-
-
-def clear_all(data):
-    data.content_type = ""
-    data.content_url = ""
-    data.datastream_id = ""
-    data.xccdf_id = ""
-    data.profile_id = ""
-    data.content_path = ""
-    data.cpe_path = ""
-    data.tailoring_path = ""
-
-    data.fingerprint = ""
-
-    data.certificates = ""
-
-    # internal values
-    data.rule_data = rule_handling.RuleData()
-    data.dry_run = False
 
 
 def paths_are_equivalent(p1, p2):
@@ -60,31 +40,20 @@ def path_is_present_among_paths(path, paths):
 
 class ContentBringer:
     CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
-    DEFAULT_SSG_DATA_STREAM_PATH = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
 
-    def __init__(self, addon_data):
-        self.content_uri_scheme = ""
-        self.content_uri_path = ""
-        self.fetched_content = ""
+    def __init__(self, what_if_fail):
+        self._valid_content_uri = ""
+        self.dest_file_name = ""
 
         self.activity_lock = threading.Lock()
         self.now_fetching_or_processing = False
+        self.what_if_fail = what_if_fail
 
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
 
-        self._addon_data = addon_data
-
-    def get_content_type(self, url):
-        if url.endswith(".rpm"):
-            return "rpm"
-        elif any(url.endswith(arch_type) for arch_type in common.SUPPORTED_ARCHIVES):
-            return "archive"
-        else:
-            return "file"
-
     @property
     def content_uri(self):
-        return self.content_uri_scheme + "://" + self.content_uri_path
+        return self._valid_content_uri
 
     @content_uri.setter
     def content_uri(self, uri):
@@ -94,130 +63,133 @@ class ContentBringer:
                 f"Invalid supplied content URL '{uri}', "
                 "use the 'scheme://path' form.")
             raise KickstartValueError(msg)
-        self.content_uri_path = scheme_and_maybe_path[1]
-        self.content_uri_scheme = scheme_and_maybe_path[0]
+        path = scheme_and_maybe_path[1]
+        if "/" not in path:
+            msg = f"Missing the path component of the '{uri}' URL"
+            raise KickstartValueError(msg)
+        basename = path.rsplit("/", 1)[1]
+        if not basename:
+            msg = f"Unable to deduce basename from the '{uri}' URL"
+            raise KickstartValueError(msg)
+        self._valid_content_uri = uri
+        self.dest_file_name = self.CONTENT_DOWNLOAD_LOCATION / basename
 
-    def fetch_content(self, what_if_fail, ca_certs_path=""):
+    def fetch_content(self, content_uri, ca_certs_path=""):
         """
         Initiate fetch of the content into an appropriate directory
 
         Args:
-            what_if_fail: Callback accepting exception as an argument that
-                should handle them in the calling layer.
+            content_uri: URI location of the content to be fetched
             ca_certs_path: Path to the HTTPS certificate file
         """
         try:
-            self.content_uri = self._addon_data.content_url
+            self.content_uri = content_uri
         except Exception as exc:
-            what_if_fail(exc)
+            self.what_if_fail(exc)
         shutil.rmtree(self.CONTENT_DOWNLOAD_LOCATION, ignore_errors=True)
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
-        fetching_thread_name = self._fetch_files(
-            self.content_uri_scheme, self.content_uri_path,
-            self.CONTENT_DOWNLOAD_LOCATION, ca_certs_path, what_if_fail)
+        fetching_thread_name = self._fetch_files(ca_certs_path)
         return fetching_thread_name
 
-    def _fetch_files(self, scheme, path, destdir, ca_certs_path, what_if_fail):
+    def _fetch_files(self, ca_certs_path):
         with self.activity_lock:
             if self.now_fetching_or_processing:
-                msg = "OSCAP Addon: Strange, it seems that we are already fetching something."
+                msg = "OSCAP Addon: Strange, it seems that we are already " \
+                    "fetching something."
                 log.warn(msg)
                 return
             self.now_fetching_or_processing = True
 
         fetching_thread_name = None
         try:
-            fetching_thread_name = self._start_actual_fetch(scheme, path, destdir, ca_certs_path)
+            fetching_thread_name = self._start_actual_fetch(ca_certs_path)
         except Exception as exc:
             with self.activity_lock:
                 self.now_fetching_or_processing = False
-            what_if_fail(exc)
+            self.what_if_fail(exc)
 
         # We are not finished yet with the fetch
         return fetching_thread_name
 
-    def _start_actual_fetch(self, scheme, path, destdir, ca_certs_path):
+    def _start_actual_fetch(self, ca_certs_path):
         fetching_thread_name = None
-        url = scheme + "://" + path
 
-        if "/" not in path:
-            msg = f"Missing the path component of the '{url}' URL"
-            raise KickstartValueError(msg)
-        basename = path.rsplit("/", 1)[1]
-        if not basename:
-            msg = f"Unable to deduce basename from the '{url}' URL"
-            raise KickstartValueError(msg)
-
-        dest = destdir / basename
-
+        scheme = self.content_uri.split("://")[0]
         if is_network(scheme):
             fetching_thread_name = data_fetch.wait_and_fetch_net_data(
-                url,
-                dest,
+                self.content_uri,
+                self.dest_file_name,
                 ca_certs_path
             )
         else:  # invalid schemes are handled down the road
             fetching_thread_name = data_fetch.fetch_local_data(
-                url,
-                dest,
+                self.content_uri,
+                self.dest_file_name,
             )
         return fetching_thread_name
 
-    def finish_content_fetch(self, fetching_thread_name, fingerprint, report_callback, dest_filename,
-                             what_if_fail):
-        """
-        Finish any ongoing fetch and analyze what has been fetched.
-
-        After the fetch is completed, it analyzes verifies fetched content if applicable,
-        analyzes it and compiles into an instance of ObtainedContent.
-
-        Args:
-            fetching_thread_name: Name of the fetching thread
-                or None if we are only after the analysis
-            fingerprint: A checksum for downloaded file verification
-            report_callback: Means for the method to send user-relevant messages outside
-            dest_filename: The target of the fetch operation. Can be falsy -
-                in this case there is no content filename defined
-            what_if_fail: Callback accepting exception as an argument
-                that should handle them in the calling layer.
-
-        Returns:
-            Instance of ObtainedContent if everything went well, or None.
-        """
+    def finish_content_fetch(self, fetching_thread_name, fingerprint):
         try:
-            content = self._finish_actual_fetch(fetching_thread_name, fingerprint, report_callback, dest_filename)
+            self._finish_actual_fetch(fetching_thread_name)
+            if fingerprint:
+                self._verify_fingerprint(fingerprint)
         except Exception as exc:
-            what_if_fail(exc)
-            content = None
+            self.what_if_fail(exc)
         finally:
             with self.activity_lock:
                 self.now_fetching_or_processing = False
 
-        return content
+    def _finish_actual_fetch(self, wait_for):
+        if wait_for:
+            log.info(f"OSCAP Addon: Waiting for thread {wait_for}")
+            threadMgr.wait(wait_for)
+            log.info(f"OSCAP Addon: Finished waiting for thread {wait_for}")
 
-    def _verify_fingerprint(self, dest_filename, fingerprint=""):
+    def _verify_fingerprint(self, fingerprint=""):
         if not fingerprint:
-            log.info("OSCAP Addon: No fingerprint provided, skipping integrity check")
+            log.info(
+                "OSCAP Addon: No fingerprint provided, skipping integrity "
+                "check")
             return
 
         hash_obj = utils.get_hashing_algorithm(fingerprint)
-        digest = utils.get_file_fingerprint(dest_filename,
+        digest = utils.get_file_fingerprint(self.dest_file_name,
                                             hash_obj)
         if digest != fingerprint:
             log.error(
                 "OSCAP Addon: "
-                f"File {dest_filename} failed integrity check - assumed a "
-                f"{hash_obj.name} hash and '{fingerprint}', got '{digest}'"
+                f"File {self.dest_file_name} failed integrity check - assumed "
+                f"a {hash_obj.name} hash and '{fingerprint}', got '{digest}'"
             )
-            msg = _(f"OSCAP Addon: Integrity check of the content failed - {hash_obj.name} hash didn't match")
+            msg = _(
+                f"OSCAP Addon: Integrity check of the content failed - "
+                f"{hash_obj.name} hash didn't match")
             raise content_handling.ContentCheckError(msg)
         log.info(f"Integrity check passed using {hash_obj.name} hash")
 
-    def allow_one_expected_tailoring_or_no_tailoring(self, labelled_files):
-        expected_tailoring = common.get_preinst_tailoring_path(self._addon_data)
+
+class ContentAnalyzer:
+    CONTENT_DOWNLOAD_LOCATION = pathlib.Path(common.INSTALLATION_CONTENT_DIR)
+    DEFAULT_SSG_DATA_STREAM_PATH = f"{common.SSG_DIR}/{common.SSG_CONTENT}"
+
+    @staticmethod
+    def __get_content_type(url):
+        if url.endswith(".rpm"):
+            return "rpm"
+        elif any(
+                url.endswith(arch_type)
+                for arch_type in common.SUPPORTED_ARCHIVES):
+            return "archive"
+        else:
+            return "file"
+
+    @staticmethod
+    def __allow_one_expected_tailoring_or_no_tailoring(
+            labelled_files, expected_tailoring):
         tailoring_label = CONTENT_TYPES["TAILORING"]
         if expected_tailoring:
-            labelled_files = self.reduce_files(labelled_files, expected_tailoring, [tailoring_label])
+            labelled_files = ContentAnalyzer.reduce_files(
+                labelled_files, expected_tailoring, [tailoring_label])
         else:
             labelled_files = {
                 path: label for path, label in labelled_files.items()
@@ -225,55 +197,78 @@ class ContentBringer:
             }
         return labelled_files
 
-    def filter_discovered_content(self, labelled_files):
-        expected_path = common.get_preinst_content_path(self._addon_data)
-        categories = (CONTENT_TYPES["DATASTREAM"], CONTENT_TYPES["XCCDF_CHECKLIST"])
+    @staticmethod
+    def __filter_discovered_content(
+            labelled_files, expected_path, expected_tailoring,
+            expected_cpe_path):
+        categories = (
+            CONTENT_TYPES["DATASTREAM"],
+            CONTENT_TYPES["XCCDF_CHECKLIST"])
         if expected_path:
-            labelled_files = self.reduce_files(labelled_files, expected_path, categories)
+            labelled_files = ContentAnalyzer.reduce_files(
+                labelled_files, expected_path, categories)
 
-        labelled_files = self.allow_one_expected_tailoring_or_no_tailoring(labelled_files)
+        labelled_files = \
+            ContentAnalyzer.__allow_one_expected_tailoring_or_no_tailoring(
+                labelled_files, expected_tailoring)
 
-        expected_path = self._addon_data.cpe_path
         categories = (CONTENT_TYPES["CPE_DICT"], )
-        if expected_path:
-            labelled_files = self.reduce_files(labelled_files, expected_path, categories)
+        if expected_cpe_path:
+            labelled_files = ContentAnalyzer.reduce_files(
+                labelled_files, expected_cpe_path, categories)
 
         return labelled_files
 
-    def reduce_files(self, labelled_files, expected_path, categories):
+    @staticmethod
+    def reduce_files(labelled_files, expected_path, categories):
         reduced_files = dict()
-        if not path_is_present_among_paths(expected_path, labelled_files.keys()):
+        if not path_is_present_among_paths(
+                expected_path, labelled_files.keys()):
             msg = (
-                f"Expected a file {expected_path} to be part of the supplied content, "
-                f"but it was not the case, got only {list(labelled_files.keys())}"
+                f"Expected a file {expected_path} to be part of the supplied "
+                f"content, but it was not the case, got only "
+                f"{list(labelled_files.keys())}"
             )
             raise content_handling.ContentHandlingError(msg)
         for path, label in labelled_files.items():
-            if label in categories and not paths_are_equivalent(path, expected_path):
+            if label in categories and not paths_are_equivalent(
+                    path, expected_path):
                 continue
             reduced_files[path] = label
         return reduced_files
 
-    def _finish_actual_fetch(self, wait_for, fingerprint, report_callback, dest_filename):
-        if wait_for:
-            log.info(f"OSCAP Addon: Waiting for thread {wait_for}")
-            threadMgr.wait(wait_for)
-            log.info(f"OSCAP Addon: Finished waiting for thread {wait_for}")
+    @staticmethod
+    def analyze(
+            fetching_thread_name, fingerprint, dest_filename, what_if_fail,
+            expected_path, expected_tailoring, expected_cpe_path):
+        try:
+            content = ContentAnalyzer.__analyze_fetched_content(
+                fetching_thread_name, fingerprint, dest_filename,
+                expected_path, expected_tailoring, expected_cpe_path)
+        except Exception as exc:
+            what_if_fail(exc)
+            content = None
+        return content
+
+    @staticmethod
+    def __analyze_fetched_content(
+                wait_for, fingerprint, dest_filename, expected_path,
+                expected_tailoring, expected_cpe_path):
         actually_fetched_content = wait_for is not None
+        fpaths = ContentAnalyzer.__gather_available_files(
+            actually_fetched_content, dest_filename)
 
-        if fingerprint and dest_filename:
-            self._verify_fingerprint(dest_filename, fingerprint)
-
-        fpaths = self._gather_available_files(actually_fetched_content, dest_filename)
-
-        structured_content = ObtainedContent(self.CONTENT_DOWNLOAD_LOCATION)
-        content_type = self.get_content_type(str(dest_filename))
+        structured_content = ObtainedContent(
+            ContentAnalyzer.CONTENT_DOWNLOAD_LOCATION)
+        content_type = ContentAnalyzer.__get_content_type(str(dest_filename))
         log.info(f"OSCAP Addon: started to look at the content")
         if content_type in ("archive", "rpm"):
             structured_content.add_content_archive(dest_filename)
 
         labelled_filenames = content_handling.identify_files(fpaths)
-        labelled_filenames = self.filter_discovered_content(labelled_filenames)
+        labelled_filenames = ContentAnalyzer.__filter_discovered_content(
+            labelled_filenames, expected_path, expected_tailoring,
+            expected_cpe_path)
 
         for fname, label in labelled_filenames.items():
             structured_content.add_file(str(fname), label)
@@ -284,18 +279,21 @@ class ContentBringer:
         log.info(f"OSCAP Addon: finished looking at the content")
         return structured_content
 
-    def _gather_available_files(self, actually_fetched_content, dest_filename):
+    @staticmethod
+    def __gather_available_files(actually_fetched_content, dest_filename):
         fpaths = []
         if not actually_fetched_content:
             if not dest_filename:  # using scap-security-guide
-                fpaths = [self.DEFAULT_SSG_DATA_STREAM_PATH]
+                fpaths = [ContentAnalyzer.DEFAULT_SSG_DATA_STREAM_PATH]
             else:  # Using downloaded XCCDF/OVAL/DS/tailoring
-                fpaths = pathlib.Path(self.CONTENT_DOWNLOAD_LOCATION).rglob("*")
+                fpaths = pathlib.Path(
+                    ContentAnalyzer.CONTENT_DOWNLOAD_LOCATION).rglob("*")
                 fpaths = [str(p) for p in fpaths if p.is_file()]
         else:
             dest_filename = pathlib.Path(dest_filename)
             # RPM is an archive at this phase
-            content_type = self.get_content_type(str(dest_filename))
+            content_type = ContentAnalyzer.__get_content_type(
+                str(dest_filename))
             if content_type in ("archive", "rpm"):
                 try:
                     fpaths = common.extract_data(
@@ -303,7 +301,9 @@ class ContentBringer:
                         str(dest_filename.parent)
                     )
                 except common.ExtractionError as err:
-                    msg = f"Failed to extract the '{dest_filename}' archive: {str(err)}"
+                    msg = (
+                        f"Failed to extract the '{dest_filename}' "
+                        f"archive: {str(err)}")
                     log.error("OSCAP Addon: " + msg)
                     raise err
 
@@ -312,45 +312,6 @@ class ContentBringer:
             else:
                 raise common.OSCAPaddonError("Unsupported content type")
         return fpaths
-
-    def use_downloaded_content(self, content):
-        preferred_content = self.get_preferred_content(content)
-
-        # We know that we have ended up with a datastream-like content,
-        # but if we can't convert an archive to a datastream.
-        # self._addon_data.content_type = "datastream"
-        content_type = self._addon_data.content_type
-        if content_type in ("archive", "rpm"):
-            self._addon_data.content_path = str(preferred_content.relative_to(content.root))
-        else:
-            self._addon_data.content_path = str(preferred_content)
-
-        preferred_tailoring = self.get_preferred_tailoring(content)
-        if content.tailoring:
-            if content_type in ("archive", "rpm"):
-                self._addon_data.tailoring_path = str(preferred_tailoring.relative_to(content.root))
-            else:
-                self._addon_data.tailoring_path = str(preferred_tailoring)
-
-    def use_system_content(self, content=None):
-        clear_all(self._addon_data)
-        self._addon_data.content_type = "scap-security-guide"
-        self._addon_data.content_path = common.get_ssg_path()
-
-    def get_preferred_content(self, content):
-        if self._addon_data.content_path:
-            preferred_content = content.find_expected_usable_content(self._addon_data.content_path)
-        else:
-            preferred_content = content.select_main_usable_content()
-        return preferred_content
-
-    def get_preferred_tailoring(self, content):
-        tailoring_path = self._addon_data.tailoring_path
-        if tailoring_path:
-            if tailoring_path != str(content.tailoring.relative_to(content.root)):
-                msg = f"Expected a tailoring {tailoring_path}, but it couldn't be found"
-                raise content_handling.ContentHandlingError(msg)
-        return content.tailoring
 
 
 class ObtainedContent:
@@ -450,3 +411,17 @@ class ObtainedContent:
                 "Couldn't find a valid datastream or a valid XCCDF-OVAL file tuple "
                 "among the available content")
             raise content_handling.ContentHandlingError(msg)
+
+    def get_preferred_tailoring(self, tailoring_path):
+        if tailoring_path:
+            if tailoring_path != str(self.tailoring.relative_to(self.root)):
+                msg = f"Expected a tailoring {tailoring_path}, but it couldn't be found"
+                raise content_handling.ContentHandlingError(msg)
+        return self.tailoring
+
+    def get_preferred_content(self, content_path):
+        if content_path:
+            preferred_content = self.find_expected_usable_content(content_path)
+        else:
+            preferred_content = self.select_main_usable_content()
+        return preferred_content

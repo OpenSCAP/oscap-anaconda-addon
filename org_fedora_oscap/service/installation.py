@@ -73,7 +73,7 @@ class PrepareValidContent(Task):
         self._policy_data = policy_data
         self._file_path = file_path
         self._content_path = content_path
-        self.content_bringer = content_discovery.ContentBringer(policy_data)
+        self.content_bringer = content_discovery.ContentBringer(_handle_error)
 
     @property
     def name(self):
@@ -86,15 +86,25 @@ class PrepareValidContent(Task):
         if not os.path.exists(self._content_path):
             # content not available/fetched yet
             fetching_thread_name = self.content_bringer.fetch_content(
-                _handle_error, self._policy_data.certificates)
+                self._policy_data.content_url,
+                self._policy_data.certificates)
 
         content_dest = None
+        fingerprint = None
         if self._policy_data.content_type != "scap-security-guide":
             content_dest = self._file_path
+            fingerprint = self._policy_data.fingerprint
 
-        content = self.content_bringer.finish_content_fetch(
+        expected_path = common.get_preinst_content_path(self._policy_data)
+        expected_tailoring = common.get_preinst_tailoring_path(self._policy_data)
+        expected_cpe_path = self._policy_data.cpe_path
+        if fetching_thread_name is not None:
+            self.content_bringer.finish_content_fetch(
+                fetching_thread_name, fingerprint)
+        content = content_discovery.ContentAnalyzer.analyze(
             fetching_thread_name, self._policy_data.fingerprint,
-            lambda msg: log.info("OSCAP Addon: " + msg), content_dest, _handle_error)
+            content_dest, _handle_error, expected_path, expected_tailoring,
+            expected_cpe_path)
 
         if not content:
             # this shouldn't happen because error handling is supposed to
@@ -109,7 +119,7 @@ class PrepareValidContent(Task):
 
         try:
             # just check that preferred content exists
-            _ = self.content_bringer.get_preferred_content(content)
+            _ = content.get_preferred_content(self._policy_data.content_path)
         except Exception as exc:
             terminate(str(exc))
 

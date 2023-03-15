@@ -262,7 +262,7 @@ class OSCAPSpoke(NormalSpoke):
         self._anaconda_spokes_initialized = threading.Event()
         self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
 
-        self.content_bringer = content_discovery.ContentBringer(self._policy_data)
+        self.content_bringer = content_discovery.ContentBringer(self._handle_error)
         self._content_handler = None
 
     def _all_anaconda_spokes_initialized(self):
@@ -405,7 +405,8 @@ class OSCAPSpoke(NormalSpoke):
         if self._policy_data.content_url and self._policy_data.content_type != "scap-security-guide":
             log.info(f"OSCAP Addon: Actually fetching content from somewhere")
             thread_name = self.content_bringer.fetch_content(
-                self._handle_error, self._policy_data.certificates)
+                self._policy_data.content_url,
+                self._policy_data.certificates)
 
         # pylint: disable-msg=E1101
         hubQ.send_message(self.__class__.__name__,
@@ -427,18 +428,22 @@ class OSCAPSpoke(NormalSpoke):
         :type wait_for: str or None
 
         """
-        def update_progress_label(msg):
-            fire_gtk_action(self._progress_label.set_text(msg))
-
         content_path = None
         actually_fetched_content = wait_for is not None
 
         if actually_fetched_content:
             content_path = common.get_raw_preinst_content_path(self._policy_data)
+            self.content_bringer.finish_content_fetch(
+                wait_for, self._policy_data.fingerprint)
 
-        content = self.content_bringer.finish_content_fetch(
-            wait_for, self._policy_data.fingerprint, update_progress_label,
-            content_path, self._handle_error)
+        expected_path = common.get_preinst_content_path(self._policy_data)
+        expected_tailoring = common.get_preinst_tailoring_path(self._policy_data)
+        expected_cpe_path = self._policy_data.cpe_path
+
+        content = content_discovery.ContentAnalyzer.analyze(
+            wait_for, self._policy_data.fingerprint, content_path,
+            self._handle_error, expected_path, expected_tailoring,
+            expected_cpe_path)
         if not content:
             with self._fetch_flag_lock:
                 self._fetching = False
@@ -451,7 +456,7 @@ class OSCAPSpoke(NormalSpoke):
 
         try:
             if actually_fetched_content:
-                self.content_bringer.use_downloaded_content(content)
+                self._use_downloaded_content(content)
 
             preinst_content_path = common.get_preinst_content_path(self._policy_data)
             preinst_tailoring_path = common.get_preinst_tailoring_path(self._policy_data)
@@ -867,7 +872,7 @@ class OSCAPSpoke(NormalSpoke):
 
     @async_action_wait
     def _wrong_content(self, msg):
-        content_discovery.clear_all(self._policy_data)
+        self._policy_data.clear_all()
         really_hide(self._progress_spinner)
         self._fetch_button.set_sensitive(True)
         self._content_url_entry.set_sensitive(True)
@@ -1210,10 +1215,38 @@ class OSCAPSpoke(NormalSpoke):
 
     def on_change_content_clicked(self, *args):
         self._unselect_profile(self._active_profile)
-        content_discovery.clear_all(self._policy_data)
+        self._policy_data.clear_all()
         self._refresh_ui()
 
     def on_use_ssg_clicked(self, *args):
-        self.content_bringer.use_system_content()
+        self._use_system_content()
         self._save_policy_data()
         self._fetch_data_and_initialize()
+
+    def _use_system_content(self):
+        self._policy_data.clear_all()
+        self._policy_data.content_type = "scap-security-guide"
+        self._policy_data.content_path = common.get_ssg_path()
+
+    def _use_downloaded_content(self, content):
+        preferred_content = content.get_preferred_content(
+            self._policy_data.content_path)
+
+        # We know that we have ended up with a datastream-like content,
+        # but if we can't convert an archive to a datastream.
+        # self._policy_data.content_type = "datastream"
+        content_type = self._policy_data.content_type
+        if content_type in ("archive", "rpm"):
+            self._policy_data.content_path = str(
+                preferred_content.relative_to(content.root))
+        else:
+            self._policy_data.content_path = str(preferred_content)
+
+        preferred_tailoring = content.get_preferred_tailoring(
+            self._policy_data.tailoring_path)
+        if content.tailoring:
+            if content_type in ("archive", "rpm"):
+                self._policy_data.tailoring_path = str(
+                    preferred_tailoring.relative_to(content.root))
+            else:
+                self._policy_data.tailoring_path = str(preferred_tailoring)
