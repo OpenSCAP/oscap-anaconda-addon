@@ -38,3 +38,12 @@ class DataHandler:
                     preferred_tailoring.relative_to(content.root))
             else:
                 self._policy_data.tailoring_path = str(preferred_tailoring)
+
+    def set_url(self, url):
+        self._policy_data.content_url = url
+        if url.endswith(".rpm"):
+            self._policy_data.content_type = "rpm"
+        elif any(url.endswith(arch_type) for arch_type in common.SUPPORTED_ARCHIVES):
+            self._policy_data.content_type = "archive"
+        else:
+            self._policy_data.content_type = "datastream"
