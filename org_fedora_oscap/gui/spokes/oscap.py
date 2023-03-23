@@ -37,7 +37,7 @@ from org_fedora_oscap.structures import PolicyData
 
 from pyanaconda.modules.common.constants.services import USERS
 from pyanaconda.modules.common.util import is_module_available
-from pyanaconda.threading import threadMgr, AnacondaThread
+from pyanaconda.core.threads import thread_manager, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
 from pyanaconda.ui.gui.utils import async_action_wait, really_hide, really_show
@@ -410,9 +410,11 @@ class OSCAPSpoke(NormalSpoke):
                           _("Fetching content data"))
         # pylint: disable-msg=E1101
         hubQ.send_not_ready(self.__class__.__name__)
-        threadMgr.add(AnacondaThread(name="OSCAPguiWaitForDataFetchThread",
-                                     target=self._init_after_data_fetch,
-                                     args=(thread_name,)))
+        thread_manager.add(AnacondaThread(
+            name="OSCAPguiWaitForDataFetchThread",
+            target=self._init_after_data_fetch,
+            args=(thread_name,)
+        ))
 
     @set_ready
     def _init_after_data_fetch(self, wait_for):

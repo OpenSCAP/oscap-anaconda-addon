@@ -45,7 +45,7 @@ from pyanaconda.core.constants import PAYLOAD_TYPE_DNF
 from pyanaconda.modules.common.constants.namespaces import ADDONS_NAMESPACE
 from pyanaconda.modules.common.constants.services import NETWORK, PAYLOADS
 from pyanaconda.modules.common.structures.packages import PackagesSelectionData
-from pyanaconda.threading import threadMgr, AnacondaThread
+from pyanaconda.core.threads import thread_manager, AnacondaThread
 
 from org_fedora_oscap import utils
 from org_fedora_oscap import cpioarchive

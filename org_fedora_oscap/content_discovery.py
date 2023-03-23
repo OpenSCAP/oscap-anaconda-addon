@@ -6,7 +6,7 @@ from glob import glob
 from typing import List
 
 from pyanaconda.core import constants
-from pyanaconda.threading import threadMgr
+from pyanaconda.core.threads import thread_manager
 from pykickstart.errors import KickstartValueError
 
 from org_fedora_oscap import data_fetch, utils
@@ -194,7 +194,7 @@ class ContentBringer:
     def _finish_actual_fetch(self, wait_for, fingerprint, report_callback, dest_filename):
         if wait_for:
             log.info(f"OSCAP Addon: Waiting for thread {wait_for}")
-            threadMgr.wait(wait_for)
+            thread_manager.wait(wait_for)
             log.info(f"OSCAP Addon: Finished waiting for thread {wait_for}")
         actually_fetched_content = wait_for is not None
 
