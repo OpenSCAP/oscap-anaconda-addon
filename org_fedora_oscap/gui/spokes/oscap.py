@@ -271,11 +271,6 @@ class OSCAPSpoke(NormalSpoke):
         log.debug("OSCAP addon: Anaconda init_done signal triggered")
         self._anaconda_spokes_initialized.set()
 
-    @property
-    def _content_defined(self):
-        return self._policy_data.content_url \
-            or self._policy_data.content_type == "scap-security-guide"
-
     def initialize(self):
         """
         The initialize method that is called after the instance is created.
@@ -341,7 +336,7 @@ class OSCAPSpoke(NormalSpoke):
             self._policy_data.content_path = common.SSG_DIR + common.SSG_CONTENT
             self._save_policy_data()
 
-        if not self._content_defined:
+        if not self.data_handler.content_defined():
             # nothing more to be done now, the spoke is ready
             self._ready = True
 
@@ -929,7 +924,7 @@ class OSCAPSpoke(NormalSpoke):
 
     def _refresh_ui(self):
         """Refresh the UI elements."""
-        if not self._content_defined:
+        if not self.data_handler.content_defined():
             log.info("OSCAP Addon: Content not defined")
             # hide the control buttons
             really_hide(self._control_buttons)
@@ -1014,7 +1009,7 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        if not self._content_defined or not self._active_profile:
+        if not self.data_handler.content_defined() or not self._active_profile:
             # no errors for no content or no profile
             self._set_error(None)
 
@@ -1088,7 +1083,7 @@ class OSCAPSpoke(NormalSpoke):
             # not initialized
             return self._unitialized_status
 
-        if not self._content_defined:
+        if not self.data_handler.content_defined():
             return _("No content found")
 
         if not self._active_profile:

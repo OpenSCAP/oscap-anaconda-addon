@@ -11,6 +11,12 @@ class PolicyDataHandler:
             self._policy_data.content_type != "scap-security-guide"
         )
 
+    def content_defined(self):
+        return (
+            self._policy_data.content_url or
+            self._policy_data.content_type == "scap-security-guide"
+        )
+
     def use_system_content(self):
         self._policy_data.clear_all()
         self._policy_data.content_type = "scap-security-guide"
