@@ -33,7 +33,7 @@ from org_fedora_oscap import scap_content_handler
 from org_fedora_oscap import content_discovery
 from org_fedora_oscap import utils
 from org_fedora_oscap.constants import OSCAP
-from org_fedora_oscap.data_handling import DataHandler
+from org_fedora_oscap.data_handling import PolicyDataHandler
 from org_fedora_oscap.structures import PolicyData
 
 from pyanaconda.modules.common.constants.services import USERS
@@ -241,7 +241,7 @@ class OSCAPSpoke(NormalSpoke):
 
         self._policy_data = PolicyData()
         self._load_policy_data()
-        self.data_handler = DataHandler(self._policy_data)
+        self.data_handler = PolicyDataHandler(self._policy_data)
 
         # used for changing profiles
         self._rule_data = None
