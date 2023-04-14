@@ -1,9 +1,15 @@
 import os
+import time
+import pathlib
+import hashlib
 
 import pytest
 
 import org_fedora_oscap.content_discovery as tested_module
 from org_fedora_oscap import content_handling
+from org_fedora_oscap import utils
+
+import test_data_fetch
 
 
 @pytest.fixture
@@ -68,3 +74,28 @@ def test_path_presence_detection():
 
     for path in list_of_paths_not_in_list:
         assert not tested_module.path_is_present_among_paths(path, list_of_paths)
+
+
+class SlowBringer(tested_module.ContentBringer):
+    def fetch_operation(self, uri, out_file, cacerts=None):
+        time.sleep(1)
+        super().fetch_operation(uri, out_file, cacerts)
+
+
+def if_problem_raise_exception(exc):
+    raise(exc)
+
+
+def test_bringer_blocks_double_download_and_finishes_the_first(tmp_path):
+    source_path = pathlib.Path(__file__).absolute()
+    source_fingerprint = utils.get_file_fingerprint(str(source_path), hashlib.sha512())
+
+    dest_path = tmp_path / "dest"
+    uri = f"file://{source_path}"
+
+    bringer = SlowBringer(if_problem_raise_exception)
+    thread_name = bringer.fetch_content(uri)
+    second_thread_name = bringer.fetch_content(uri)
+    assert second_thread_name is None
+
+    bringer.finish_content_fetch(thread_name, source_fingerprint)

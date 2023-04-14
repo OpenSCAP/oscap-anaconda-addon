@@ -95,7 +95,7 @@ class ContentBringer:
         with self.activity_lock:
             if self.now_fetching_or_processing:
                 msg = _(
-                    f"Attempting to fetch '{self._valid_content_uri}, "
+                    f"Attempting to fetch '{self.content_uri}, "
                     "but the previous fetch is still in progress")
                 log.warn(f"OSCAP Addon: {msg}")
                 return
@@ -119,8 +119,8 @@ class ContentBringer:
         if is_network(scheme):
             try:
                 data_fetch.wait_for_network()
-            except common.OSCAPaddonNetworkError:
-                msg = _("Network connection needed to fetch data.")
+            except common.OSCAPaddonNetworkError as exc:
+                msg = _(f"Network connection needed to fetch data. {exc}")
                 raise common.OSCAPaddonNetworkError(msg)
 
         fetch_data_thread = AnacondaThread(
@@ -129,7 +129,6 @@ class ContentBringer:
             args=(self.content_uri, self.dest_file_name, ca_certs_path),
             fatal=False)
 
-        # register and run the thread
         threadMgr.add(fetch_data_thread)
 
         return fetching_thread_name

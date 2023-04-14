@@ -84,9 +84,9 @@ def wait_for_network(timeout=None):
 
     network_proxy = NETWORK.get_proxy()
     if not network_proxy.Connected:
-        msg = _("Unable to connect to the network.")
+        msg = _("Failed to connect.")
         if timeout is not None:
-            msg += " " + _(f"Waited for {timeout} seconds.")
+            msg += " " + _(f"Reached the timeout of {timeout} s.")
         raise common.OSCAPaddonNetworkError(msg)
 
 
