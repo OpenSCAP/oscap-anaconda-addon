@@ -7,7 +7,7 @@ from glob import glob
 from typing import List
 
 from pyanaconda.core import constants
-from pyanaconda.threading import threadMgr
+from pyanaconda.threading import threadMgr, AnacondaThread
 from pykickstart.errors import KickstartValueError
 
 from org_fedora_oscap import data_fetch, utils
@@ -94,9 +94,10 @@ class ContentBringer:
     def _fetch_files(self, ca_certs_path):
         with self.activity_lock:
             if self.now_fetching_or_processing:
-                msg = "OSCAP Addon: Strange, it seems that we are already " \
-                    "fetching something."
-                log.warn(msg)
+                msg = _(
+                    f"Attempting to fetch '{self._valid_content_uri}, "
+                    "but the previous fetch is still in progress")
+                log.warn(f"OSCAP Addon: {msg}")
                 return
             self.now_fetching_or_processing = True
 
@@ -112,23 +113,31 @@ class ContentBringer:
         return fetching_thread_name
 
     def _start_actual_fetch(self, ca_certs_path):
-        fetching_thread_name = None
+        fetching_thread_name = common.THREAD_FETCH_DATA
 
         scheme = self.content_uri.split("://")[0]
         if is_network(scheme):
-            fetching_thread_name = data_fetch.wait_and_fetch_net_data(
-                self.content_uri,
-                self.dest_file_name,
-                ca_certs_path
-            )
-        else:  # invalid schemes are handled down the road
-            fetching_thread_name = data_fetch.fetch_local_data(
-                self.content_uri,
-                self.dest_file_name,
-            )
+            try:
+                data_fetch.wait_for_network()
+            except common.OSCAPaddonNetworkError:
+                msg = _("Network connection needed to fetch data.")
+                raise common.OSCAPaddonNetworkError(msg)
+
+        fetch_data_thread = AnacondaThread(
+            name=fetching_thread_name,
+            target=self.fetch_operation,
+            args=(self.content_uri, self.dest_file_name, ca_certs_path),
+            fatal=False)
+
+        # register and run the thread
+        threadMgr.add(fetch_data_thread)
+
         return fetching_thread_name
 
-    def finish_content_fetch(self, fetching_thread_name, fingerprint):
+    def fetch_operation(self, uri, out_file, ca_certs_path=None):
+        return data_fetch.fetch_data(uri, out_file, ca_certs_path)
+
+    def finish_content_fetch(self, fetching_thread_name, fingerprint=""):
         try:
             self._finish_actual_fetch(fetching_thread_name)
             if fingerprint:
