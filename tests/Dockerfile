@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:rawhide
+FROM quay.io/centos/centos:stream9
 
 RUN dnf update -y \
   ; dnf install -y \
@@ -10,7 +10,6 @@ RUN dnf update -y \
   openscap-utils \
   openscap-python3 \
   scap-security-guide \
-  python3-cpio \
   python3-pycurl \
   python3-pip \
   ; dnf clean all
