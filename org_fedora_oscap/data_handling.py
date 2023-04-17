@@ -5,7 +5,7 @@ class PolicyDataHandler:
     def __init__(self, policy_data):
         self._policy_data = policy_data
 
-    def needs_fetch_content(self):
+    def content_is_fetchable(self):
         return (
             self._policy_data.content_url and
             self._policy_data.content_type != "scap-security-guide"

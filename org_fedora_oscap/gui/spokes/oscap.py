@@ -399,7 +399,7 @@ class OSCAPSpoke(NormalSpoke):
             self._fetching = True
 
         thread_name = None
-        if self.data_handler.needs_fetch_content():
+        if self.data_handler.content_is_fetchable():
             log.info(f"OSCAP Addon: Actually fetching content from somewhere")
             thread_name = self.content_bringer.fetch_content(
                 self._policy_data.content_url,
