@@ -19,6 +19,7 @@ import logging
 import os
 import shutil
 import io
+from org_fedora_oscap.data_handling import PolicyDataHandler
 
 from pyanaconda.core import util
 from pyanaconda.modules.common.task import Task
@@ -74,6 +75,7 @@ class PrepareValidContent(Task):
         self._file_path = file_path
         self._content_path = content_path
         self.content_bringer = content_discovery.ContentBringer(_handle_error)
+        self.data_handler = PolicyDataHandler(self._policy_data)
 
     @property
     def name(self):
@@ -83,7 +85,8 @@ class PrepareValidContent(Task):
         """Run the task."""
         # Is the content available?
         fetching_thread_name = None
-        if not os.path.exists(self._content_path):
+        if (self.data_handler.content_is_fetchable()
+                and not os.path.exists(self._content_path)):
             # content not available/fetched yet
             fetching_thread_name = self.content_bringer.fetch_content(
                 self._policy_data.content_url,
