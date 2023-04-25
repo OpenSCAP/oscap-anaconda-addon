@@ -137,12 +137,12 @@ install-po-files:
 
 CONTAINER_NAME = oscap-anaconda-addon-ci
 container-test:
-	podman build --tag $(CONTAINER_NAME) --file tests/Dockerfile
-	podman run --volume .:/oscap-anaconda-addon:Z $(CONTAINER_NAME) make test
+	podman build --security-opt seccomp=unconfined --tag $(CONTAINER_NAME) --file tests/Dockerfile
+	podman run --security-opt seccomp=unconfined --rm --volume .:/oscap-anaconda-addon:Z $(CONTAINER_NAME) make test
 
 container-update-image:
-	podman build --tag $(CONTAINER_NAME) --file tests/Dockerfile
-	podman run --volume .:/oscap-anaconda-addon:Z $(CONTAINER_NAME) ./create_update_image.sh -r / download_rpms
+	podman build --security-opt seccomp=unconfined --tag $(CONTAINER_NAME) --file tests/Dockerfile
+	podman run --security-opt seccomp=unconfined --rm --volume .:/oscap-anaconda-addon:Z $(CONTAINER_NAME) ./create_update_image.sh -r / download_rpms
 
 test: unittest runpylint
 

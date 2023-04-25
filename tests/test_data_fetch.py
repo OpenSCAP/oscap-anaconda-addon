@@ -1,4 +1,3 @@
-import tempfile
 import filecmp
 import contextlib
 import pathlib
@@ -28,12 +27,10 @@ def serve_directory_in_separate_process(port):
     proc.wait()
 
 
-def test_file_retreival():
+def test_file_retreival(tmp_path):
     filename_to_test = pathlib.Path(__file__)
     relative_filename_to_test = filename_to_test.relative_to(pathlib.Path.cwd())
-
-    temp_file = tempfile.NamedTemporaryFile()
-    temp_filename = temp_file.name
+    temp_filename = tmp_path / "dest"
 
     with serve_directory_in_separate_process(PORT):
         data_fetch._curl_fetch(
