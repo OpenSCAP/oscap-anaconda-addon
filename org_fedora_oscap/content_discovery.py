@@ -31,7 +31,6 @@ def paths_are_equivalent(p1, p2):
 
 
 def path_is_present_among_paths(path, paths):
-    absolute_path = os.path.abspath(path)
     for second_path in paths:
         if paths_are_equivalent(path, second_path):
             return True
