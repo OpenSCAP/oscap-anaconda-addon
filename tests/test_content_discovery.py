@@ -77,9 +77,9 @@ def test_path_presence_detection():
 
 
 class SlowBringer(tested_module.ContentBringer):
-    def fetch_operation(self, uri, out_file, cacerts=None):
+    def fetch_operation(self, out_file):
         time.sleep(1)
-        super().fetch_operation(uri, out_file, cacerts)
+        super().fetch_operation(out_file)
 
 
 def if_problem_raise_exception(exc):

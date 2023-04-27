@@ -43,6 +43,7 @@ class ContentBringer:
 
     def __init__(self, what_if_fail):
         self._valid_content_uri = ""
+        self.ca_certs_path = ""
         self.dest_file_name = ""
 
         self.activity_lock = threading.Lock()
@@ -84,14 +85,15 @@ class ContentBringer:
         """
         try:
             self.content_uri = content_uri
+            self.ca_certs_path = ca_certs_path
         except Exception as exc:
             self.what_if_fail(exc)
         shutil.rmtree(self.CONTENT_DOWNLOAD_LOCATION, ignore_errors=True)
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
-        fetching_thread_name = self._fetch_files(ca_certs_path)
+        fetching_thread_name = self._fetch_files()
         return fetching_thread_name
 
-    def _fetch_files(self, ca_certs_path):
+    def _fetch_files(self):
         with self.activity_lock:
             if self.now_fetching_or_processing:
                 msg = _(
@@ -103,7 +105,7 @@ class ContentBringer:
 
         fetching_thread_name = None
         try:
-            fetching_thread_name = self._start_actual_fetch(ca_certs_path)
+            fetching_thread_name = self._start_actual_fetch()
         except Exception as exc:
             with self.activity_lock:
                 self.now_fetching_or_processing = False
@@ -112,7 +114,7 @@ class ContentBringer:
         # We are not finished yet with the fetch
         return fetching_thread_name
 
-    def _start_actual_fetch(self, ca_certs_path):
+    def _start_actual_fetch(self):
         fetching_thread_name = common.THREAD_FETCH_DATA
 
         scheme = self.content_uri.split("://")[0]
@@ -126,15 +128,15 @@ class ContentBringer:
         fetch_data_thread = AnacondaThread(
             name=fetching_thread_name,
             target=self.fetch_operation,
-            args=(self.content_uri, self.dest_file_name, ca_certs_path),
+            args=(self.dest_file_name,),
             fatal=False)
 
         threadMgr.add(fetch_data_thread)
 
         return fetching_thread_name
 
-    def fetch_operation(self, uri, out_file, ca_certs_path=None):
-        return data_fetch.fetch_data(uri, out_file, ca_certs_path)
+    def fetch_operation(self, out_file):
+        return data_fetch.fetch_data(self.content_uri, out_file, self.ca_certs_path)
 
     def finish_content_fetch(self, fetching_thread_name, fingerprint=""):
         try:
