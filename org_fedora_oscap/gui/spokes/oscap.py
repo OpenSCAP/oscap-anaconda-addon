@@ -32,7 +32,7 @@ from org_fedora_oscap import content_handling
 from org_fedora_oscap import scap_content_handler
 from org_fedora_oscap import utils
 from org_fedora_oscap.common import dry_run_skip
-from org_fedora_oscap.content_discovery import ContentBringer
+from org_fedora_oscap.content_discovery import ContentBringer, ContentAnalyzer
 from pyanaconda.threading import threadMgr, AnacondaThread
 from pyanaconda.ui.gui.spokes import NormalSpoke
 from pyanaconda.ui.communication import hubQ
@@ -251,7 +251,7 @@ class OSCAPSpoke(NormalSpoke):
         self._anaconda_spokes_initialized = threading.Event()
         self.initialization_controller.init_done.connect(self._all_anaconda_spokes_initialized)
 
-        self.content_bringer = ContentBringer(self._addon_data)
+        self.content_bringer = ContentBringer(self._handle_error)
 
     def _all_anaconda_spokes_initialized(self):
         log.debug("OSCAP addon: Anaconda init_done signal triggered")
@@ -378,7 +378,8 @@ class OSCAPSpoke(NormalSpoke):
         thread_name = None
         if self._addon_data.content_url and self._addon_data.content_type != "scap-security-guide":
             thread_name = self.content_bringer.fetch_content(
-                self._handle_error, self._addon_data.certificates)
+                self._addon_data.content_url,
+                self._addon_data.certificates)
 
         # pylint: disable-msg=E1101
         hubQ.send_message(self.__class__.__name__,
@@ -400,18 +401,22 @@ class OSCAPSpoke(NormalSpoke):
         :type wait_for: str or None
 
         """
-        def update_progress_label(msg):
-            fire_gtk_action(self._progress_label.set_text(msg))
-
         content_path = None
         actually_fetched_content = wait_for is not None
 
         if actually_fetched_content:
             content_path = self._addon_data.raw_preinst_content_path
+            self.content_bringer.finish_content_fetch(
+                wait_for, self._addon_data.fingerprint)
 
-        content = self.content_bringer.finish_content_fetch(
-            wait_for, self._addon_data.fingerprint, update_progress_label,
-            content_path, self._handle_error)
+        expected_path = self._addon_data.preinst_content_path
+        expected_tailoring = self._addon_data.preinst_tailoring_path
+        expected_cpe_path = self._addon_data.cpe_path
+
+        content = ContentAnalyzer.analyze(
+            wait_for, self._addon_data.fingerprint, content_path,
+            self._handle_error, expected_path, expected_tailoring,
+            expected_cpe_path)
         if not content:
             with self._fetch_flag_lock:
                 self._fetching = False
@@ -420,7 +425,7 @@ class OSCAPSpoke(NormalSpoke):
 
         try:
             if actually_fetched_content:
-                self.content_bringer.use_downloaded_content(content)
+                self._use_downloaded_content(content)
 
             msg = f"Opening SCAP content at {self._addon_data.preinst_content_path}"
             if self._addon_data.tailoring_path:
@@ -1164,5 +1169,33 @@ class OSCAPSpoke(NormalSpoke):
         self.refresh()
 
     def on_use_ssg_clicked(self, *args):
-        self.content_bringer.use_system_content()
+        self._use_system_content()
         self._fetch_data_and_initialize()
+
+    def _use_system_content(self):
+        self._addon_data.clear_all()
+        self._addon_data.content_type = "scap-security-guide"
+        self._addon_data.content_path = common.get_ssg_path()
+
+    def _use_downloaded_content(self, content):
+        preferred_content = content.get_preferred_content(
+            self._addon_data.content_path)
+
+        # We know that we have ended up with a datastream-like content,
+        # but if we can't convert an archive to a datastream.
+        # self._addon_data.content_type = "datastream"
+        content_type = self._addon_data.content_type
+        if content_type in ("archive", "rpm"):
+            self._addon_data.content_path = str(
+                preferred_content.relative_to(content.root))
+        else:
+            self._addon_data.content_path = str(preferred_content)
+
+        preferred_tailoring = content.get_preferred_tailoring(
+            self._addon_data.tailoring_path)
+        if content.tailoring:
+            if content_type in ("archive", "rpm"):
+                self._addon_data.tailoring_path = str(
+                    preferred_tailoring.relative_to(content.root))
+            else:
+                self._addon_data.tailoring_path = str(preferred_tailoring)

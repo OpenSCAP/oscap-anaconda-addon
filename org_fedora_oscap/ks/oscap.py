@@ -105,7 +105,8 @@ class OSCAPdata(AddonData):
         self.rule_data = rule_handling.RuleData()
         self.dry_run = False
 
-        self.content_bringer = content_discovery.ContentBringer(self)
+        self.content_bringer = content_discovery.ContentBringer(
+            self._handle_error)
 
     def __str__(self):
         """
@@ -436,21 +437,31 @@ class OSCAPdata(AddonData):
         thread_name = None
         if not os.path.exists(self.preinst_content_path) and not os.path.exists(self.raw_preinst_content_path):
             # content not available/fetched yet
-            thread_name = self.content_bringer.fetch_content(self._handle_error, self.certificates)
+            thread_name = self.content_bringer.fetch_content(
+                self.content_url, self.certificates)
 
         content_dest = None
+        fingerprint = None
         if self.content_type != "scap-security-guide":
             content_dest = self.raw_preinst_content_path
+            fingerprint = self.fingerprint
 
-        content = self.content_bringer.finish_content_fetch(
-            thread_name, self.fingerprint, lambda msg: log.info(msg), content_dest, self._handle_error)
+        expected_path = self.preinst_content_path
+        expected_tailoring = self.preinst_tailoring_path
+        expected_cpe_path = self.cpe_path
+        if thread_name is not None:
+            self.content_bringer.finish_content_fetch(
+                thread_name, fingerprint)
+        content = content_discovery.ContentAnalyzer.analyze(
+            thread_name, self.fingerprint, content_dest, self._handle_error,
+            expected_path, expected_tailoring, expected_cpe_path)
 
         if not content:
             return
 
         try:
             # just check that preferred content exists
-            self.content_bringer.get_preferred_content(content)
+            content.get_preferred_content(self.content_path)
         except Exception as exc:
             self._terminate(str(exc))
             return
