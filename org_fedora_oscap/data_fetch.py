@@ -11,7 +11,7 @@ import pycurl
 
 from pyanaconda.core.configuration.anaconda import conf
 from pyanaconda.core import constants
-from pyanaconda.threading import threadMgr, AnacondaThread
+from pyanaconda.core.threads import thread_manager, AnacondaThread
 from pyanaconda.modules.common.constants.services import NETWORK
 
 from org_fedora_oscap import common
@@ -90,7 +90,7 @@ def fetch_local_data(url, out_file):
                                        fatal=False)
 
     # register and run the thread
-    threadMgr.add(fetch_data_thread)
+    thread_manager.add(fetch_data_thread)
 
     return common.THREAD_FETCH_DATA
 
@@ -107,7 +107,7 @@ def wait_and_fetch_net_data(url, out_file, ca_certs_path=None):
     """
 
     # get thread that tries to establish a network connection
-    nm_conn_thread = threadMgr.get(constants.THREAD_WAIT_FOR_CONNECTING_NM)
+    nm_conn_thread = thread_manager.get(constants.THREAD_WAIT_FOR_CONNECTING_NM)
     if nm_conn_thread:
         # NM still connecting, wait for it to finish
         nm_conn_thread.join()
@@ -123,7 +123,7 @@ def wait_and_fetch_net_data(url, out_file, ca_certs_path=None):
                                        fatal=False)
 
     # register and run the thread
-    threadMgr.add(fetch_data_thread)
+    thread_manager.add(fetch_data_thread)
 
     return common.THREAD_FETCH_DATA
 
