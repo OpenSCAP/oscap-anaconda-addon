@@ -33,6 +33,7 @@ from org_fedora_oscap import scap_content_handler
 from org_fedora_oscap import content_discovery
 from org_fedora_oscap import utils
 from org_fedora_oscap.constants import OSCAP
+from org_fedora_oscap.data_handling import PolicyDataHandler
 from org_fedora_oscap.structures import PolicyData
 
 from pyanaconda.modules.common.constants.services import USERS
@@ -240,6 +241,7 @@ class OSCAPSpoke(NormalSpoke):
 
         self._policy_data = PolicyData()
         self._load_policy_data()
+        self.data_handler = PolicyDataHandler(self._policy_data)
 
         # used for changing profiles
         self._rule_data = None
@@ -268,11 +270,6 @@ class OSCAPSpoke(NormalSpoke):
     def _all_anaconda_spokes_initialized(self):
         log.debug("OSCAP addon: Anaconda init_done signal triggered")
         self._anaconda_spokes_initialized.set()
-
-    @property
-    def _content_defined(self):
-        return self._policy_data.content_url \
-            or self._policy_data.content_type == "scap-security-guide"
 
     def initialize(self):
         """
@@ -339,7 +336,7 @@ class OSCAPSpoke(NormalSpoke):
             self._policy_data.content_path = common.SSG_DIR + common.SSG_CONTENT
             self._save_policy_data()
 
-        if not self._content_defined:
+        if not self.data_handler.content_defined():
             # nothing more to be done now, the spoke is ready
             self._ready = True
 
@@ -402,7 +399,7 @@ class OSCAPSpoke(NormalSpoke):
             self._fetching = True
 
         thread_name = None
-        if self._policy_data.content_url and self._policy_data.content_type != "scap-security-guide":
+        if self.data_handler.content_is_fetchable():
             log.info(f"OSCAP Addon: Actually fetching content from somewhere")
             thread_name = self.content_bringer.fetch_content(
                 self._policy_data.content_url,
@@ -456,7 +453,7 @@ class OSCAPSpoke(NormalSpoke):
 
         try:
             if actually_fetched_content:
-                self._use_downloaded_content(content)
+                self.data_handler.use_downloaded_content(content)
 
             preinst_content_path = common.get_preinst_content_path(self._policy_data)
             preinst_tailoring_path = common.get_preinst_tailoring_path(self._policy_data)
@@ -927,7 +924,7 @@ class OSCAPSpoke(NormalSpoke):
 
     def _refresh_ui(self):
         """Refresh the UI elements."""
-        if not self._content_defined:
+        if not self.data_handler.content_defined():
             log.info("OSCAP Addon: Content not defined")
             # hide the control buttons
             really_hide(self._control_buttons)
@@ -1012,7 +1009,7 @@ class OSCAPSpoke(NormalSpoke):
 
         """
 
-        if not self._content_defined or not self._active_profile:
+        if not self.data_handler.content_defined() or not self._active_profile:
             # no errors for no content or no profile
             self._set_error(None)
 
@@ -1086,7 +1083,7 @@ class OSCAPSpoke(NormalSpoke):
             # not initialized
             return self._unitialized_status
 
-        if not self._content_defined:
+        if not self.data_handler.content_defined():
             return _("No content found")
 
         if not self._active_profile:
@@ -1198,13 +1195,7 @@ class OSCAPSpoke(NormalSpoke):
 
         self._progress_label.set_text(_("Fetching content..."))
         self._progress_spinner.start()
-        self._policy_data.content_url = url
-        if url.endswith(".rpm"):
-            self._policy_data.content_type = "rpm"
-        elif any(url.endswith(arch_type) for arch_type in common.SUPPORTED_ARCHIVES):
-            self._policy_data.content_type = "archive"
-        else:
-            self._policy_data.content_type = "datastream"
+        self.data_handler.set_url(url)
 
         self._fetch_data_and_initialize()
 
@@ -1219,34 +1210,6 @@ class OSCAPSpoke(NormalSpoke):
         self._refresh_ui()
 
     def on_use_ssg_clicked(self, *args):
-        self._use_system_content()
+        self.data_handler.use_system_content()
         self._save_policy_data()
         self._fetch_data_and_initialize()
-
-    def _use_system_content(self):
-        self._policy_data.clear_all()
-        self._policy_data.content_type = "scap-security-guide"
-        self._policy_data.content_path = common.get_ssg_path()
-
-    def _use_downloaded_content(self, content):
-        preferred_content = content.get_preferred_content(
-            self._policy_data.content_path)
-
-        # We know that we have ended up with a datastream-like content,
-        # but if we can't convert an archive to a datastream.
-        # self._policy_data.content_type = "datastream"
-        content_type = self._policy_data.content_type
-        if content_type in ("archive", "rpm"):
-            self._policy_data.content_path = str(
-                preferred_content.relative_to(content.root))
-        else:
-            self._policy_data.content_path = str(preferred_content)
-
-        preferred_tailoring = content.get_preferred_tailoring(
-            self._policy_data.tailoring_path)
-        if content.tailoring:
-            if content_type in ("archive", "rpm"):
-                self._policy_data.tailoring_path = str(
-                    preferred_tailoring.relative_to(content.root))
-            else:
-                self._policy_data.tailoring_path = str(preferred_tailoring)
