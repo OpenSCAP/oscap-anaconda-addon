@@ -194,6 +194,37 @@ For example:
 repo --name oscap --baseurl=https://download.copr.fedorainfracloud.org/results/packit/OpenSCAP-openscap-1838/epel-8-x86_64/
 ----
 
+==== Testing code in rawhide branch
+
+Our `rawhide` branch is compatible with the latest released Fedora.
+However, testing this code has some caveats, for example, the `reanaconda` tool can't be used at this moment.
+The recommended procedure for testing the rawhide branch is the following:
+
+. Download the latest Fedora Server DVD ISO file from https://fedoraproject.org/server/download/, for example `Fedora-Server-dvd-x86_64-38-1.6.iso`.
+. Create an OAA update image with the `-r` parameter set to the version:
++
+----
+sudo ./create_update_image.sh -r 38 download_rpms
+----
++
+. Start a HTTP server in the project directory:
++
+----
+python3 -m http.server
+----
++
+. Create a virtual machine in `virt-manager` choosing the downloaded ISO file as the installation resource.
+. When the virtual machine screen appears, navigate using arrow to highlight `Install Fedora 38` and press `e`.
+. On the line starting with `linux`, append this command:
++
+----
+inst.updates=http://192.168.122.1:8000/update.img
+----
++
+. Press `F10`.
+
+The HTTP server should display a `GET /update.img` message, otherwise fix the `firewalld` settings.
+
 == Available make commands
 
 Following commands are available to be used in make command:
