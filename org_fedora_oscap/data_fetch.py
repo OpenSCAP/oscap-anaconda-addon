@@ -75,57 +75,19 @@ class FetchError(DataFetchError):
     pass
 
 
-def fetch_local_data(url, out_file):
-    """
-    Function that fetches data locally.
-
-    :see: org_fedora_oscap.data_fetch.fetch_data
-    :return: the name of the thread running fetch_data
-    :rtype: str
-
-    """
-    fetch_data_thread = AnacondaThread(name=common.THREAD_FETCH_DATA,
-                                       target=fetch_data,
-                                       args=(url, out_file, None),
-                                       fatal=False)
-
-    # register and run the thread
-    threadMgr.add(fetch_data_thread)
-
-    return common.THREAD_FETCH_DATA
-
-
-def wait_and_fetch_net_data(url, out_file, ca_certs_path=None):
-    """
-    Function that waits for network connection and starts a thread that fetches
-    data over network.
-
-    :see: org_fedora_oscap.data_fetch.fetch_data
-    :return: the name of the thread running fetch_data
-    :rtype: str
-
-    """
-
+def wait_for_network(timeout=None):
     # get thread that tries to establish a network connection
     nm_conn_thread = threadMgr.get(constants.THREAD_WAIT_FOR_CONNECTING_NM)
     if nm_conn_thread:
         # NM still connecting, wait for it to finish
-        nm_conn_thread.join()
+        nm_conn_thread.join(timeout)
 
     network_proxy = NETWORK.get_proxy()
     if not network_proxy.Connected:
-        raise common.OSCAPaddonNetworkError(_("Network connection needed to fetch data."))
-
-    log.info(f"Fetching data from {url}")
-    fetch_data_thread = AnacondaThread(name=common.THREAD_FETCH_DATA,
-                                       target=fetch_data,
-                                       args=(url, out_file, ca_certs_path),
-                                       fatal=False)
-
-    # register and run the thread
-    threadMgr.add(fetch_data_thread)
-
-    return common.THREAD_FETCH_DATA
+        msg = _("Failed to connect.")
+        if timeout is not None:
+            msg += " " + _(f"Reached the timeout of {timeout} s.")
+        raise common.OSCAPaddonNetworkError(msg)
 
 
 def can_fetch_from(url):

@@ -7,7 +7,7 @@ from glob import glob
 from typing import List
 
 from pyanaconda.core import constants
-from pyanaconda.threading import threadMgr
+from pyanaconda.threading import threadMgr, AnacondaThread
 from pykickstart.errors import KickstartValueError
 
 from org_fedora_oscap import data_fetch, utils
@@ -31,7 +31,6 @@ def paths_are_equivalent(p1, p2):
 
 
 def path_is_present_among_paths(path, paths):
-    absolute_path = os.path.abspath(path)
     for second_path in paths:
         if paths_are_equivalent(path, second_path):
             return True
@@ -43,6 +42,7 @@ class ContentBringer:
 
     def __init__(self, what_if_fail):
         self._valid_content_uri = ""
+        self.ca_certs_path = ""
         self.dest_file_name = ""
 
         self.activity_lock = threading.Lock()
@@ -84,25 +84,27 @@ class ContentBringer:
         """
         try:
             self.content_uri = content_uri
+            self.ca_certs_path = ca_certs_path
         except Exception as exc:
             self.what_if_fail(exc)
         shutil.rmtree(self.CONTENT_DOWNLOAD_LOCATION, ignore_errors=True)
         self.CONTENT_DOWNLOAD_LOCATION.mkdir(parents=True, exist_ok=True)
-        fetching_thread_name = self._fetch_files(ca_certs_path)
+        fetching_thread_name = self._fetch_files()
         return fetching_thread_name
 
-    def _fetch_files(self, ca_certs_path):
+    def _fetch_files(self):
         with self.activity_lock:
             if self.now_fetching_or_processing:
-                msg = "OSCAP Addon: Strange, it seems that we are already " \
-                    "fetching something."
-                log.warn(msg)
+                msg = _(
+                    f"Attempting to fetch '{self.content_uri}, "
+                    "but the previous fetch is still in progress")
+                log.warn(f"OSCAP Addon: {msg}")
                 return
             self.now_fetching_or_processing = True
 
         fetching_thread_name = None
         try:
-            fetching_thread_name = self._start_actual_fetch(ca_certs_path)
+            fetching_thread_name = self._start_actual_fetch()
         except Exception as exc:
             with self.activity_lock:
                 self.now_fetching_or_processing = False
@@ -111,24 +113,31 @@ class ContentBringer:
         # We are not finished yet with the fetch
         return fetching_thread_name
 
-    def _start_actual_fetch(self, ca_certs_path):
-        fetching_thread_name = None
+    def _start_actual_fetch(self):
+        fetching_thread_name = common.THREAD_FETCH_DATA
 
         scheme = self.content_uri.split("://")[0]
         if is_network(scheme):
-            fetching_thread_name = data_fetch.wait_and_fetch_net_data(
-                self.content_uri,
-                self.dest_file_name,
-                ca_certs_path
-            )
-        else:  # invalid schemes are handled down the road
-            fetching_thread_name = data_fetch.fetch_local_data(
-                self.content_uri,
-                self.dest_file_name,
-            )
+            try:
+                data_fetch.wait_for_network()
+            except common.OSCAPaddonNetworkError as exc:
+                msg = _(f"Network connection needed to fetch data. {exc}")
+                raise common.OSCAPaddonNetworkError(msg)
+
+        fetch_data_thread = AnacondaThread(
+            name=fetching_thread_name,
+            target=self.fetch_operation,
+            args=(self.dest_file_name,),
+            fatal=False)
+
+        threadMgr.add(fetch_data_thread)
+
         return fetching_thread_name
 
-    def finish_content_fetch(self, fetching_thread_name, fingerprint):
+    def fetch_operation(self, out_file):
+        return data_fetch.fetch_data(self.content_uri, out_file, self.ca_certs_path)
+
+    def finish_content_fetch(self, fetching_thread_name, fingerprint=""):
         try:
             self._finish_actual_fetch(fetching_thread_name)
             if fingerprint:
