@@ -221,6 +221,8 @@ python3 -m http.server
 inst.updates=http://192.168.122.1:8000/update.img
 ----
 +
+where the IP address may vary - if the update image is not downloaded during the installation media boot (you can tell that something happened from the output of the Python server command), look up the gateway IP address from the respective VM configuration.
++
 . Press `F10`.
 
 The HTTP server should display a `GET /update.img` message, otherwise fix the `firewalld` settings.
