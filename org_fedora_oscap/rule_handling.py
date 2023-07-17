@@ -59,12 +59,6 @@ ESSENTIAL_PACKAGES = {
         "env": ["graphical-server-environment", "workstation-product-environment"],
         "groups": ["workstation-product-environment"],
     },
-    "tftp": {
-        "groups": ["network-server"],
-    },
-    "abrt": {
-        "groups": ["debugging"],
-    },
     "gssproxy": {
         "groups": ["file-server"],
     },
