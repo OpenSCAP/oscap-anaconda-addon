@@ -122,6 +122,11 @@ def get_doc_type(file_path):
             if line.startswith("Document type:"):
                 _prefix, _sep, type_info = line.partition(":")
                 content_type = type_info.strip()
+                if content_type not in CONTENT_TYPES.values():
+                    log.info(
+                        f"File {file_path} labelled by oscap as {content_type}, "
+                        "which is an unexpected type.")
+                    content_type = f"unknown - {content_type}"
                 break
     except OSError:
         # 'oscap info' exitted with a non-zero exit code -> unknown doc
@@ -136,43 +141,3 @@ def get_doc_type(file_path):
     log.info("OSCAP addon: Identified {file_path} as {content_type}"
              .format(file_path=file_path, content_type=content_type))
     return content_type
-
-
-def explore_content_files(fpaths):
-    """
-    Function for finding content files in a list of file paths. SIMPLY PICKS
-    THE FIRST USABLE CONTENT FILE OF A PARTICULAR TYPE AND JUST PREFERS DATA
-    STREAMS OVER STANDALONE BENCHMARKS.
-
-    :param fpaths: a list of file paths to search for content files in
-    :type fpaths: [str]
-    :return: ContentFiles instance containing the file names of the XCCDF file,
-        CPE dictionary and tailoring file or "" in place of those items
-        if not found
-    :rtype: ContentFiles
-
-    """
-    xccdf_file = ""
-    cpe_file = ""
-    tailoring_file = ""
-    found_ds = False
-
-    for fpath in fpaths:
-        doc_type = get_doc_type(fpath)
-        if not doc_type:
-            continue
-
-        # prefer DS over standalone XCCDF
-        if doc_type == "Source Data Stream" and (not xccdf_file or not found_ds):
-            xccdf_file = fpath
-            found_ds = True
-        elif doc_type == "XCCDF Checklist" and not xccdf_file:
-            xccdf_file = fpath
-        elif doc_type == "CPE Dictionary" and not cpe_file:
-            cpe_file = fpath
-        elif doc_type == "XCCDF Tailoring" and not tailoring_file:
-            tailoring_file = fpath
-
-    # TODO: raise exception if no xccdf_file is found?
-    files = ContentFiles(xccdf_file, cpe_file, tailoring_file)
-    return files
