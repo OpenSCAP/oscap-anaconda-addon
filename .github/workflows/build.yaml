@@ -10,7 +10,7 @@ jobs:
     if: github.ref == 'refs/heads/rawhide' || github.event.pull_request.base.ref == 'rawhide'
     runs-on: ubuntu-latest
     container:
-      image: fedora:latest
+      image: fedora:rawhide
     steps:
       - name: Install Deps
         run: dnf install -y make anaconda python3-pytest python3-pycurl openscap-scanner
