@@ -360,7 +360,7 @@ def extract_data(archive, out_dir, ensure_has_files=None):
                 raise ExtractionError(msg)
 
         utils.ensure_dir_exists(out_dir)
-        zfile.extractall(path=out_dir)
+        zfile.extractall(path=out_dir, filter="data")
         result = [utils.join_paths(out_dir, info.filename) for info in zfile.filelist]
         zfile.close()
     elif archive.endswith(".tar"):
@@ -418,7 +418,7 @@ def _extract_tarball(archive, out_dir, ensure_has_files, alg):
             raise ExtractionError(msg)
 
     utils.ensure_dir_exists(out_dir)
-    tfile.extractall(path=out_dir)
+    tfile.extractall(path=out_dir, filter="data")
     result = [utils.join_paths(out_dir, member.path) for member in tfile.getmembers()]
     tfile.close()
 
