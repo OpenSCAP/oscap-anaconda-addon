@@ -42,6 +42,7 @@ from dasbus.identifier import DBusServiceIdentifier
 from pyanaconda.core import constants
 from pyanaconda.core.dbus import DBus
 from pyanaconda.core.constants import PAYLOAD_TYPE_DNF
+from pyanaconda.core.product import get_product_short_name, get_product_version
 from pyanaconda.modules.common.constants.namespaces import ADDONS_NAMESPACE
 from pyanaconda.modules.common.constants.services import NETWORK, PAYLOADS
 from pyanaconda.modules.common.structures.packages import PackagesSelectionData
@@ -85,16 +86,17 @@ COMPLAIN_ABOUT_NON_CANONICAL_NAMES = True
 # Enable patches that set the content name at package-time
 DEFAULT_SSG_CONTENT_NAME = ""
 SSG_CONTENT = DEFAULT_SSG_CONTENT_NAME
+SHORT_PRODUCT_NAME = get_product_short_name()
 if not SSG_CONTENT:
-    if constants.shortProductName != 'anaconda':
-        if constants.shortProductName == 'fedora':
+    if SHORT_PRODUCT_NAME != 'anaconda':
+        if SHORT_PRODUCT_NAME == 'fedora':
             SSG_CONTENT = "ssg-fedora-ds.xml"
         else:
             SSG_CONTENT = (
                 "ssg-{name}{version}-ds.xml"
                 .format(
-                    name=constants.shortProductName,
-                    version=constants.productVersion.strip(".")[0]))
+                    name=SHORT_PRODUCT_NAME,
+                    version=get_product_version().strip(".")[0]))
 
 RESULTS_PATH = utils.join_paths(TARGET_CONTENT_DIR,
                                 "eval_remediate_results.xml")
