@@ -151,7 +151,6 @@ def set_ready(func):
         self._ready = True
         # pylint: disable-msg=E1101
         hubQ.send_ready(self.__class__.__name__)
-        hubQ.send_message(self.__class__.__name__, self.status)
 
         return ret
 
@@ -390,11 +389,14 @@ class OSCAPSpoke(NormalSpoke):
         else:
             renderer.set_property("stock-id", None)
 
+    def _still_fetching(self):
+        return self._fetching or threadMgr.get('OSCAPguiWaitForDataFetchThread')
+
     def _fetch_data_and_initialize(self):
         """Fetch data from a specified URL and initialize everything."""
 
         with self._fetch_flag_lock:
-            if self._fetching:
+            if self._still_fetching():
                 # prevent multiple fetches running simultaneously
                 return
             self._fetching = True
@@ -943,7 +945,7 @@ class OSCAPSpoke(NormalSpoke):
 
             # hide the progress box, no progress now
             with self._fetch_flag_lock:
-                if not self._fetching:
+                if not self._still_fetching():
                     really_hide(self._progress_box)
 
                     self._content_url_entry.set_sensitive(True)
@@ -1168,7 +1170,7 @@ class OSCAPSpoke(NormalSpoke):
         """Handler for the Fetch button"""
 
         with self._fetch_flag_lock:
-            if self._fetching:
+            if self._still_fetching():
                 # some other fetching/pre-processing running, give up
                 log.warn(
                     "OSCAP Addon: "
