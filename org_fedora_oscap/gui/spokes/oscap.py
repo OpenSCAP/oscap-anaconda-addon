@@ -158,6 +158,25 @@ def set_ready(func):
     return decorated
 
 
+def crop_to_n_lines(text, line_limit):
+    if line_limit < 2:
+        msg = (
+            "As cropping involves putting ellipsis on a separate line, "
+            "it doesn't make sense to crop to less than 2 lines.")
+        raise ValueError(msg)
+    lines = text.splitlines()
+    if len(lines) < line_limit:
+        return text
+    lines_to_keep = lines[:line_limit - 1]
+
+    if not lines_to_keep[-1].strip():
+        lines_to_keep[-1] = "..."
+    else:
+        lines_to_keep += ["..."]
+
+    return "\n".join(lines_to_keep)
+
+
 class OSCAPSpoke(NormalSpoke):
     """
     Main class of the OSCAP addon spoke that will appear in the Security
@@ -614,12 +633,26 @@ class OSCAPSpoke(NormalSpoke):
             log.warning("OSCAP Addon: " + str(e))
             self._invalid_content()
 
+        if len(profiles) > 9:
+            max_description_lines = 4
+        elif len(profiles) > 4:
+            max_description_lines = 6
+        else:
+            max_description_lines = 9
+
         for profile in profiles:
+            profile_is_active = True
+            description = profile.description
+
+            if profile.id != self._active_profile:
+                profile_is_active = False
+                description = crop_to_n_lines(description, max_description_lines)
+
             profile_markup = '<span weight="bold">%s</span>\n%s' \
-                                % (profile.title, profile.description)
+                                % (profile.title, description)
             self._profiles_store.append([profile.id,
                                          profile_markup,
-                                         profile.id == self._active_profile])
+                                         profile_is_active])
 
     def _add_message(self, message):
         """
