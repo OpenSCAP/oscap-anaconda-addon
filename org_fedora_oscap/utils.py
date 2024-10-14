@@ -146,8 +146,9 @@ def get_hashing_algorithm(fingerprint):
 
     """
 
-    hashes = (hashlib.md5(), hashlib.sha1(), hashlib.sha224(),
-              hashlib.sha256(), hashlib.sha384(), hashlib.sha512())
+    expected_hash_ids = {'md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512'}
+    available_hash_ids = expected_hash_ids.intersection(hashlib.algorithms_available)
+    hashes = (hashlib.new(hash_id) for hash_id in available_hash_ids)
 
     if len(fingerprint) % 2 == 1:
         return None

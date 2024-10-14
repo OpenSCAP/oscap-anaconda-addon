@@ -27,6 +27,9 @@ import pytest
 
 from org_fedora_oscap import utils
 
+import hashlib
+import warnings
+
 
 @pytest.fixture()
 def mock_os():
@@ -146,11 +149,34 @@ def test_gen():
 
 
 def test_hash():
-    file_hash = '87fcda7d9e7a22412e95779e2f8e70f929106c7b27a94f5f8510553ebf4624a6'
+    file_hashes = {
+       'md5':    'ea38136ca349e139c59f09e09d2aa956',
+       'sha1':   'f905458483be8ac21002ab2c6409d3a10b3813f1',
+       'sha224': '2b1e795db6b7397f47a270fbb5059e76b94a8c972240b17c45db1f13',
+       'sha256': '87fcda7d9e7a22412e95779e2f8e70f929106c7b27a94f5f8510553ebf4624a6',
+       'sha384': 'b3ffdfad2bf33caf6e44a8b34386ad741bb80fb02306d3889b8a5645cde31e9d'
+                 '31ec44e0b0e6ce84d83a57339b75b9bf',
+       'sha512': '7b05940e8d69e804a90f5110d22ad3a1cd03adc5bf4d0a4779790c78118b3c61'
+                 'b7f3a3cd39fcf2902ec92ac80df71b952a7aeb2d53c16f0e77436eeb91e33e1d'
+    }
+
+    for hash_id, file_hash in file_hashes.items():
+        if hash_id not in hashlib.algorithms_available:
+            warnings.warn(RuntimeWarning('Expected hash algorithm \'%s\' is not '
+                                         'available in this build of Python' % hash_id))
+            continue
+
+        hash_obj = utils.get_hashing_algorithm(file_hash)
+        assert hash_obj.name == hash_id
+
+        filepath = os.path.join(os.path.dirname(__file__), 'data', 'file')
+        computed_hash = utils.get_file_fingerprint(filepath, hash_obj)
+
+        assert file_hash == computed_hash
+
+
+def test_hash_unknown():
+    file_hash = 'XXXX'
+
     hash_obj = utils.get_hashing_algorithm(file_hash)
-    assert hash_obj.name == "sha256"
-
-    filepath = os.path.join(os.path.dirname(__file__), 'data', 'file')
-    computed_hash = utils.get_file_fingerprint(filepath, hash_obj)
-
-    assert file_hash == computed_hash
+    assert hash_obj is None
