@@ -148,7 +148,16 @@ def get_hashing_algorithm(fingerprint):
 
     expected_hash_ids = {'md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512'}
     available_hash_ids = expected_hash_ids.intersection(hashlib.algorithms_available)
-    hashes = (hashlib.new(hash_id) for hash_id in available_hash_ids)
+
+    hashes = []
+    for hash_id in available_hash_ids:
+        try:
+            hash_obj = hashlib.new(hash_id)
+            hashes.append(hash_obj)
+        except ValueError as e:
+            # We have an unavailable algorithm, that is a part of hashlib.algorithms_available,
+            # for example see https://github.com/python/cpython/issues/91257.
+            pass
 
     if len(fingerprint) % 2 == 1:
         return None
